@@ -2,43 +2,43 @@
 
 # 🎨 Claude Artefacts
 
-**Витрина HTML-артефактов, собранных в паре с [Claude Code](https://claude.com/claude-code).**
+**A showcase of HTML artefacts built together with [Claude Code](https://claude.com/claude-code).**
 
 [![Live](https://img.shields.io/badge/live-grafsoul.github.io-d97757?style=flat-square)](https://grafsoul.github.io/claude-artefacts/)
 [![GitHub Pages](https://img.shields.io/badge/GitHub%20Pages-main%20%2F%20docs-1c1917?style=flat-square&logo=github)](https://github.com/GrafSoul/claude-artefacts/settings/pages)
 ![Zero deps](https://img.shields.io/badge/dependencies-0-4d7c4a?style=flat-square)
 
-[**Открыть витрину →**](https://grafsoul.github.io/claude-artefacts/)
+[**Open the showcase →**](https://grafsoul.github.io/claude-artefacts/)
 
 </div>
 
 ---
 
-## Как устроено
+## How it works
 
-Один статичный лендинг, который сам собирает список из реестра. Никакой сборки, фреймворков и зависимостей — чистый HTML + немного JS.
+A single static landing page that builds its own list from a registry. No build step, no frameworks, no dependencies — just plain HTML and a bit of JS.
 
 ```
 docs/
-├── index.html      # витрина: читает manifest.json, рисует карточки, тема light/dark
-├── manifest.json   # реестр артефактов — единственное, что правится при добавлении
-└── <artefact>.html # сами артефакты, по файлу на каждый
+├── index.html      # showcase: reads manifest.json, renders cards, light/dark theme
+├── manifest.json   # artefact registry — the only file you edit to add one
+└── <artefact>.html # the artefacts themselves, one file each
 ```
 
 > [!NOTE]
-> `index.html` ничего не хардкодит. Добавить артефакт = положить HTML в `docs/` и дописать **одну запись** в `manifest.json`. Разметку витрины трогать не нужно.
+> `index.html` hardcodes nothing. Adding an artefact = drop an HTML file into `docs/` and append **one entry** to `manifest.json`. The showcase markup stays untouched.
 
 ---
 
-## Добавить артефакт
+## Adding an artefact
 
-**1.** Кладём файл в `docs/`, например `docs/revenue-dashboard.html`
-**2.** Дописываем объект в массив `artefacts` внутри `manifest.json`:
+**1.** Drop the file into `docs/`, e.g. `docs/revenue-dashboard.html`
+**2.** Append an object to the `artefacts` array in `manifest.json`:
 
 ```json
 {
   "title": "Revenue Dashboard",
-  "description": "Интерактивный дашборд выручки по кварталам",
+  "description": "Interactive quarterly revenue dashboard",
   "path": "revenue-dashboard.html",
   "emoji": "📊",
   "date": "2026-07-15",
@@ -46,30 +46,30 @@ docs/
 }
 ```
 
-| Поле          |                 | Описание                    |
-| ------------- | --------------- | --------------------------- |
-| `title`       | **обязательно** | Название на карточке        |
-| `path`        | **обязательно** | Имя файла внутри `docs/`    |
-| `description` | опц.            | Одна строка о сути          |
-| `emoji`       | опц.            | Иконка карточки             |
-| `date`        | опц.            | Дата в формате `YYYY-MM-DD` |
-| `tags`        | опц.            | Массив меток-чипов          |
+| Field         |              | Description                 |
+| ------------- | ------------ | --------------------------- |
+| `title`       | **required** | Card heading                |
+| `path`        | **required** | File name inside `docs/`    |
+| `description` | optional     | One line about what it is   |
+| `emoji`       | optional     | Card icon                   |
+| `date`        | optional     | Date in `YYYY-MM-DD` format |
+| `tags`        | optional     | Array of chip labels        |
 
 ---
 
-## Публикация
+## Publishing
 
-Витрина отдаётся через **GitHub Pages**:
+The showcase is served via **GitHub Pages**:
 
 ```
 https://grafsoul.github.io/claude-artefacts/
 ```
 
 > [!IMPORTANT]
-> Pages включается один раз вручную: **Settings → Pages → Source: `main` / `/docs`**.
+> Pages is enabled once, by hand: **Settings → Pages → Source: `main` / `/docs`**.
 
 ---
 
 <div align="center">
-<sub>Собрано в паре с Claude Code · без зависимостей, без сборки</sub>
+<sub>Built together with Claude Code · no dependencies, no build step</sub>
 </div>
