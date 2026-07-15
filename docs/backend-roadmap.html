@@ -1,0 +1,890 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Атлас бэкенда · дорожная карта</title>
+    <meta
+      name="description"
+      content="Подробная интерактивная дорожная карта: путь от фронтендера до фулстека — NestJS, PostgreSQL, Redis, Docker, Nginx, CI/CD."
+    />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --bg: #14100e;
+        --bg-2: #1b1613;
+        --panel: #201a16;
+        --panel-2: #261f1a;
+        --line: #382e27;
+        --line-2: #4a3d34;
+        --ink: #f3ece4;
+        --ink-2: #c3b6a8;
+        --ink-3: #8b7d70;
+        --copper: #e0895f;
+        --copper-soft: #d97757;
+        --gold: #e6b86a;
+        --done: #7fa66a;
+        --done-bg: rgba(127, 166, 106, 0.14);
+        --shadow: 0 2px 8px rgba(0, 0, 0, 0.3), 0 20px 50px rgba(0, 0, 0, 0.4);
+        --radius: 16px;
+        --serif: "Fraunces", Georgia, "Times New Roman", serif;
+        --sans: "IBM Plex Sans", -apple-system, BlinkMacSystemFont, sans-serif;
+        --mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+      }
+      :root[data-theme="light"] {
+        --bg: #f6f1ea;
+        --bg-2: #efe7db;
+        --panel: #fffdf9;
+        --panel-2: #f7f0e6;
+        --line: #e2d6c6;
+        --line-2: #d2c2ad;
+        --ink: #241c14;
+        --ink-2: #5a4d3f;
+        --ink-3: #8a7a68;
+        --copper: #b8542f;
+        --copper-soft: #c96a3e;
+        --gold: #a9762a;
+        --done: #5c7f45;
+        --done-bg: rgba(92, 127, 69, 0.12);
+        --shadow: 0 1px 3px rgba(90, 60, 30, 0.08), 0 16px 40px rgba(90, 60, 30, 0.12);
+      }
+      @media (prefers-color-scheme: light) {
+        :root:not([data-theme="dark"]) {
+          --bg: #f6f1ea;
+          --bg-2: #efe7db;
+          --panel: #fffdf9;
+          --panel-2: #f7f0e6;
+          --line: #e2d6c6;
+          --line-2: #d2c2ad;
+          --ink: #241c14;
+          --ink-2: #5a4d3f;
+          --ink-3: #8a7a68;
+          --copper: #b8542f;
+          --copper-soft: #c96a3e;
+          --gold: #a9762a;
+          --done: #5c7f45;
+          --done-bg: rgba(92, 127, 69, 0.12);
+          --shadow: 0 1px 3px rgba(90, 60, 30, 0.08), 0 16px 40px rgba(90, 60, 30, 0.12);
+        }
+      }
+
+      * { box-sizing: border-box; margin: 0; padding: 0; }
+      html { scroll-behavior: smooth; scroll-padding-top: 90px; }
+      body {
+        font-family: var(--sans);
+        background: var(--bg);
+        color: var(--ink);
+        line-height: 1.6;
+        -webkit-font-smoothing: antialiased;
+        background-image:
+          radial-gradient(1200px 600px at 85% -5%, rgba(224, 137, 95, 0.09), transparent 60%),
+          radial-gradient(900px 500px at 0% 10%, rgba(230, 184, 106, 0.05), transparent 55%);
+        background-attachment: fixed;
+      }
+      ::selection { background: var(--copper); color: #14100e; }
+
+      /* ---------- top bar ---------- */
+      .topbar {
+        position: sticky; top: 0; z-index: 50;
+        display: flex; align-items: center; gap: 1rem;
+        padding: 0.7rem clamp(1rem, 4vw, 2.5rem);
+        background: color-mix(in srgb, var(--bg) 82%, transparent);
+        backdrop-filter: blur(14px);
+        border-bottom: 1px solid var(--line);
+      }
+      .brand { font-family: var(--mono); font-size: 0.82rem; letter-spacing: 0.02em; color: var(--ink-2); white-space: nowrap; }
+      .brand b { color: var(--copper); font-weight: 500; }
+      .topbar .bar-progress { flex: 1; height: 6px; background: var(--line); border-radius: 99px; overflow: hidden; min-width: 60px; }
+      .topbar .bar-progress i { display: block; height: 100%; width: 0; background: linear-gradient(90deg, var(--gold), var(--copper)); border-radius: 99px; transition: width 0.5s cubic-bezier(0.22, 1, 0.36, 1); }
+      .topbar .pct { font-family: var(--mono); font-size: 0.8rem; color: var(--ink); min-width: 3.2ch; text-align: right; }
+      .btn {
+        font-family: var(--mono); font-size: 0.76rem; color: var(--ink-2);
+        background: var(--panel); border: 1px solid var(--line); border-radius: 8px;
+        padding: 0.4rem 0.6rem; cursor: pointer; transition: all 0.15s ease; white-space: nowrap;
+      }
+      .btn:hover { color: var(--ink); border-color: var(--line-2); }
+      .btn:focus-visible { outline: 2px solid var(--copper); outline-offset: 2px; }
+
+      /* ---------- shell ---------- */
+      .shell { max-width: 1180px; margin: 0 auto; padding: 0 clamp(1rem, 4vw, 2.5rem) 6rem; }
+
+      /* ---------- hero ---------- */
+      .hero { padding: clamp(2.5rem, 7vw, 5rem) 0 2.5rem; max-width: 60ch; }
+      .eyebrow { font-family: var(--mono); font-size: 0.78rem; letter-spacing: 0.16em; text-transform: uppercase; color: var(--copper); display: flex; align-items: center; gap: 0.6rem; }
+      .eyebrow::before { content: ""; width: 2rem; height: 1px; background: var(--copper); }
+      h1 { font-family: var(--serif); font-weight: 600; font-size: clamp(2.6rem, 8vw, 4.6rem); line-height: 1.02; letter-spacing: -0.015em; margin: 1rem 0 0.4rem; }
+      h1 em { font-style: italic; color: var(--copper); }
+      .lede { font-size: clamp(1.05rem, 2.4vw, 1.25rem); color: var(--ink-2); margin-top: 1rem; }
+      .hero-meta { display: flex; flex-wrap: wrap; gap: 0.5rem 0.6rem; margin-top: 1.6rem; font-family: var(--mono); font-size: 0.78rem; }
+      .chip { border: 1px solid var(--line); background: var(--panel); color: var(--ink-2); border-radius: 99px; padding: 0.25rem 0.7rem; }
+      .chip b { color: var(--ink); font-weight: 500; }
+
+      .legend { display: flex; flex-wrap: wrap; gap: 1rem; margin-top: 1.8rem; font-family: var(--mono); font-size: 0.76rem; color: var(--ink-3); }
+      .legend span { display: inline-flex; align-items: center; gap: 0.4rem; }
+      .dot { width: 0.7rem; height: 0.7rem; border-radius: 3px; }
+      .dot.l1 { background: var(--done); }
+      .dot.l2 { background: var(--copper); }
+      .dot.l3 { background: var(--gold); }
+
+      /* ---------- phase nav ---------- */
+      .phasenav { position: sticky; top: 52px; z-index: 40; display: flex; gap: 0.4rem; overflow-x: auto; padding: 0.7rem 0; margin-bottom: 1rem; background: color-mix(in srgb, var(--bg) 82%, transparent); backdrop-filter: blur(10px); scrollbar-width: thin; }
+      .phasenav a { font-family: var(--mono); font-size: 0.75rem; color: var(--ink-2); text-decoration: none; border: 1px solid var(--line); border-radius: 8px; padding: 0.3rem 0.65rem; white-space: nowrap; transition: all 0.15s ease; display: flex; align-items: center; gap: 0.4rem; }
+      .phasenav a:hover { color: var(--ink); border-color: var(--line-2); }
+      .phasenav a .n { color: var(--copper); }
+      .phasenav a.complete { border-color: var(--done); color: var(--done); }
+      .phasenav a.complete .n { color: var(--done); }
+
+      /* ---------- phase ---------- */
+      .phase { position: relative; padding: 2.2rem 0 1rem; scroll-margin-top: 96px; border-top: 1px solid var(--line); }
+      .phase:first-of-type { border-top: none; }
+      .phase-head { display: grid; grid-template-columns: auto 1fr auto; gap: 1rem 1.2rem; align-items: start; margin-bottom: 1.4rem; }
+      .phase-num { font-family: var(--serif); font-size: clamp(2rem, 5vw, 3rem); font-weight: 500; color: var(--copper); line-height: 1; font-variant-numeric: tabular-nums; }
+      .phase-title { font-family: var(--serif); font-weight: 600; font-size: clamp(1.4rem, 3.5vw, 1.9rem); letter-spacing: -0.01em; }
+      .phase-sub { color: var(--ink-2); font-size: 0.98rem; margin-top: 0.25rem; max-width: 62ch; }
+      .phase-ring { display: flex; flex-direction: column; align-items: flex-end; gap: 0.3rem; font-family: var(--mono); }
+      .phase-ring .frac { font-size: 0.82rem; color: var(--ink-2); }
+      .phase-ring .frac b { color: var(--ink); font-weight: 500; }
+      .phase-ring .mini { width: 80px; height: 5px; background: var(--line); border-radius: 99px; overflow: hidden; }
+      .phase-ring .mini i { display: block; height: 100%; width: 0; background: var(--copper); border-radius: 99px; transition: width 0.45s ease; }
+      .phase-ring.done .mini i { background: var(--done); }
+
+      /* ---------- steps ---------- */
+      .steps { display: flex; flex-direction: column; gap: 0.7rem; }
+      .step { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; transition: border-color 0.2s ease, background 0.2s ease; }
+      .step:hover { border-color: var(--line-2); }
+      .step.done { background: var(--done-bg); border-color: color-mix(in srgb, var(--done) 40%, var(--line)); }
+      .step-head { display: flex; align-items: center; gap: 0.9rem; padding: 0.95rem 1.1rem; }
+      .check { flex-shrink: 0; width: 1.5rem; height: 1.5rem; border-radius: 7px; border: 1.5px solid var(--line-2); background: transparent; cursor: pointer; display: grid; place-items: center; transition: all 0.15s ease; color: transparent; }
+      .check:hover { border-color: var(--done); }
+      .check:focus-visible { outline: 2px solid var(--copper); outline-offset: 2px; }
+      .step.done .check { background: var(--done); border-color: var(--done); color: #14100e; }
+      .check svg { width: 0.95rem; height: 0.95rem; }
+      .step-toggle { flex: 1; display: flex; align-items: center; gap: 0.8rem; background: none; border: none; color: inherit; font: inherit; text-align: left; cursor: pointer; padding: 0; min-width: 0; }
+      .step-code { font-family: var(--mono); font-size: 0.78rem; color: var(--copper); flex-shrink: 0; font-variant-numeric: tabular-nums; }
+      .step.done .step-code { color: var(--done); }
+      .step-name { font-weight: 500; font-size: 1.02rem; flex: 1; min-width: 0; }
+      .step.done .step-name { text-decoration: line-through; text-decoration-color: color-mix(in srgb, var(--done) 60%, transparent); color: var(--ink-2); }
+      .level { font-family: var(--mono); font-size: 0.68rem; padding: 0.15rem 0.5rem; border-radius: 99px; flex-shrink: 0; border: 1px solid; }
+      .level.l1 { color: var(--done); border-color: color-mix(in srgb, var(--done) 45%, transparent); }
+      .level.l2 { color: var(--copper); border-color: color-mix(in srgb, var(--copper) 45%, transparent); }
+      .level.l3 { color: var(--gold); border-color: color-mix(in srgb, var(--gold) 45%, transparent); }
+      .chevron { flex-shrink: 0; color: var(--ink-3); transition: transform 0.25s ease; }
+      .step[aria-expanded="true"] .chevron { transform: rotate(90deg); color: var(--copper); }
+
+      .step-body { display: grid; grid-template-rows: 0fr; transition: grid-template-rows 0.3s ease; }
+      .step-body > div { overflow: hidden; }
+      .step[aria-expanded="true"] .step-body { grid-template-rows: 1fr; }
+      .body-inner { padding: 0 1.1rem 1.25rem 3.4rem; }
+      @media (max-width: 560px) { .body-inner { padding-left: 1.1rem; } }
+      .field { margin-top: 1.1rem; }
+      .field:first-child { margin-top: 0.3rem; }
+      .field-label { font-family: var(--mono); font-size: 0.72rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--copper); margin-bottom: 0.4rem; }
+      .field p { color: var(--ink); font-size: 0.96rem; }
+      .field.why p { color: var(--ink-2); }
+      .field ul { list-style: none; display: flex; flex-direction: column; gap: 0.35rem; }
+      .field li { position: relative; padding-left: 1.3rem; color: var(--ink); font-size: 0.94rem; }
+      .field li::before { content: "→"; position: absolute; left: 0; color: var(--copper); font-family: var(--mono); }
+      .links { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+      .links a { display: inline-flex; align-items: center; gap: 0.4rem; font-family: var(--mono); font-size: 0.8rem; color: var(--ink); text-decoration: none; background: var(--panel-2); border: 1px solid var(--line); border-radius: 8px; padding: 0.35rem 0.65rem; transition: all 0.15s ease; }
+      .links a:hover { border-color: var(--copper); color: var(--copper); transform: translateY(-1px); }
+      .links a::after { content: "↗"; color: var(--ink-3); font-size: 0.75rem; }
+      .links a:hover::after { color: var(--copper); }
+
+      /* ---------- outro ---------- */
+      .outro { margin-top: 3rem; padding: 2rem; border: 1px dashed var(--line-2); border-radius: var(--radius); background: var(--panel); }
+      .outro h3 { font-family: var(--serif); font-size: 1.4rem; font-weight: 600; margin-bottom: 0.6rem; }
+      .outro p { color: var(--ink-2); font-size: 0.96rem; max-width: 68ch; }
+      .outro .links { margin-top: 1.1rem; }
+      footer { margin-top: 3rem; padding-top: 1.5rem; border-top: 1px solid var(--line); font-family: var(--mono); font-size: 0.78rem; color: var(--ink-3); display: flex; flex-wrap: wrap; gap: 0.5rem 1rem; justify-content: space-between; }
+      footer a { color: var(--copper); text-decoration: none; }
+      footer a:hover { text-decoration: underline; }
+
+      @media (prefers-reduced-motion: reduce) { * { transition: none !important; scroll-behavior: auto !important; } }
+
+      /* staggered load */
+      .phase { opacity: 0; transform: translateY(12px); animation: rise 0.6s cubic-bezier(0.22, 1, 0.36, 1) forwards; }
+      @keyframes rise { to { opacity: 1; transform: none; } }
+    </style>
+  </head>
+  <body>
+    <div class="topbar">
+      <span class="brand"><b>◆</b> Атлас бэкенда</span>
+      <div class="bar-progress" aria-hidden="true"><i id="topFill"></i></div>
+      <span class="pct" id="topPct">0%</span>
+      <button class="btn" id="expandAll">развернуть всё</button>
+      <button class="btn" id="themeBtn" title="Сменить тему">☾</button>
+      <button class="btn" id="resetBtn" title="Сбросить прогресс">сброс</button>
+    </div>
+
+    <div class="shell">
+      <header class="hero">
+        <span class="eyebrow">от фронтенда к фулстеку</span>
+        <h1>Атлас <em>бэкенда</em></h1>
+        <p class="lede">
+          Пошаговый путь от «умею дёргать API» до «умею держать сервис в проде».
+          Каждый шаг объясняет простым языком, <b>что это</b>, <b>что уметь после</b> и
+          <b>зачем это в общей картине</b> — со ссылками на официальные документации.
+        </p>
+        <div class="hero-meta">
+          <span class="chip"><b id="statSteps">0</b>&nbsp;шагов</span>
+          <span class="chip"><b>10</b>&nbsp;этапов</span>
+          <span class="chip">NestJS · PostgreSQL · Redis</span>
+          <span class="chip">Docker · Nginx · CI/CD</span>
+        </div>
+        <div class="legend">
+          <span><i class="dot l1"></i> Основы</span>
+          <span><i class="dot l2"></i> Средний уровень</span>
+          <span><i class="dot l3"></i> Продвинутый</span>
+          <span style="color: var(--ink-3)">· прогресс сохраняется в браузере</span>
+        </div>
+      </header>
+
+      <nav class="phasenav" id="phasenav" aria-label="Этапы"></nav>
+
+      <main id="roadmap"></main>
+
+      <section class="outro">
+        <h3>Ты дошёл до конца карты — что дальше?</h3>
+        <p>
+          Эта карта — не экзамен, а компас. Планка «понимать, что и как» достигается
+          намного раньше, чем «умею писать всё сам», и это нормальная точка остановки.
+          Лучший способ закрепить — собрать один сквозной проект, который протаскивает
+          через все слои сразу: API на NestJS, база в PostgreSQL, кэш в Redis,
+          упаковка в Docker и выкат через CI/CD.
+        </p>
+        <div class="links">
+          <a href="https://roadmap.sh/backend" target="_blank" rel="noopener noreferrer">roadmap.sh · Backend</a>
+          <a href="https://github.com/donnemartin/system-design-primer" target="_blank" rel="noopener noreferrer">System Design Primer</a>
+          <a href="https://12factor.net/" target="_blank" rel="noopener noreferrer">The Twelve-Factor App</a>
+        </div>
+      </section>
+
+      <footer>
+        <span>Атлас бэкенда · собрано в паре с Claude Code</span>
+        <a href="https://github.com/GrafSoul/claude-artefacts">исходники на GitHub</a>
+      </footer>
+    </div>
+
+    <script>
+      /* ============================================================
+         Данные дорожной карты. Чтобы добавить/поправить шаг —
+         редактируется только этот массив, разметка не трогается.
+         level: 1 = основы, 2 = средний, 3 = продвинутый
+         ============================================================ */
+      const PHASES = [
+        {
+          id: "p0",
+          title: "Как вообще работает веб",
+          sub: "Мысленная модель, без которой всё остальное висит в воздухе. Здесь ничего не программируем — раскладываем по полкам то, что ты и так видел со стороны браузера.",
+          steps: [
+            {
+              code: "0.1", level: 1, name: "Клиент и сервер: кто кому и что",
+              what: "Браузер (клиент) отправляет запрос, программа на другом компьютере (сервер) его обрабатывает и возвращает ответ. Бэкенд — это и есть та программа на сервере.",
+              know: ["Объяснить своими словами, что делает клиент, а что сервер", "Понимать, что «сервер» — это не железо, а запущенная программа", "Видеть, где заканчивается фронтенд и начинается бэкенд"],
+              why: "Ты каждый день пишешь клиентскую половину этого диалога. Дальше мы строим вторую половину — ту, что отвечает на твои запросы.",
+              links: [{ l: "MDN · Как работает веб", u: "https://developer.mozilla.org/ru/docs/Learn/Getting_started_with_the_web/How_the_Web_works" }, { l: "MDN · Client-Server overview", u: "https://developer.mozilla.org/en-US/docs/Learn/Server-side/First_steps/Client-Server_overview" }],
+            },
+            {
+              code: "0.2", level: 1, name: "HTTP: язык браузера и сервера",
+              what: "Протокол, по которому клиент и сервер обмениваются сообщениями. У запроса есть метод (GET, POST…), путь, заголовки и тело; у ответа — код состояния (200, 404, 500…), заголовки и тело.",
+              know: ["Различать методы GET/POST/PUT/PATCH/DELETE и когда какой", "Читать коды ответов по группам: 2xx успех, 3xx редирект, 4xx ошибка клиента, 5xx ошибка сервера", "Понимать, что такое заголовки и тело запроса"],
+              why: "Это словарь всего бэкенда. Каждый эндпоинт, который ты напишешь, — это правило «на такой-то запрос отвечай так-то».",
+              links: [{ l: "MDN · Обзор HTTP", u: "https://developer.mozilla.org/ru/docs/Web/HTTP/Overview" }, { l: "MDN · Методы HTTP", u: "https://developer.mozilla.org/ru/docs/Web/HTTP/Methods" }, { l: "MDN · Коды состояния", u: "https://developer.mozilla.org/ru/docs/Web/HTTP/Status" }],
+            },
+            {
+              code: "0.3", level: 1, name: "Что такое «сервер» на самом деле",
+              what: "Это программа, которая постоянно работает и «слушает» определённый порт (например, 3000). Когда на этот порт приходит запрос — программа просыпается, обрабатывает его и отвечает.",
+              know: ["Понимать, что такое порт и IP-адрес", "Объяснить, что значит «сервер слушает порт»", "Различать localhost (свой компьютер) и удалённый сервер"],
+              why: "Демистифицирует слово «сервер». Твой первый NestJS-проект будет ровно такой программой, слушающей порт на твоём же ноутбуке.",
+              links: [{ l: "MDN · Введение в серверную часть", u: "https://developer.mozilla.org/en-US/docs/Learn/Server-side/First_steps/Introduction" }, { l: "Cloudflare · Что такое порт", u: "https://www.cloudflare.com/learning/network-layer/what-is-a-computer-port/" }],
+            },
+            {
+              code: "0.4", level: 1, name: "Путь запроса: от браузера до базы и обратно",
+              what: "Запрос проходит цепочку: браузер → DNS (находит адрес) → Nginx (входная дверь) → Node/Nest (твоя программа) → база данных/Redis → и весь ответ едет обратно. Каждое звено этой карты — отдельный этап ниже.",
+              know: ["Нарисовать эту цепочку по памяти", "Понимать, зачем нужно каждое звено", "Знать, что ошибка «502 Bad Gateway» — это когда Nginx не достучался до твоей программы"],
+              why: "Это скелет всего атласа. Когда дальше пойдут Nginx, Postgres, Redis — ты будешь понимать, в каком месте цепочки они стоят.",
+              links: [{ l: "MDN · Что происходит при заходе на сайт", u: "https://developer.mozilla.org/en-US/docs/Web/Performance/How_browsers_work" }, { l: "Cloudflare · Что такое DNS", u: "https://www.cloudflare.com/learning/dns/what-is-dns/" }],
+            },
+            {
+              code: "0.5", level: 1, name: "Node.js: как JavaScript живёт вне браузера",
+              what: "Node.js — это среда, которая запускает JavaScript не в браузере, а на сервере. Её суперсила — событийный цикл (event loop): один поток, который не простаивает в ожидании базы или сети, а параллельно обслуживает много запросов.",
+              know: ["Понимать, что Node — это runtime, а не язык", "На уровне идеи объяснить event loop и «неблокирующий ввод-вывод»", "Запустить простой скрипт через `node file.js`"],
+              why: "NestJS работает поверх Node. Понимание event loop объясняет, почему на бэке так важен async/await и почему нельзя блокировать поток тяжёлым циклом.",
+              links: [{ l: "Node.js · Официальная документация", u: "https://nodejs.org/en/learn/getting-started/introduction-to-nodejs" }, { l: "Node.js · Event Loop", u: "https://nodejs.org/en/learn/asynchronous-work/event-loop-timers-and-nexttick" }],
+            },
+            {
+              code: "0.6", level: 1, name: "Терминал и переменные окружения",
+              what: "Бэкенд живёт в терминале: запуск, логи, установка пакетов — всё оттуда. Переменные окружения (env) — это способ хранить настройки (адрес базы, секретные ключи) вне кода.",
+              know: ["Свободно двигаться по терминалу: cd, ls, запуск команд", "Понимать, что такое переменная окружения и зачем `.env`-файл", "Знать, почему секреты не хранят в коде и в git"],
+              why: "Без этого не запустить ни один шаг дальше. А env-переменные — основа безопасной конфигурации, к которой мы вернёмся в теме секретов.",
+              links: [{ l: "MDN · Командная строка", u: "https://developer.mozilla.org/en-US/docs/Learn/Tools_and_testing/Understanding_client-side_tools/Command_line" }, { l: "12factor · Config", u: "https://12factor.net/config" }],
+            },
+          ],
+        },
+        {
+          id: "p1",
+          title: "TypeScript на сервере",
+          sub: "Ты уже знаешь TypeScript — здесь только то, что отличает серверный проект от фронтового, плюс декораторы: без них не понять NestJS.",
+          steps: [
+            {
+              code: "1.1", level: 1, name: "Node + TypeScript: настройка проекта",
+              what: "Как собрать серверный TS-проект: package.json, tsconfig.json, система модулей (import/export), запуск через ts-node или сборка в JS. Отличается от фронта отсутствием бандлера и браузерных API.",
+              know: ["Инициализировать проект и настроить tsconfig под Node", "Понимать разницу между ESM и CommonJS модулями", "Запустить TS-код на Node"],
+              why: "Фундамент, на котором стоит NestJS-проект. Понимая его, ты не будешь бояться конфигов, которые Nest генерирует за тебя.",
+              links: [{ l: "TypeScript · Handbook", u: "https://www.typescriptlang.org/docs/handbook/intro.html" }, { l: "Node.js · TypeScript", u: "https://nodejs.org/en/learn/typescript/introduction" }],
+            },
+            {
+              code: "1.2", level: 2, name: "Декораторы и метаданные",
+              what: "Декоратор — это функция со значком @, которую вешают на класс, метод или свойство, чтобы добавить поведение. Например, @Controller() превращает класс в обработчик маршрутов. NestJS построен на них целиком.",
+              know: ["Понимать, что @Decorator — это обёртка, добавляющая поведение", "Читать код с декораторами без паники", "Знать, что за ними стоит reflect-metadata"],
+              why: "Весь синтаксис NestJS — это декораторы. Пять минут на их понимание экономят недели ощущения «магии».",
+              links: [{ l: "TypeScript · Декораторы", u: "https://www.typescriptlang.org/docs/handbook/decorators.html" }, { l: "NestJS · Custom Decorators", u: "https://docs.nestjs.com/custom-decorators" }],
+            },
+            {
+              code: "1.3", level: 1, name: "Пакеты и менеджеры: npm / pnpm",
+              what: "package.json описывает зависимости и скрипты проекта. Менеджер (npm, pnpm, yarn) их устанавливает. Lock-файл фиксирует точные версии, чтобы у всех была одинаковая сборка.",
+              know: ["Понимать роль package.json, lock-файла и node_modules", "Различать dependencies и devDependencies", "Запускать скрипты через npm run"],
+              why: "Это то же, что на фронте, но полезно освежить: на бэке аккуратность с зависимостями напрямую влияет на безопасность и воспроизводимость деплоя.",
+              links: [{ l: "npm · Документация", u: "https://docs.npmjs.com/" }, { l: "pnpm · Документация", u: "https://pnpm.io/motivation" }],
+            },
+          ],
+        },
+        {
+          id: "p2",
+          title: "NestJS: скелет бэкенда",
+          sub: "Основной инструмент. NestJS даёт готовую архитектуру — модули, внедрение зависимостей, конвейер обработки запроса. Концепции рифмуются с Angular.",
+          steps: [
+            {
+              code: "2.1", level: 1, name: "Философия Nest, структура проекта, CLI",
+              what: "NestJS — это фреймворк с чётким мнением о том, как раскладывать код: модули, контроллеры, сервисы. CLI (`nest new`, `nest generate`) создаёт заготовки за тебя.",
+              know: ["Создать проект через Nest CLI и запустить его", "Понимать назначение папок src, main.ts, app.module.ts", "Сгенерировать модуль/контроллер/сервис командой"],
+              why: "Nest навязывает хорошую архитектуру с первого дня — это ровно то, что нужно, когда впервые строишь бэкенд и ещё не выработал свои привычки.",
+              links: [{ l: "NestJS · First steps", u: "https://docs.nestjs.com/first-steps" }, { l: "NestJS · CLI", u: "https://docs.nestjs.com/cli/overview" }],
+            },
+            {
+              code: "2.2", level: 1, name: "Модули, контроллеры, провайдеры",
+              what: "Три кирпича Nest. Модуль — коробка, группирующая связанный код. Контроллер — принимает HTTP-запросы и решает, что с ними делать. Провайдер (сервис) — содержит бизнес-логику.",
+              know: ["Разложить фичу на модуль + контроллер + сервис", "Понимать, что контроллер тонкий, а логика — в сервисе", "Связать их между собой"],
+              why: "Это основной ритм написания бэкенда на Nest: пришёл запрос → контроллер → сервис → ответ. Всё остальное — детали вокруг этой оси.",
+              links: [{ l: "NestJS · Controllers", u: "https://docs.nestjs.com/controllers" }, { l: "NestJS · Providers", u: "https://docs.nestjs.com/providers" }, { l: "NestJS · Modules", u: "https://docs.nestjs.com/modules" }],
+            },
+            {
+              code: "2.3", level: 2, name: "Внедрение зависимостей (DI)",
+              what: "Вместо того чтобы создавать зависимости вручную (new Service()), ты просто объявляешь их в конструкторе, а Nest сам подставляет нужный объект. Это делает код развязанным и легко тестируемым.",
+              know: ["Объяснить, что делает DI-контейнер и зачем", "Внедрить сервис в контроллер через конструктор", "Понимать, что такое provider scope"],
+              why: "DI — сердце Nest и вообще большой бэкенд-архитектуры. Именно он позже позволит подменять реальную базу на заглушку в тестах.",
+              links: [{ l: "NestJS · Fundamentals: DI", u: "https://docs.nestjs.com/fundamentals/custom-providers" }, { l: "NestJS · Providers", u: "https://docs.nestjs.com/providers" }],
+            },
+            {
+              code: "2.4", level: 1, name: "Маршруты и обработка запроса",
+              what: "Как достать из запроса данные: параметры пути (@Param), строку запроса (@Query), тело (@Body). Как вернуть ответ и задать код состояния.",
+              know: ["Описать маршрут с параметрами: GET /users/:id", "Достать query, params и body в контроллере", "Вернуть правильный статус-код"],
+              why: "Это буквально то, ради чего пишется бэкенд, — принять запрос и осмысленно ответить. Здесь фронтовый опыт с fetch переворачивается на серверную сторону.",
+              links: [{ l: "NestJS · Routing", u: "https://docs.nestjs.com/controllers#routing" }, { l: "NestJS · Request payloads", u: "https://docs.nestjs.com/controllers#request-payloads" }],
+            },
+            {
+              code: "2.5", level: 2, name: "DTO и валидация входных данных",
+              what: "DTO (Data Transfer Object) — класс, описывающий форму входных данных. Вместе с ValidationPipe и class-validator он автоматически проверяет: пришло ли нужное поле, правильного ли оно типа, не пустое ли.",
+              know: ["Описать DTO с декораторами валидации (@IsEmail, @IsString…)", "Включить глобальный ValidationPipe", "Понимать, почему нельзя доверять данным от клиента"],
+              why: "Первое правило безопасности бэкенда: всё, что пришло снаружи, — потенциально враждебно. Валидация на границе отсекает мусор и атаки до того, как они дойдут до логики.",
+              links: [{ l: "NestJS · Validation", u: "https://docs.nestjs.com/techniques/validation" }, { l: "class-validator", u: "https://github.com/typestack/class-validator" }],
+            },
+            {
+              code: "2.6", level: 2, name: "Конвейер запроса: Pipes, Guards, Interceptors, Filters",
+              what: "Nest пропускает каждый запрос через конвейер. Guard решает «пустить или нет» (авторизация). Pipe преобразует/проверяет данные. Interceptor оборачивает вызов (логи, кэш, трансформация ответа). Exception Filter ловит ошибки.",
+              know: ["Понимать порядок: middleware → guard → pipe → handler → interceptor → filter", "Написать простой guard и interceptor", "Знать, какой инструмент под какую задачу"],
+              why: "Это то, что превращает набор эндпоинтов в настоящее приложение: единая авторизация, логирование и обработка ошибок без копипасты в каждом методе.",
+              links: [{ l: "NestJS · Guards", u: "https://docs.nestjs.com/guards" }, { l: "NestJS · Interceptors", u: "https://docs.nestjs.com/interceptors" }, { l: "NestJS · Pipes", u: "https://docs.nestjs.com/pipes" }],
+            },
+            {
+              code: "2.7", level: 1, name: "Конфигурация и переменные окружения",
+              what: "@nestjs/config подтягивает настройки из .env и делает их доступными в приложении типобезопасно. Так адрес базы и ключи не хардкодятся, а меняются между dev/prod без правки кода.",
+              know: ["Настроить ConfigModule и читать переменные", "Разделять конфиг для разработки и продакшена", "Валидировать конфиг при старте приложения"],
+              why: "Приложение, которое одинаково работает и локально, и на сервере, отличается только конфигом. Это прямая дорога к принципам 12-factor.",
+              links: [{ l: "NestJS · Configuration", u: "https://docs.nestjs.com/techniques/configuration" }, { l: "12factor · Config", u: "https://12factor.net/config" }],
+            },
+            {
+              code: "2.8", level: 2, name: "Обработка ошибок и исключения",
+              what: "Nest даёт готовые классы исключений (NotFoundException, BadRequestException…) и единый механизм фильтров, который превращает их в аккуратные HTTP-ответы. Клиент получает понятный код и сообщение, а не стек-трейс.",
+              know: ["Бросать осмысленные исключения из сервисов", "Настроить глобальный exception filter", "Понимать, почему в проде нельзя отдавать внутренние детали ошибок"],
+              why: "Как приложение ведёт себя, когда что-то пошло не так, — половина его качества. И заодно важный вопрос безопасности: утечка деталей ошибки помогает атакующему.",
+              links: [{ l: "NestJS · Exception filters", u: "https://docs.nestjs.com/exception-filters" }, { l: "OWASP · Error Handling", u: "https://cheatsheetseries.owasp.org/cheatsheets/Error_Handling_Cheat_Sheet.html" }],
+            },
+          ],
+        },
+        {
+          id: "p3",
+          title: "Данные: базы и хранение",
+          sub: "Главный разрыв для фронтендера. Здесь живут все данные приложения, и здесь же — самая частая причина медленных и падающих сервисов.",
+          steps: [
+            {
+              code: "3.1", level: 1, name: "Реляционные базы и язык SQL",
+              what: "Данные хранятся в таблицах со строками и столбцами, связанными между собой. SQL — язык, которым ты их запрашиваешь: SELECT (достать), INSERT (добавить), UPDATE, DELETE, JOIN (соединить таблицы).",
+              know: ["Писать базовые запросы SELECT с WHERE, ORDER BY, LIMIT", "Соединять таблицы через JOIN", "Понимать, что такое первичный и внешний ключ"],
+              why: "Даже если потом ты используешь ORM, он генерирует SQL под капотом. Не понимая SQL, невозможно отладить медленный запрос — а это самая частая прод-проблема.",
+              links: [{ l: "SQLBolt · Интерактивный курс", u: "https://sqlbolt.com/" }, { l: "PostgreSQL Tutorial", u: "https://www.postgresqltutorial.com/" }],
+            },
+            {
+              code: "3.2", level: 1, name: "PostgreSQL: установка и первые шаги",
+              what: "PostgreSQL — самая уважаемая свободная реляционная база. Ставится локально (проще всего через Docker), управляется из консоли psql или GUI. Богатые типы данных: JSON, массивы, даты, enum.",
+              know: ["Поднять Postgres локально и подключиться к нему", "Создать базу, таблицу, вставить и достать данные", "Ориентироваться в основных типах данных"],
+              why: "Это твоё основное хранилище на весь путь. Postgres — индустриальный стандарт, знание которого ценится само по себе.",
+              links: [{ l: "PostgreSQL · Документация", u: "https://www.postgresql.org/docs/current/tutorial.html" }, { l: "postgres · Docker образ", u: "https://hub.docker.com/_/postgres" }],
+            },
+            {
+              code: "3.3", level: 2, name: "Моделирование данных и связи",
+              what: "Как разложить сущности предметной области по таблицам и связать их: один-к-одному, один-ко-многим, многие-ко-многим. Нормализация — правила, убирающие дублирование данных.",
+              know: ["Спроектировать схему для реальной задачи (например, пользователи и заказы)", "Выбрать тип связи между таблицами", "Понимать базовую нормализацию и когда её осознанно нарушают"],
+              why: "Плохая схема данных отравляет весь проект: запросы становятся сложными, данные — противоречивыми. Хорошая — делает половину логики тривиальной.",
+              links: [{ l: "Prisma · Модель данных и связи", u: "https://www.prisma.io/docs/orm/prisma-schema/data-model/relations" }, { l: "Database normalization (обзор)", u: "https://www.guru99.com/database-normalization.html" }],
+            },
+            {
+              code: "3.4", level: 2, name: "ORM: мост между кодом и базой (Prisma / TypeORM)",
+              what: "ORM позволяет работать с базой через объекты и методы вместо ручного SQL. Prisma — современный, с отличной типобезопасностью и автогенерацией типов. TypeORM — глубже интегрирован в Nest. Начать проще с Prisma.",
+              know: ["Описать схему и сделать запросы через Prisma Client", "Понимать, где ORM помогает, а где мешает (сложные запросы)", "Подключить ORM к NestJS-модулю"],
+              why: "ORM — то, чем ты будешь трогать базу 90% времени. Типобезопасность Prisma особенно приятна фронтендеру: те же гарантии типов, что ты любишь на клиенте.",
+              links: [{ l: "Prisma · Документация", u: "https://www.prisma.io/docs" }, { l: "TypeORM · Документация", u: "https://typeorm.io/" }, { l: "NestJS · Prisma", u: "https://docs.nestjs.com/recipes/prisma" }],
+            },
+            {
+              code: "3.5", level: 2, name: "Миграции: безопасное изменение схемы",
+              what: "Миграция — версионируемый файл, описывающий изменение структуры базы (добавить столбец, таблицу). Позволяет применять и откатывать изменения одинаково на всех окружениях, ничего не сломав.",
+              know: ["Создать и применить миграцию через Prisma Migrate", "Понимать, почему схему не меняют руками на проде", "Держать миграции в git рядом с кодом"],
+              why: "База — единственное место, где ошибка необратима: данные не откатишь как код. Миграции — это техника безопасности для эволюции схемы.",
+              links: [{ l: "Prisma · Migrate", u: "https://www.prisma.io/docs/orm/prisma-migrate/getting-started" }, { l: "TypeORM · Migrations", u: "https://typeorm.io/migrations" }],
+            },
+            {
+              code: "3.6", level: 3, name: "Транзакции и целостность (ACID)",
+              what: "Транзакция — группа операций, которые выполняются «всё или ничего». Если на середине что-то упало — база откатывается в исходное состояние. ACID — набор гарантий, за которые ценят реляционные базы.",
+              know: ["Обернуть несколько операций в транзакцию", "Расшифровать ACID на бытовом примере (перевод денег)", "Понимать, когда транзакция обязательна"],
+              why: "Без транзакций одновременные запросы портят данные тихо и незаметно. Классический пример — списать деньги, но не начислить: транзакция это предотвращает.",
+              links: [{ l: "Prisma · Транзакции", u: "https://www.prisma.io/docs/orm/prisma-client/queries/transactions" }, { l: "PostgreSQL · Транзакции", u: "https://www.postgresql.org/docs/current/tutorial-transactions.html" }],
+            },
+            {
+              code: "3.7", level: 3, name: "Производительность: индексы, N+1, пул соединений",
+              what: "Индекс — как оглавление книги: ускоряет поиск по столбцу в разы. Проблема N+1 — когда вместо одного запроса код делает сотни в цикле. Пул соединений переиспользует подключения к базе вместо создания новых.",
+              know: ["Добавить индекс на часто фильтруемый столбец", "Распознать и починить запрос N+1", "Понимать, зачем нужен connection pool"],
+              why: "Почти всякая «тормозящая» бэкенд-фича упирается в базу. Эти три темы решают большинство реальных проблем производительности.",
+              links: [{ l: "Use The Index, Luke!", u: "https://use-the-index-luke.com/" }, { l: "Prisma · Query optimization", u: "https://www.prisma.io/docs/orm/prisma-client/queries/query-optimization-performance" }],
+            },
+          ],
+        },
+        {
+          id: "p4",
+          title: "Безопасность и доступ",
+          sub: "Кто ты и что тебе можно. Ошибки здесь стоят дороже всех остальных — поэтому темы стоят рано, до того как накопится код, который придётся защищать задним числом.",
+          steps: [
+            {
+              code: "4.1", level: 1, name: "Аутентификация vs авторизация",
+              what: "Аутентификация — «кто ты» (проверка личности, вход). Авторизация — «что тебе можно» (проверка прав на действие). Это два разных этапа, их часто путают.",
+              know: ["Чётко различать эти два понятия", "Понимать, что вход и проверка прав — разные шаги", "Видеть их в цепочке обработки запроса"],
+              why: "Вся защита строится вокруг этих двух вопросов. Путаница между ними — источник большинства дыр в доступе.",
+              links: [{ l: "NestJS · Authentication", u: "https://docs.nestjs.com/security/authentication" }, { l: "Auth0 · AuthN vs AuthZ", u: "https://auth0.com/docs/get-started/identity-fundamentals/authentication-and-authorization" }],
+            },
+            {
+              code: "4.2", level: 2, name: "Пароли: хеширование",
+              what: "Пароли никогда не хранят в открытом виде. Их пропускают через одностороннюю функцию (bcrypt, argon2) — из хеша нельзя восстановить пароль, но можно проверить совпадение при входе.",
+              know: ["Захешировать пароль через bcrypt/argon2 и проверить его", "Объяснить, почему хеш нельзя развернуть обратно", "Знать, что такое соль (salt) и зачем она"],
+              why: "Утечки баз происходят регулярно. Если пароли захешированы правильно — утечка не превращается в катастрофу для пользователей.",
+              links: [{ l: "OWASP · Password Storage", u: "https://cheatsheetseries.owasp.org/cheatsheets/Password_Storage_Cheat_Sheet.html" }, { l: "node · bcrypt", u: "https://github.com/kelektiv/node.bcrypt.js" }],
+            },
+            {
+              code: "4.3", level: 2, name: "Сессии против JWT-токенов",
+              what: "Два способа «помнить» вошедшего пользователя. Сессия хранит состояние на сервере, клиент носит id в cookie. JWT — самодостаточный подписанный токен, состояние на сервере не хранится. У каждого свои плюсы.",
+              know: ["Объяснить разницу и компромиссы между сессиями и JWT", "Понимать устройство JWT (header.payload.signature)", "Знать, где безопасно хранить токен на клиенте"],
+              why: "Это архитектурная развилка, влияющая на масштабирование и безопасность. Как фронтендер ты хранил токены — теперь узнаешь, как их правильно выдают и проверяют.",
+              links: [{ l: "jwt.io · Введение", u: "https://jwt.io/introduction" }, { l: "NestJS · JWT authentication", u: "https://docs.nestjs.com/security/authentication#jwt-token" }],
+            },
+            {
+              code: "4.4", level: 2, name: "Passport и стратегии в Nest",
+              what: "Passport — библиотека аутентификации с готовыми «стратегиями»: локальная (логин/пароль), JWT, OAuth (Google, GitHub). Nest интегрирует её через @nestjs/passport, оборачивая проверку в guard.",
+              know: ["Настроить локальную и JWT-стратегию в Nest", "Защитить маршрут через AuthGuard", "Добавить вход через сторонний провайдер (OAuth)"],
+              why: "Не изобретать аутентификацию вручную — правило безопасности. Passport — проверенный стандарт, а Nest делает его подключение декларативным.",
+              links: [{ l: "NestJS · Passport", u: "https://docs.nestjs.com/recipes/passport" }, { l: "Passport.js", u: "https://www.passportjs.org/" }],
+            },
+            {
+              code: "4.5", level: 2, name: "Guards и роли (RBAC)",
+              what: "RBAC (управление доступом на основе ролей) — модель, где право на действие зависит от роли пользователя (admin, user). В Nest это реализуется через guard, который проверяет роль перед выполнением метода.",
+              know: ["Навесить проверку роли на эндпоинт через guard", "Спроектировать роли и права для приложения", "Проверять и владение ресурсом (это точно твой заказ?)"],
+              why: "Аутентификация пускает в дом, авторизация решает, в какие комнаты. Пропуск проверки прав (IDOR) — уязвимость №1 в рейтинге OWASP.",
+              links: [{ l: "NestJS · Authorization / RBAC", u: "https://docs.nestjs.com/security/authorization" }, { l: "OWASP · Broken Access Control", u: "https://owasp.org/Top10/A01_2021-Broken_Access_Control/" }],
+            },
+            {
+              code: "4.6", level: 2, name: "Базовая веб-безопасность: OWASP, CORS, заголовки, rate limit",
+              what: "Набор обязательной гигиены: OWASP Top 10 (карта главных угроз), CORS (кто с каких доменов может звать твой API), защитные заголовки (Helmet), ограничение частоты запросов (rate limiting) против перебора и DoS.",
+              know: ["Настроить CORS и подключить Helmet", "Включить rate limiting на чувствительные эндпоинты", "Пройтись по OWASP Top 10 применительно к своему API"],
+              why: "Это минимальный уровень, ниже которого выпускать сервис в интернет нельзя. Большинство атак — автоматические и бьют именно по этим базовым брешам.",
+              links: [{ l: "OWASP · Top 10", u: "https://owasp.org/www-project-top-ten/" }, { l: "NestJS · Helmet / CORS / Rate limit", u: "https://docs.nestjs.com/security/helmet" }],
+            },
+            {
+              code: "4.7", level: 2, name: "Секреты и переменные окружения по-взрослому",
+              what: "Ключи, пароли базы, токены — это секреты. Они живут в переменных окружения и в специальных хранилищах (secret manager), но никогда в коде и никогда в git. Утёкший в репозиторий ключ считается скомпрометированным навсегда.",
+              know: ["Держать все секреты в env, а .env — вне git", "Понимать, что делать при утечке ключа (ротация)", "Знать про secret managers у облачных платформ"],
+              why: "Секрет в публичном репозитории находят боты за минуты. Правильная работа с секретами — дешёвая привычка, предотвращающая дорогие инциденты.",
+              links: [{ l: "OWASP · Secrets Management", u: "https://cheatsheetseries.owasp.org/cheatsheets/Secrets_Management_Cheat_Sheet.html" }, { l: "12factor · Config", u: "https://12factor.net/config" }],
+            },
+          ],
+        },
+        {
+          id: "p5",
+          title: "Скорость и реальное время",
+          sub: "Когда базового API мало: кэш ускоряет, очереди разгружают, вебсокеты дают живое обновление. Здесь бэкенд начинает чувствоваться как система, а не набор эндпоинтов.",
+          steps: [
+            {
+              code: "5.1", level: 2, name: "Redis: сверхбыстрое хранилище в памяти",
+              what: "Redis хранит данные в оперативной памяти, поэтому отвечает за доли миллисекунды. Используется как кэш, хранилище сессий, счётчик, брокер очередей. Прост как словарь ключ-значение, но очень мощный.",
+              know: ["Поднять Redis (через Docker) и подключиться", "Понимать модель ключ-значение и TTL (время жизни)", "Знать основные сценарии применения Redis"],
+              why: "Redis — универсальный ускоритель бэкенда. Он появится сразу в трёх следующих темах: кэш, сессии, очереди.",
+              links: [{ l: "Redis · Документация", u: "https://redis.io/docs/latest/" }, { l: "redis · Docker образ", u: "https://hub.docker.com/_/redis" }],
+            },
+            {
+              code: "5.2", level: 2, name: "Стратегии кэширования",
+              what: "Кэш хранит результат дорогой операции, чтобы не повторять её. Ключевые вопросы: что кэшировать, на сколько (TTL) и как инвалидировать (сбрасывать устаревшее). Популярный паттерн — cache-aside.",
+              know: ["Закэшировать ответ эндпоинта через Nest CacheModule + Redis", "Выбрать разумный TTL и стратегию инвалидации", "Понимать риск отдать устаревшие данные"],
+              why: "«Инвалидация кэша — одна из двух сложнейших вещей в программировании» — не шутка. Кэш даёт огромный прирост скорости, но требует аккуратности с актуальностью.",
+              links: [{ l: "NestJS · Caching", u: "https://docs.nestjs.com/techniques/caching" }, { l: "AWS · Caching best practices", u: "https://aws.amazon.com/caching/best-practices/" }],
+            },
+            {
+              code: "5.3", level: 2, name: "Очереди и фоновые задачи (BullMQ)",
+              what: "Долгие операции (отправка письма, генерация отчёта) не держат в HTTP-запросе — их кладут в очередь, а отдельный процесс (worker) выполняет позже. BullMQ реализует очереди поверх Redis.",
+              know: ["Поставить задачу в очередь и обработать воркером", "Понимать, зачем разделять быстрый ответ и долгую работу", "Настроить повторы (retry) при сбое задачи"],
+              why: "Пользователь не должен ждать 10 секунд, пока уйдёт письмо. Очереди делают API отзывчивым и устойчивым к всплескам нагрузки.",
+              links: [{ l: "NestJS · Queues", u: "https://docs.nestjs.com/techniques/queues" }, { l: "BullMQ · Документация", u: "https://docs.bullmq.io/" }],
+            },
+            {
+              code: "5.4", level: 3, name: "WebSocket и real-time (Nest Gateways)",
+              what: "HTTP — «запрос-ответ», а WebSocket держит постоянное двустороннее соединение, где сервер сам шлёт данные клиенту. Nest реализует это через Gateways. Основа чатов, живых уведомлений, онлайн-статусов.",
+              know: ["Поднять WebSocket-шлюз в Nest", "Отправлять события клиенту в реальном времени", "Понимать разницу между HTTP и WebSocket"],
+              why: "Всё «живое» в интерфейсе (уведомления, совместное редактирование) требует, чтобы сервер умел толкать данные сам, а не ждать запроса. Как фронтендеру тебе это особенно близко.",
+              links: [{ l: "NestJS · WebSockets / Gateways", u: "https://docs.nestjs.com/websockets/gateways" }, { l: "MDN · WebSocket API", u: "https://developer.mozilla.org/ru/docs/Web/API/WebSockets_API" }],
+            },
+            {
+              code: "5.5", level: 2, name: "Загрузка и хранение файлов",
+              what: "Файлы (аватары, документы) не хранят в базе — их кладут в объектное хранилище (S3 или S3-совместимое: MinIO, Cloudflare R2), а в базе держат только ссылку. Nest принимает загрузку через multipart.",
+              know: ["Принять загрузку файла в Nest и проверить его", "Сохранить файл в объектное хранилище и отдать ссылку", "Ограничить тип и размер загружаемого"],
+              why: "Файлы — отдельный класс данных со своими правилами. Неограниченная загрузка — и дыра в безопасности, и способ забить диск сервера.",
+              links: [{ l: "NestJS · File upload", u: "https://docs.nestjs.com/techniques/file-upload" }, { l: "MinIO · S3-совместимое хранилище", u: "https://min.io/docs/minio/linux/index.html" }],
+            },
+          ],
+        },
+        {
+          id: "p6",
+          title: "Качество: тесты и наблюдаемость",
+          sub: "То, что отличает учебный проект от прод-сервиса: он проверен тестами, а когда что-то ломается — ты это видишь и понимаешь, что произошло.",
+          steps: [
+            {
+              code: "6.1", level: 2, name: "Юнит-тесты (Jest)",
+              what: "Юнит-тест проверяет одну функцию или сервис в изоляции, подменяя зависимости заглушками (mock). Nest поставляется с Jest и удобным тестовым модулем, где DI помогает подменять реальную базу на фейковую.",
+              know: ["Написать юнит-тест сервиса с подменой зависимостей", "Понимать структуру теста: подготовка → действие → проверка", "Мокать только границы (база, сеть), не саму логику"],
+              why: "Тесты — это страховка, позволяющая менять код без страха. И вот где окупается DI из этапа 2: подменить базу на заглушку становится тривиально.",
+              links: [{ l: "NestJS · Testing", u: "https://docs.nestjs.com/fundamentals/testing" }, { l: "Jest · Документация", u: "https://jestjs.io/docs/getting-started" }],
+            },
+            {
+              code: "6.2", level: 2, name: "E2E-тесты API (supertest)",
+              what: "End-to-end тест поднимает приложение целиком и шлёт ему настоящие HTTP-запросы, проверяя ответ. supertest делает это удобно. Так проверяется весь путь: маршрут, guard, валидация, сервис, ответ.",
+              know: ["Написать e2e-тест, дёргающий реальный эндпоинт", "Проверить и успешные, и ошибочные сценарии (401, 422)", "Понимать разницу между unit и e2e и когда какой уместен"],
+              why: "Юнит-тесты проверяют детали, e2e — что всё вместе действительно работает. Для API e2e часто дают лучшее соотношение уверенности к усилиям.",
+              links: [{ l: "NestJS · E2E testing", u: "https://docs.nestjs.com/fundamentals/testing#end-to-end-testing" }, { l: "supertest", u: "https://github.com/ladjs/supertest" }],
+            },
+            {
+              code: "6.3", level: 2, name: "Логирование по-взрослому",
+              what: "console.log в проде не годится. Структурные логи (в формате JSON, с уровнями и контекстом) можно искать и фильтровать. Pino — быстрый логгер, nestjs-pino интегрирует его в Nest.",
+              know: ["Подключить структурный логгер вместо console.log", "Логировать с уровнями (info, warn, error) и контекстом", "Никогда не логировать пароли, токены, полные номера карт"],
+              why: "Когда сервис падает в 3 ночи, логи — единственный свидетель. Хорошие логи превращают «непонятно почему упало» в «вот точная причина».",
+              links: [{ l: "NestJS · Logger", u: "https://docs.nestjs.com/techniques/logger" }, { l: "Pino", u: "https://getpino.io/" }],
+            },
+            {
+              code: "6.4", level: 3, name: "Метрики, health-check, отслеживание ошибок",
+              what: "Health-check — эндпоинт, по которому инфраструктура понимает «жив ли сервис». Метрики показывают нагрузку и время ответа. Sentry автоматически ловит ошибки в проде с контекстом и шлёт уведомление.",
+              know: ["Сделать health-check эндпоинт (@nestjs/terminus)", "Подключить Sentry для отлова прод-ошибок", "Понимать идею «наблюдаемости» (observability)"],
+              why: "Нельзя чинить то, чего не видишь. Наблюдаемость превращает прод из чёрного ящика в приборную панель — ты узнаёшь о проблеме раньше пользователя.",
+              links: [{ l: "NestJS · Health checks", u: "https://docs.nestjs.com/recipes/terminus" }, { l: "Sentry · Node/Nest", u: "https://docs.sentry.io/platforms/javascript/guides/nestjs/" }],
+            },
+            {
+              code: "6.5", level: 1, name: "Документация API (Swagger / OpenAPI)",
+              what: "OpenAPI (Swagger) — стандарт описания API. Nest умеет генерировать интерактивную документацию прямо из твоих DTO и декораторов: список эндпоинтов, форматы, возможность позвать их из браузера.",
+              know: ["Подключить @nestjs/swagger и получить авто-документацию", "Аннотировать эндпоинты для точного описания", "Понимать ценность контракта API для фронтенда"],
+              why: "Документация, которая генерируется из кода, не устаревает. Как фронтендер ты оценишь: это тот самый контракт, по которому клиент точно знает, чего ждать от сервера.",
+              links: [{ l: "NestJS · OpenAPI (Swagger)", u: "https://docs.nestjs.com/openapi/introduction" }, { l: "OpenAPI Specification", u: "https://swagger.io/specification/" }],
+            },
+          ],
+        },
+        {
+          id: "p7",
+          title: "Инфраструктура",
+          sub: "Здесь код превращается в работающий на настоящем сервере сервис. Docker упаковывает, Nginx встречает трафик, Linux всё это держит.",
+          steps: [
+            {
+              code: "7.1", level: 2, name: "Docker: контейнеры и образы",
+              what: "Docker упаковывает приложение вместе со всем окружением в контейнер — он одинаково запускается где угодно. Образ (image) — шаблон, контейнер — запущенный экземпляр. Dockerfile описывает, как собрать образ.",
+              know: ["Написать Dockerfile для NestJS-приложения", "Собрать образ и запустить контейнер", "Понимать, чем контейнер отличается от виртуальной машины"],
+              why: "Docker убивает вечное «у меня работает, а на сервере нет». Это стандартная единица доставки в современном бэкенде — с него начинается любой деплой.",
+              links: [{ l: "Docker · Get started", u: "https://docs.docker.com/get-started/" }, { l: "NestJS в Docker (гайд)", u: "https://www.tomray.dev/nestjs-docker-production" }],
+            },
+            {
+              code: "7.2", level: 2, name: "docker-compose: собираем весь стек",
+              what: "Compose описывает несколько контейнеров в одном файле и запускает их вместе одной командой: приложение + PostgreSQL + Redis. Идеально для локальной разработки и простого продакшена.",
+              know: ["Описать app + Postgres + Redis в docker-compose.yml", "Поднять весь стек одной командой", "Связать контейнеры через сеть и переменные"],
+              why: "Это момент, когда все предыдущие этапы собираются в единый организм. Один файл — и у тебя воспроизводимое окружение целиком, у любого члена команды одинаковое.",
+              links: [{ l: "Docker Compose · Документация", u: "https://docs.docker.com/compose/" }, { l: "Compose · Getting started", u: "https://docs.docker.com/compose/gettingstarted/" }],
+            },
+            {
+              code: "7.3", level: 2, name: "Linux-сервер и SSH: основы",
+              what: "Прод обычно живёт на Linux-сервере (VPS). SSH — защищённый способ подключиться к нему из терминала. Нужен минимум: навигация, права доступа, установка софта, работа с процессами и логами.",
+              know: ["Подключиться к серверу по SSH с ключом", "Ориентироваться в файловой системе Linux и правах", "Установить Docker на сервер и запустить контейнер"],
+              why: "Даже с управляемыми платформами рано или поздно нужен доступ к «голой» машине. Базовый Linux — то, что превращает облако из магии в понятный инструмент.",
+              links: [{ l: "SSH · Основы (DigitalOcean)", u: "https://www.digitalocean.com/community/tutorials/ssh-essentials-working-with-ssh-servers-clients-and-keys" }, { l: "Linux · Начальный набор команд", u: "https://ubuntu.com/tutorials/command-line-for-beginners" }],
+            },
+            {
+              code: "7.4", level: 3, name: "Nginx: обратный прокси и HTTPS",
+              what: "Nginx стоит перед твоим Node-приложением как входная дверь: принимает трафик из интернета, направляет (proxy) его на нужный процесс, раздаёт статику, распределяет нагрузку и терминирует HTTPS/TLS-сертификаты.",
+              know: ["Настроить Nginx как reverse-proxy на Node-приложение", "Подключить бесплатный HTTPS через Let's Encrypt", "Понимать, откуда берётся ошибка 502 Bad Gateway"],
+              why: "Замыкает карту запроса из этапа 0.4: теперь ты понимаешь каждое звено «браузер → Nginx → Node → база». HTTPS сегодня обязателен для любого публичного сервиса.",
+              links: [{ l: "Nginx · Beginner's Guide", u: "https://nginx.org/en/docs/beginners_guide.html" }, { l: "Certbot · Let's Encrypt", u: "https://certbot.eff.org/" }],
+            },
+            {
+              code: "7.5", level: 2, name: "Управление процессом: держим сервис живым",
+              what: "Node-процесс должен переживать перезапуски сервера и падения. В контейнерном мире это делает Docker (restart policy) и оркестратор; на «голой» машине — PM2 или systemd, которые перезапускают упавший процесс автоматически.",
+              know: ["Запустить приложение так, чтобы оно поднималось после перезагрузки", "Понимать роль restart-политик в Docker", "Знать про PM2/systemd для не-контейнерного запуска"],
+              why: "Сервис, который не встаёт сам после сбоя, — это ночные звонки и потерянные пользователи. Автоперезапуск — базовая надёжность.",
+              links: [{ l: "PM2 · Quick start", u: "https://pm2.keymetrics.io/docs/usage/quick-start/" }, { l: "Docker · Restart policies", u: "https://docs.docker.com/engine/containers/start-containers-automatically/" }],
+            },
+          ],
+        },
+        {
+          id: "p8",
+          title: "Выкат и CI/CD",
+          sub: "Автоматизация пути от «закоммитил» до «работает в проде». Цель — деплой, который делается одной кнопкой (или вообще сам) и который не страшно повторять по десять раз в день.",
+          steps: [
+            {
+              code: "8.1", level: 1, name: "Git-поток для команды",
+              what: "Как командой работать с git без хаоса: ветки, pull request, ревью, слияние. Осмысленные коммиты, защита основной ветки, откат неудачных изменений.",
+              know: ["Вести работу через ветки и pull request", "Писать понятные коммиты (Conventional Commits)", "Откатывать и находить сломавший коммит (git bisect)"],
+              why: "Git ты уже знаешь как фронтендер — здесь акцент на командной дисциплине, от которой напрямую зависит стабильность деплоя.",
+              links: [{ l: "GitHub Flow", u: "https://docs.github.com/en/get-started/using-github/github-flow" }, { l: "Conventional Commits", u: "https://www.conventionalcommits.org/ru/v1.0.0/" }],
+            },
+            {
+              code: "8.2", level: 2, name: "CI/CD: что это и зачем",
+              what: "CI (непрерывная интеграция) — на каждый push автоматически собирается и тестируется код. CD (непрерывная доставка/деплой) — прошедший проверки код автоматически едет на сервер. Вместе — конвейер от коммита до прода.",
+              know: ["Объяснить, что происходит на каждом шаге пайплайна", "Понимать, зачем автоматизировать сборку/тесты/деплой", "Видеть, как CI ловит ошибки до пользователя"],
+              why: "Ручной деплой — источник ошибок и стресса. CI/CD делает выкат рутинной, повторяемой, не страшной операцией — это меняет саму скорость разработки.",
+              links: [{ l: "GitHub · О непрерывной интеграции", u: "https://docs.github.com/en/actions/concepts/overview/continuous-integration" }, { l: "GitLab · CI/CD концепции", u: "https://docs.gitlab.com/ee/ci/" }],
+            },
+            {
+              code: "8.3", level: 2, name: "GitHub Actions: собери — протестируй — задеплой",
+              what: "GitHub Actions запускает твой пайплайн прямо в репозитории по событию (push, PR). Workflow описывается в YAML: установить зависимости, прогнать тесты, собрать Docker-образ, задеплоить.",
+              know: ["Написать workflow, гоняющий тесты на каждый push", "Собрать и опубликовать Docker-образ из Actions", "Хранить секреты деплоя в GitHub Secrets"],
+              why: "Самый доступный вход в CI/CD: живёт там же, где код, бесплатен для старта. Один настроенный workflow — и рутина сборки исчезает.",
+              links: [{ l: "GitHub Actions · Документация", u: "https://docs.github.com/en/actions" }, { l: "Actions · Node.js", u: "https://docs.github.com/en/actions/automating-builds-and-tests/building-and-testing-nodejs" }],
+            },
+            {
+              code: "8.4", level: 3, name: "Стратегии деплоя: zero-downtime и откат",
+              what: "Как выкатывать новую версию без простоя: поднять новую рядом со старой и переключить трафик (blue-green), либо катить постепенно (rolling). И всегда иметь быстрый откат на предыдущую версию, если что-то пошло не так.",
+              know: ["Объяснить идею blue-green и rolling деплоя", "Всегда иметь план отката", "Понимать роль health-check в безопасном переключении"],
+              why: "Пользователи не должны видеть «сайт на обслуживании». Zero-downtime и мгновенный откат — то, что делает частые релизы безопасными.",
+              links: [{ l: "Deployment strategies (обзор)", u: "https://docs.aws.amazon.com/whitepapers/latest/overview-deployment-options/deployment-strategies.html" }, { l: "Martin Fowler · BlueGreenDeployment", u: "https://martinfowler.com/bliki/BlueGreenDeployment.html" }],
+            },
+            {
+              code: "8.5", level: 1, name: "Где хостить: VPS против управляемых платформ",
+              what: "Два пути. VPS (DigitalOcean, Hetzner) — своя виртуальная машина, полный контроль, но всё настраиваешь сам. Управляемые платформы (Railway, Render, Fly.io) берут инфраструктуру на себя — деплой из git в пару кликов.",
+              know: ["Сравнить контроль и удобство VPS vs PaaS", "Задеплоить приложение на управляемую платформу", "Выбрать вариант под задачу и бюджет"],
+              why: "Для обучения и первых проектов управляемая платформа снимает 90% инфраструктурной боли. VPS понадобится, когда захочется контроля или экономии на масштабе.",
+              links: [{ l: "Railway · Документация", u: "https://docs.railway.com/" }, { l: "Render · Документация", u: "https://render.com/docs" }, { l: "Fly.io · Документация", u: "https://fly.io/docs/" }],
+            },
+            {
+              code: "8.6", level: 2, name: "Мониторинг в проде",
+              what: "После выката работа не кончается: нужно видеть аптайм, время ответа, частоту ошибок, нагрузку на базу. Алерты предупреждают о проблеме до того, как её заметят пользователи.",
+              know: ["Настроить uptime-мониторинг и алерты", "Смотреть на ключевые метрики (латентность, ошибки, ресурсы)", "Связать мониторинг с отловом ошибок из этапа 6.4"],
+              why: "Деплой — не финиш, а начало жизни сервиса. Мониторинг замыкает цикл: ты узнаёшь о проблемах первым и чинишь их спокойно, а не в панике.",
+              links: [{ l: "Grafana · Документация", u: "https://grafana.com/docs/" }, { l: "Google SRE · Мониторинг", u: "https://sre.google/sre-book/monitoring-distributed-systems/" }],
+            },
+          ],
+        },
+        {
+          id: "p9",
+          title: "Мышление фулстека и система целиком",
+          sub: "Финальный слой — не новые инструменты, а взгляд сверху: как проектировать API, соединять фронт с бэком и думать о системе, которая растёт.",
+          steps: [
+            {
+              code: "9.1", level: 2, name: "Проектирование API (REST, версии, пагинация)",
+              what: "Хороший API предсказуем: понятные URL и методы, консистентные форматы ответов и ошибок, пагинация для списков, версионирование для развития без поломки клиентов.",
+              know: ["Спроектировать понятный REST-эндпоинт (ресурсы, методы, коды)", "Добавить пагинацию, фильтрацию, сортировку", "Понимать, зачем и как версионировать API"],
+              why: "API — это контракт, которым будут пользоваться другие (в том числе будущий ты на фронте). Плохой контракт больно ломать позже, хороший — служит годами.",
+              links: [{ l: "REST API Tutorial", u: "https://restfulapi.net/" }, { l: "Microsoft · REST API Guidelines", u: "https://github.com/microsoft/api-guidelines/blob/vNext/Guidelines.md" }],
+            },
+            {
+              code: "9.2", level: 1, name: "Соединяем фронтенд и свой бэкенд",
+              what: "Момент, ради которого всё затевалось: клиент (React/твой стек) зовёт твой же API. Здесь замыкается контракт — типы, форматы ошибок, авторизация, CORS — теперь ты видишь обе стороны провода.",
+              know: ["Подключить фронтенд к своему API с авторизацией", "Согласовать типы и форматы ошибок между клиентом и сервером", "Понимать сквозной путь данных от кнопки до базы и обратно"],
+              why: "Это и есть фулстек в действии. Всё, что ты знал как фронтендер, встаёт на место, потому что теперь ты понимаешь, что происходит на другом конце запроса.",
+              links: [{ l: "MDN · Fetch API", u: "https://developer.mozilla.org/ru/docs/Web/API/Fetch_API" }, { l: "TanStack Query (работа с API)", u: "https://tanstack.com/query/latest" }],
+            },
+            {
+              code: "9.3", level: 3, name: "Масштабирование: stateless, балансировка, горизонталь",
+              what: "Когда одного сервера мало, поднимают несколько копий приложения за балансировщиком. Условие — приложение должно быть stateless (без состояния в памяти процесса), тогда любой запрос обслужит любая копия. Сессии и кэш выносятся в Redis.",
+              know: ["Объяснить разницу вертикального и горизонтального масштабирования", "Понимать, почему прод-приложение делают stateless", "Видеть роль балансировщика и общего Redis"],
+              why: "Даже если тебе не нужен масштаб сейчас, stateless-мышление с самого начала избавляет от болезненного переписывания потом. Это водораздел между «скриптом» и «системой».",
+              links: [{ l: "System Design Primer", u: "https://github.com/donnemartin/system-design-primer" }, { l: "12factor · Processes", u: "https://12factor.net/processes" }],
+            },
+            {
+              code: "9.4", level: 3, name: "Очереди сообщений и микросервисы (введение)",
+              what: "По мере роста монолит иногда разбивают на сервисы, общающиеся через брокеры сообщений (RabbitMQ, Kafka). Nest поддерживает микросервисы из коробки. Это не обязательный, а осознанный шаг под конкретную боль масштаба.",
+              know: ["Понимать, что решают и что усложняют микросервисы", "Отличать синхронное (HTTP) и асинхронное (очереди) взаимодействие", "Знать, что монолит — правильный дефолт для старта"],
+              why: "Важно знать этот уровень, чтобы осознанно НЕ спешить к нему: преждевременные микросервисы — классическая дорогая ошибка. Понимание даёт иммунитет к хайпу.",
+              links: [{ l: "NestJS · Microservices", u: "https://docs.nestjs.com/microservices/basics" }, { l: "Martin Fowler · Microservices", u: "https://martinfowler.com/articles/microservices.html" }],
+            },
+            {
+              code: "9.5", level: 2, name: "Капстоун: собери всё в один проект",
+              what: "Финальное упражнение — один сквозной проект, проходящий через всю карту: NestJS API с авторизацией, данные в PostgreSQL, кэш и очереди в Redis, тесты, упаковка в Docker, выкат через CI/CD, подключённый фронтенд.",
+              know: ["Довести проект от пустого репозитория до работающего в проде", "Осознанно применить инструменты каждого этапа", "Уметь объяснить каждое своё архитектурное решение"],
+              why: "Знание, не собранное в один проект, остаётся набором разрозненных фактов. Капстоун превращает карту в реальный навык — и в убедительную строчку портфолио.",
+              links: [{ l: "roadmap.sh · Backend projects", u: "https://roadmap.sh/backend/projects" }, { l: "NestJS · Awesome (примеры)", u: "https://github.com/nestjs/awesome-nestjs" }],
+            },
+          ],
+        },
+      ];
+
+      /* ============================================================
+         Рендер и интерактив
+         ============================================================ */
+      const STORE_KEY = "backend-atlas-progress-v1";
+      const THEME_KEY = "backend-atlas-theme";
+      const done = new Set(JSON.parse(localStorage.getItem(STORE_KEY) || "[]"));
+      const allIds = PHASES.flatMap((p) => p.steps.map((s) => s.code));
+
+      const esc = (s) =>
+        String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+      const LEVELS = { 1: "основы", 2: "средний", 3: "продвинутый" };
+      const CHECK_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>';
+      const CHEVRON_SVG = '<svg class="chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg>';
+
+      function save() { localStorage.setItem(STORE_KEY, JSON.stringify([...done])); }
+
+      function render() {
+        document.getElementById("statSteps").textContent = allIds.length;
+        const nav = document.getElementById("phasenav");
+        const root = document.getElementById("roadmap");
+
+        nav.innerHTML = PHASES.map((p, i) => `<a href="#${p.id}" data-phase="${p.id}"><span class="n">${String(i).padStart(2, "0")}</span> ${esc(p.title)}</a>`).join("");
+
+        root.innerHTML = PHASES.map((p, i) => {
+          const steps = p.steps.map((s) => stepHTML(p.id, s)).join("");
+          return `<section class="phase" id="${p.id}" style="animation-delay:${Math.min(i * 55, 400)}ms">
+            <div class="phase-head">
+              <div class="phase-num">${String(i).padStart(2, "0")}</div>
+              <div>
+                <div class="phase-title">${esc(p.title)}</div>
+                <p class="phase-sub">${esc(p.sub)}</p>
+              </div>
+              <div class="phase-ring" data-ring="${p.id}">
+                <span class="frac"><b class="frac-n">0</b>/${p.steps.length}</span>
+                <span class="mini"><i></i></span>
+              </div>
+            </div>
+            <div class="steps">${steps}</div>
+          </section>`;
+        }).join("");
+
+        // bind
+        root.querySelectorAll(".step").forEach((el) => {
+          const id = el.dataset.id;
+          el.querySelector(".step-toggle").addEventListener("click", () => {
+            const open = el.getAttribute("aria-expanded") === "true";
+            el.setAttribute("aria-expanded", String(!open));
+            el.querySelector(".step-toggle").setAttribute("aria-expanded", String(!open));
+          });
+          el.querySelector(".check").addEventListener("click", () => {
+            done.has(id) ? done.delete(id) : done.add(id);
+            save();
+            el.classList.toggle("done", done.has(id));
+            updateProgress();
+          });
+        });
+
+        updateProgress();
+      }
+
+      function stepHTML(phaseId, s) {
+        const isDone = done.has(s.code);
+        const know = s.know.map((k) => `<li>${esc(k)}</li>`).join("");
+        const links = s.links.map((l) => `<a href="${esc(l.u)}" target="_blank" rel="noopener noreferrer">${esc(l.l)}</a>`).join("");
+        return `<article class="step ${isDone ? "done" : ""}" data-id="${s.code}" aria-expanded="false">
+          <div class="step-head">
+            <button class="check" aria-label="Отметить шаг ${s.code} выполненным" aria-pressed="${isDone}">${CHECK_SVG}</button>
+            <button class="step-toggle" aria-expanded="false">
+              <span class="step-code">${s.code}</span>
+              <span class="step-name">${esc(s.name)}</span>
+              <span class="level l${s.level}">${LEVELS[s.level]}</span>
+              ${CHEVRON_SVG}
+            </button>
+          </div>
+          <div class="step-body"><div><div class="body-inner">
+            <div class="field"><div class="field-label">Что это</div><p>${esc(s.what)}</p></div>
+            <div class="field"><div class="field-label">Что уметь после</div><ul>${know}</ul></div>
+            <div class="field why"><div class="field-label">Зачем это в общей картине</div><p>${esc(s.why)}</p></div>
+            <div class="field"><div class="field-label">Ресурсы</div><div class="links">${links}</div></div>
+          </div></div></div>
+        </article>`;
+      }
+
+      function updateProgress() {
+        const total = allIds.length;
+        const n = [...done].filter((id) => allIds.includes(id)).length;
+        const pct = Math.round((n / total) * 100);
+        document.getElementById("topFill").style.width = pct + "%";
+        document.getElementById("topPct").textContent = pct + "%";
+
+        PHASES.forEach((p) => {
+          const dn = p.steps.filter((s) => done.has(s.code)).length;
+          const ring = document.querySelector(`[data-ring="${p.id}"]`);
+          ring.querySelector(".frac-n").textContent = dn;
+          ring.querySelector(".mini i").style.width = Math.round((dn / p.steps.length) * 100) + "%";
+          const full = dn === p.steps.length;
+          ring.classList.toggle("done", full);
+          const navLink = document.querySelector(`.phasenav a[data-phase="${p.id}"]`);
+          if (navLink) navLink.classList.toggle("complete", full);
+        });
+      }
+
+      /* controls */
+      let allOpen = false;
+      document.getElementById("expandAll").addEventListener("click", (e) => {
+        allOpen = !allOpen;
+        document.querySelectorAll(".step").forEach((el) => {
+          el.setAttribute("aria-expanded", String(allOpen));
+          el.querySelector(".step-toggle").setAttribute("aria-expanded", String(allOpen));
+        });
+        e.target.textContent = allOpen ? "свернуть всё" : "развернуть всё";
+      });
+
+      document.getElementById("resetBtn").addEventListener("click", () => {
+        if (!confirm("Сбросить весь отмеченный прогресс?")) return;
+        done.clear();
+        save();
+        document.querySelectorAll(".step.done").forEach((el) => el.classList.remove("done"));
+        updateProgress();
+      });
+
+      /* theme */
+      function applyTheme(t) {
+        document.documentElement.setAttribute("data-theme", t);
+        document.getElementById("themeBtn").textContent = t === "dark" ? "☾" : "☀";
+      }
+      const savedTheme = localStorage.getItem(THEME_KEY);
+      if (savedTheme) applyTheme(savedTheme);
+      else document.getElementById("themeBtn").textContent = matchMedia("(prefers-color-scheme: light)").matches ? "☀" : "☾";
+      document.getElementById("themeBtn").addEventListener("click", () => {
+        const cur = document.documentElement.getAttribute("data-theme") || (matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark");
+        const next = cur === "dark" ? "light" : "dark";
+        localStorage.setItem(THEME_KEY, next);
+        applyTheme(next);
+      });
+
+      render();
+    </script>
+  </body>
+</html>

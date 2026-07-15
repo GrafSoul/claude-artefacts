@@ -1,5 +1,14 @@
 {
   "title": "Claude Artefacts",
   "subtitle": "Витрина артефактов, собранных в паре с Claude Code",
-  "artefacts": []
+  "artefacts": [
+    {
+      "title": "Атлас бэкенда",
+      "description": "Интерактивная дорожная карта: путь от фронтендера до фулстека — NestJS, PostgreSQL, Redis, Docker, Nginx, CI/CD. 57 шагов с трекингом прогресса и ссылками на доки.",
+      "path": "backend-roadmap.html",
+      "emoji": "🗺️",
+      "date": "2026-07-15",
+      "tags": ["backend", "nestjs", "roadmap"]
+    }
+  ]
 }
