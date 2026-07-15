@@ -104,6 +104,8 @@
       .arch-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 0.8rem; }
       .svc { border: 1px solid var(--line); border-radius: 10px; padding: 0.85rem; background: var(--panel-2); }
       .svc.app { border-color: color-mix(in srgb, var(--copper) 45%, var(--line)); }
+      .svc.ext { border-style: dashed; }
+      .svc.ext .svc-name { color: var(--blue); }
       .svc-name { font-family: var(--mono); font-weight: 500; font-size: 0.92rem; color: var(--ink); display: flex; align-items: center; gap: 0.4rem; }
       .svc.app .svc-name { color: var(--copper); }
       .svc-img { font-family: var(--mono); font-size: 0.74rem; color: var(--ink-3); margin-top: 0.2rem; }
@@ -228,15 +230,22 @@
 
       <h2>Что построим <span class="stepbadge">результат этапа</span></h2>
       <p class="body">
-        Три контейнера в одной изолированной сети Docker. Твоё приложение видит базу и кэш
-        по именам сервисов (<code>postgres</code>, <code>redis</code>), а ты с машины —
-        по <code>localhost</code> на проброшенных портах.
+        Полная картина: четыре контейнера в одной сети Docker — <code>web</code> (React),
+        <code>app</code> (Nest) и рядом база с кэшем. В <b>этом уроке</b> поднимаем бэкенд-часть
+        (<code>app</code> + <code>postgres</code> + <code>redis</code>); <code>web</code> живёт в
+        своей репе и встаёт в ту же сеть тем же способом — показан, чтобы ты видел систему целиком.
       </p>
       <div class="arch">
         <div class="arch-host">твоя машина (host) · порты наружу</div>
         <div class="arch-net">
           <span class="arch-net-label">docker network: devvault</span>
           <div class="arch-grid">
+            <div class="svc ext">
+              <div class="svc-name">◇ web</div>
+              <div class="svc-img">React · репа frontend</div>
+              <div class="svc-port">:5173 → localhost:5173</div>
+              <div class="svc-vol">не в этом уроке · строится так же</div>
+            </div>
             <div class="svc app">
               <div class="svc-name">◆ app</div>
               <div class="svc-img">dev-vault (NestJS)</div>
@@ -269,8 +278,8 @@
 
       <h2>Три контейнера — но одно приложение</h2>
       <p class="body">
-        Частый ступор: «почему три контейнера, это же одно приложение?». Разберём — это основа,
-        на которой держится всё дальше.
+        Частый ступор: «почему три контейнера, это же одно приложение?». Речь про бэкенд-стек
+        (<code>app</code> + база + кэш) — разберём, это основа, на которой держится всё дальше.
       </p>
       <p class="body">
         <b>Три контейнера — это не три копии твоего кода.</b> Твоё приложение среди них
@@ -315,6 +324,33 @@
         <code>docker compose up --scale app=3</code> — три копии <code>app</code>, но по-прежнему
         одна база и один Redis. Будь это монолитный контейнер — так бы не вышло.
       </p>
+
+      <h2>React тоже в Docker — из своей репы</h2>
+      <p class="body">
+        Код фронта — отдельная репа (React ты знаешь, учить не будем). Но в Docker-картине
+        <code>web</code> — это <b>ещё один контейнер</b> рядом с бэком, как на схеме «Что построим»
+        выше. Значит система целиком живёт в Docker: <b>web + app + база + кэш</b>. Фронт
+        контейнеризуется тем же способом — свой <code>Dockerfile</code>, те же команды.
+      </p>
+      <div class="stackdiag">   <span class="cmt">одна сеть Docker</span>
+   <span class="hl">┌──────────────────────────────────────────────┐</span>
+   <span class="hl">│</span>  web ──HTTP──► app ──► postgres / redis        <span class="hl">│</span>
+   <span class="hl">│</span>  <span class="cmt">React</span>        <span class="cmt">Nest</span>      <span class="cmt">база / кэш</span>            <span class="hl">│</span>
+   <span class="hl">└──────────────────────────────────────────────┘</span>
+   <span class="cmt">репа frontend</span>   <span class="cmt">└──── репа dev-vault ────┘</span></div>
+      <p class="body">
+        <b>Локально:</b> контейнеры в одной Docker-сети; фронт зовёт бэк по
+        <code>localhost:3000</code> — как ты сейчас дёргаешь любой API. <b>В прод</b> (этап 02)
+        Nginx ставит оба под один домен: <code>app.домен</code> → фронт, <code>/api</code> → бэк.
+      </p>
+      <div class="note">
+        <div class="t">две репы, но одна Docker-картина</div>
+        <p>
+          Репы разные — разные деплои и жизненные циклы. А Docker и сеть общие: контейнеры видят
+          друг друга. Единственная связь фронт↔бэк — <b>API-контракт</b> (этап 06); CORS и токены
+          тоже там.
+        </p>
+      </div>
 
       <h2>Мини-теория: 4 слова Docker</h2>
       <p class="body">Только то, без чего дальше будет непонятно. Аналогии намеренно бытовые.</p>
