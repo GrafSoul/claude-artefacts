@@ -241,7 +241,7 @@
         <div class="svc ext" style="margin-bottom: 0.9rem;">
           <div class="svc-name">◇ web · репа frontend</div>
           <div class="svc-img">React · свой compose, своя сеть</div>
-          <div class="svc-port">:5173 → localhost:5173</div>
+          <div class="svc-port">:3000 → localhost:3000</div>
           <div class="svc-vol">не в этом уроке · строится так же</div>
         </div>
         <div class="arch-net">
@@ -250,7 +250,7 @@
             <div class="svc app">
               <div class="svc-name">◆ app</div>
               <div class="svc-img">dev-vault (NestJS)</div>
-              <div class="svc-port">:3000 → localhost:3000</div>
+              <div class="svc-port">:3030 → localhost:3030</div>
               <div class="svc-vol">том: код (bind-mount) + hot-reload</div>
             </div>
             <div class="svc">
@@ -334,15 +334,15 @@
         контейнеризуется тем же способом — свой <code>Dockerfile</code>, те же команды.
       </p>
       <div class="stackdiag">              <span class="cmt">твой браузер</span>
-                 <span class="hl">│</span>  грузит React-страницу с web :5173
-                 <span class="hl">│</span>  шлёт запросы к API app :3000
+                 <span class="hl">│</span>  грузит React-страницу с web :3000
+                 <span class="hl">│</span>  шлёт запросы к API app :3030
                  <span class="hl">▼</span>
-   web :5173                 app :3000  <span class="hl">──►</span>  postgres / redis
+   web :3000                 app :3030  <span class="hl">──►</span>  postgres / redis
    <span class="cmt">репа frontend</span>             <span class="cmt">└────────── репа dev-vault ──────────┘</span></div>
       <p class="body">
         <b>Локально:</b> два независимых стека, у каждого свой <code>compose up</code>. Связывает их
-        твой <b>браузер</b>: грузит фронт с <code>localhost:5173</code>, а запросы к API шлёт на
-        <code>localhost:3000</code> — оба порта опубликованы на хост. <b>В прод</b> (этап 02) Nginx
+        твой <b>браузер</b>: грузит фронт с <code>localhost:3000</code>, а запросы к API шлёт на
+        <code>localhost:3030</code> — оба порта опубликованы на хост. <b>В прод</b> (этап 02) Nginx
         ставит оба под один домен: корень → фронт, <code>/api</code> → бэк.
       </p>
       <div class="note">
@@ -421,7 +421,7 @@ ENV NODE_ENV=production
 COPY --from=build /app/node_modules ./node_modules
 COPY --from=build /app/dist ./dist
 COPY --from=build /app/package*.json ./
-EXPOSE 3000
+EXPOSE 3030
 CMD ["node", "dist/main.js"]</code></pre>
       </div>
       <div class="code" data-lang="text">
@@ -458,9 +458,9 @@ WORKDIR /app
 COPY package*.json ./
 RUN npm ci
 COPY . .
-EXPOSE 5173
-# --host — чтобы Vite был виден снаружи контейнера
-CMD ["npm", "run", "dev", "--", "--host"]
+EXPOSE 3000
+# --host — виден снаружи контейнера; --port 3000 — фронт на 3000 (бэк на 3030)
+CMD ["npm", "run", "dev", "--", "--host", "--port", "3000"]
 
 # ---- build: собираем статику в папку dist/ ----
 FROM node:22-alpine AS build
@@ -510,7 +510,7 @@ CMD ["nginx", "-g", "daemon off;"]</code></pre>
       target: dev            # берём dev-стадию из Dockerfile
     command: npm run start:dev
     ports:
-      - "3000:3000"
+      - "3030:3030"
     env_file: .env
     volumes:
       - .:/app               # код с хоста внутрь — для hot-reload
@@ -552,7 +552,7 @@ volumes:
         <div class="code-head"><span class="code-file">.env</span><span class="code-lang">env</span><span class="spacer"></span><button class="copy">копировать</button></div>
         <pre><code># значения для локальной разработки (в прод пойдут другие)
 NODE_ENV=development
-PORT=3000
+PORT=3030
 
 # внутри сети Docker хост базы — это ИМЯ СЕРВИСА, а не localhost
 DATABASE_URL=postgresql://devvault:devvault@postgres:5432/devvault
@@ -588,12 +588,12 @@ REDIS_URL=redis://redis:6379</code></pre>
     build:
       context: .
       target: dev
-    command: npm run dev -- --host
+    command: npm run dev -- --host --port 3000
     ports:
-      - "5173:5173"
+      - "3000:3000"
     environment:
       # адрес бэка: он опубликован на хосте, браузер зовёт его сам
-      VITE_API_URL: http://localhost:3000
+      VITE_API_URL: http://localhost:3030
     volumes:
       - .:/app
       - /app/node_modules</code></pre>
@@ -603,7 +603,7 @@ REDIS_URL=redis://redis:6379</code></pre>
         <p>
           Контейнер <code>web</code> только <b>отдаёт</b> собранный JS. Сам код React исполняется
           <b>в твоём браузере</b> — и запросы к API уходят <b>из браузера</b> на
-          <code>localhost:3000</code>. Поэтому общая Docker-сеть между репами фронта и бэка
+          <code>localhost:3030</code>. Поэтому общая Docker-сеть между репами фронта и бэка
           <b>не нужна</b>: связывает их браузер + опубликованные порты, а не внутренняя сеть Docker.
           Два независимых стека, каждый со своим <code>compose up</code>.
         </p>
@@ -626,7 +626,7 @@ docker compose up --build</code></pre>
       <p class="body">Когда в логах появится строка Nest «<code>Nest application successfully started</code>» — открывай:</p>
       <div class="code term" data-lang="bash">
         <div class="code-head"><span class="code-file">браузер</span><span class="code-lang">url</span><span class="spacer"></span><button class="copy">копировать</button></div>
-        <pre><code>http://localhost:3000</code></pre>
+        <pre><code>http://localhost:3030</code></pre>
       </div>
       <p class="body">Увидишь <code>Hello World!</code> — приложение из контейнера отвечает наружу. Теперь проверим hot-reload:</p>
       <ol class="body">
@@ -638,7 +638,7 @@ docker compose up --build</code></pre>
         <svg class="ic" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
         <div>
           <div class="t">проверь себя</div>
-          <p>Три контейнера в <code>docker compose ps</code> со статусом up, приложение отвечает на <code>localhost:3000</code>, правка кода подхватывается без ручного перезапуска. Если так — этап 01 выполнен.</p>
+          <p>Три контейнера в <code>docker compose ps</code> со статусом up, приложение отвечает на <code>localhost:3030</code>, правка кода подхватывается без ручного перезапуска. Если так — этап 01 выполнен.</p>
         </div>
       </div>
 
