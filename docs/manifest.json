@@ -9,6 +9,14 @@
       "emoji": "🛠️",
       "date": "2026-07-15",
       "tags": ["backend", "nestjs", "devops", "план"]
+    },
+    {
+      "title": "Урок 01 · Локальная среда в Docker",
+      "description": "Практикум по этапу 01: заворачиваем пустой Nest-проект dev-vault в контейнер, поднимаем рядом PostgreSQL и Redis, настраиваем hot-reload. Dockerfile, compose, команды, шпаргалка — с копируемыми блоками кода.",
+      "path": "lesson-01-docker.html",
+      "emoji": "🐳",
+      "date": "2026-07-15",
+      "tags": ["docker", "nestjs", "урок", "dev-vault"]
     }
   ]
 }
