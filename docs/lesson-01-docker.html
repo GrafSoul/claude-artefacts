@@ -222,7 +222,7 @@
           на машине и потом на сервере.
         </p>
         <div class="meta">
-          <span class="chip"><b>~40</b> мин</span>
+          <span class="chip"><b>~50</b> мин</span>
           <span class="chip">Docker · Compose</span>
           <span class="chip">шаги плана 1.1–1.3</span>
           <span class="chip" style="color:var(--ink-3)">нужен установленный Docker Desktop</span>
@@ -443,12 +443,63 @@ docker-compose.yml</code></pre>
         </p>
       </div>
 
+      <h3>Dockerfile фронта — для сравнения (другая репа)</h3>
+      <p class="body">
+        У React-морды <b>свой</b> Dockerfile, и он другой — потому что задача другая. Бэк в проде
+        крутит живой Node-процесс; фронт компилируется в <b>статику</b>, которую раздаёт Nginx
+        (Node в проде уже не нужен). Каркас похож, финал — принципиально разный:
+      </p>
+      <div class="code" data-lang="dockerfile">
+        <div class="code-head"><span class="code-file">Dockerfile · репа frontend (React)</span><span class="code-lang">dockerfile</span><span class="spacer"></span><button class="copy">копировать</button></div>
+        <pre><code># ---- dev: Vite dev-сервер с hot-reload ----
+FROM node:22-alpine AS dev
+WORKDIR /app
+COPY package*.json ./
+RUN npm ci
+COPY . .
+EXPOSE 5173
+# --host — чтобы Vite был виден снаружи контейнера
+CMD ["npm", "run", "dev", "--", "--host"]
+
+# ---- build: собираем статику в папку dist/ ----
+FROM node:22-alpine AS build
+WORKDIR /app
+COPY package*.json ./
+RUN npm ci
+COPY . .
+RUN npm run build
+
+# ---- prod: отдаём статику через Nginx, без Node ----
+FROM nginx:alpine AS prod
+COPY --from=build /app/dist /usr/share/nginx/html
+EXPOSE 80
+CMD ["nginx", "-g", "daemon off;"]</code></pre>
+      </div>
+      <div class="note">
+        <div class="t">«совместимость» тут не про Dockerfile</div>
+        <p>
+          Файлы фронта и бэка не обязаны совпадать — даже версия Node может отличаться. Они
+          общаются по HTTP, а не разделяют код. Связывают их три вещи: <b>адрес API</b> (env-переменная
+          <code>VITE_API_URL</code>), <b>сам API-контракт</b> и <b>CORS</b> на бэке. Подробно — этап 06.
+        </p>
+      </div>
+
       <h2>Шаг 2 — docker-compose.yml <span class="stepbadge">план 1.2</span></h2>
       <p class="body">
         Описываем весь стек в одном файле: приложение + база + кэш, их тома, порты и связи.
         <code>depends_on</code> с проверкой здоровья гарантирует, что app стартует, только когда
         Postgres реально готов принимать соединения.
       </p>
+      <div class="note win">
+        <div class="t">откуда берутся Postgres и Redis — их ставить НЕ надо</div>
+        <p>
+          Главный момент: базу и кэш <b>не нужно устанавливать вручную</b>. Строки
+          <code>image: postgres:17-alpine</code> и <code>image: redis:7-alpine</code> говорят Docker:
+          «скачай готовый образ из реестра Docker Hub». При первом <code>docker compose up</code>
+          Docker сам их подтянет и запустит. На машине тебе нужен <b>только Docker</b> — ни Postgres,
+          ни Redis отдельно ставить не требуется.
+        </p>
+      </div>
       <div class="code" data-lang="yaml">
         <div class="code-head"><span class="code-file">docker-compose.yml</span><span class="code-lang">yaml</span><span class="spacer"></span><button class="copy">копировать</button></div>
         <pre><code>services:
@@ -530,6 +581,13 @@ REDIS_URL=redis://redis:6379</code></pre>
         <pre><code># собрать образы и поднять весь стек (логи в этом же окне)
 docker compose up --build</code></pre>
       </div>
+      <div class="note">
+        <div class="t">первый запуск — дольше, это норма</div>
+        <p>
+          В первый раз Docker <b>скачивает образы</b> (Node, Postgres, Redis) и собирает твой —
+          пара минут. Дальше секунды: образы уже кэшированы на диске.
+        </p>
+      </div>
       <p class="body">Когда в логах появится строка Nest «<code>Nest application successfully started</code>» — открывай:</p>
       <div class="code term" data-lang="bash">
         <div class="code-head"><span class="code-file">браузер</span><span class="code-lang">url</span><span class="spacer"></span><button class="copy">копировать</button></div>
@@ -563,6 +621,9 @@ docker compose exec app sh
 
 # подключиться к базе прямо в контейнере
 docker compose exec postgres psql -U devvault -d devvault
+
+# проверить, что Redis жив — ответит PONG
+docker compose exec redis redis-cli ping
 
 # остановить стек (данные в томах сохранятся)
 docker compose down
@@ -662,6 +723,29 @@ docker compose down -v</code></pre>
           Воспроизводимое окружение: <b>dev-vault + Postgres + Redis</b> поднимаются одной
           командой, код перезагружается на лету, данные базы живут в томе. Ровно этот же
           <code>docker-compose.yml</code> станет основой боевого стека на сервере (этап 02).
+        </p>
+      </div>
+
+      <h2>Перенос на сервер — превью</h2>
+      <p class="body">
+        Сила Docker в том, что <b>тот же</b> <code>docker-compose.yml</code>, что работает у тебя
+        локально, поедет на сервер почти без изменений. На твоём <b>Hetzner</b> в общих чертах так:
+      </p>
+      <ol class="body">
+        <li>Подключиться к серверу по <b>SSH</b>.</li>
+        <li>Установить <b>Docker</b> — так же, как локально.</li>
+        <li>Забрать проект на сервер (<code>git clone</code> / <code>git pull</code>).</li>
+        <li>Положить <b>прод-</b><code>.env</code> — другие пароли, реальный домен.</li>
+        <li><code>docker compose up -d</code> — и стек уже крутится на сервере.</li>
+      </ol>
+      <div class="note">
+        <div class="t">но «боевой» сервер — это больше</div>
+        <p>
+          По-настоящему рабочий сервер — это ещё вход по ключу, firewall, <b>Nginx</b> перед
+          приложением, <b>HTTPS</b>, автозапуск после перезагрузки. Это отдельная большая тема —
+          <b>урок 02 «Боевой сервер (VPS)»</b>, как раз под твой Hetzner: там разберёмся с железом
+          по шагам. Здесь главное усвоить: локальный и серверный стек — <b>один и тот же compose</b>,
+          меняется в основном конфиг.
         </p>
       </div>
 
