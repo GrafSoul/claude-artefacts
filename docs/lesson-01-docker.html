@@ -150,6 +150,35 @@
       .tree .add { color: var(--copper); }
       .tree .cmt { color: var(--ink-3); }
 
+      /* mini stack diagram */
+      .stackdiag { font-family: var(--mono); font-size: 0.8rem; color: var(--ink-2); background: var(--code-bg); border: 1px solid var(--line); border-radius: 12px; padding: 1.1rem 1.2rem; margin: 1rem 0; white-space: pre; overflow-x: auto; line-height: 1.65; }
+      .stackdiag .hl { color: var(--copper); }
+      .stackdiag .cmt { color: var(--ink-3); }
+
+      /* who-owns table */
+      .owns { display: flex; flex-direction: column; gap: 0.5rem; margin: 1rem 0; }
+      .owns-row { display: grid; grid-template-columns: 7rem 1fr auto; gap: 0.8rem; align-items: center; border: 1px solid var(--line); border-radius: 10px; background: var(--panel); padding: 0.6rem 0.9rem; }
+      .owns-row .svc-n { font-family: var(--mono); font-size: 0.86rem; color: var(--copper); }
+      .owns-row .svc-d { font-size: 0.88rem; color: var(--ink-2); }
+      .owns-row .svc-o { font-family: var(--mono); font-size: 0.72rem; padding: 0.15rem 0.5rem; border-radius: 99px; white-space: nowrap; }
+      .owns-row .svc-o.mine { color: var(--copper); border: 1px solid color-mix(in srgb, var(--copper) 45%, transparent); }
+      .owns-row .svc-o.ext { color: var(--ink-3); border: 1px solid var(--line-2); }
+      @media (max-width: 520px) { .owns-row { grid-template-columns: 1fr auto; } .owns-row .svc-d { grid-column: 1 / -1; } }
+
+      /* FAQ accordion */
+      .faq { display: flex; flex-direction: column; gap: 0.55rem; margin: 1.3rem 0; }
+      .faq-item { border: 1px solid var(--line); border-radius: 12px; background: var(--panel); overflow: hidden; }
+      .faq-item summary { cursor: pointer; padding: 0.9rem 1.1rem; font-weight: 500; color: var(--ink); list-style: none; display: flex; align-items: center; gap: 0.7rem; transition: color 0.15s ease; }
+      .faq-item summary::-webkit-details-marker { display: none; }
+      .faq-item summary::before { content: "+"; font-family: var(--mono); color: var(--copper); font-size: 1.15rem; line-height: 1; flex-shrink: 0; width: 1rem; text-align: center; }
+      .faq-item[open] summary::before { content: "–"; }
+      .faq-item summary:hover { color: var(--copper); }
+      .faq-a { padding: 0 1.1rem 1rem 2.8rem; }
+      .faq-a p { color: var(--ink-2); font-size: 0.92rem; }
+      .faq-a p + p { margin-top: 0.5rem; }
+      .faq-a code { font-family: var(--mono); font-size: 0.86em; background: var(--panel-2); border: 1px solid var(--line); border-radius: 5px; padding: 0.05rem 0.35rem; color: var(--copper); }
+      .faq-a b { color: var(--ink); }
+
       /* cheat sheet */
       .cheat { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 0.7rem; margin: 1.3rem 0; }
       .cheat-row { display: flex; flex-direction: column; gap: 0.2rem; border: 1px solid var(--line); border-radius: 10px; background: var(--panel); padding: 0.7rem 0.9rem; }
@@ -237,6 +266,55 @@
           вперёд, логика потом.
         </p>
       </div>
+
+      <h2>Три контейнера — но одно приложение</h2>
+      <p class="body">
+        Частый ступор: «почему три контейнера, это же одно приложение?». Разберём — это основа,
+        на которой держится всё дальше.
+      </p>
+      <p class="body">
+        <b>Три контейнера — это не три копии твоего кода.</b> Твоё приложение среди них
+        <b>одно</b> — <code>app</code>. Два других — готовые чужие программы, которые ты не
+        пишешь, а просто используешь:
+      </p>
+      <div class="owns">
+        <div class="owns-row"><span class="svc-n">app</span><span class="svc-d">твой Nest — dev-vault</span><span class="svc-o mine">твой код</span></div>
+        <div class="owns-row"><span class="svc-n">postgres</span><span class="svc-d">сервер базы данных</span><span class="svc-o ext">чужой образ</span></div>
+        <div class="owns-row"><span class="svc-n">redis</span><span class="svc-d">сервер кэша</span><span class="svc-o ext">чужой образ</span></div>
+      </div>
+      <p class="body">
+        Аналогия: розетка-удлинитель. <b>Приложение + база + кэш</b> — три разных прибора,
+        воткнутых в одну сеть. Не три одинаковых, а три разных, работающих вместе.
+      </p>
+      <div class="note">
+        <div class="t">«изолированы» ≠ «разъединены»</div>
+        <p>
+          Контейнеры изолированы как процессы (свой Node, свои библиотеки, свой рестарт), но
+          соединены сетью Docker и свободно общаются. Изоляция здесь — про <b>независимость</b>,
+          а не про стену.
+        </p>
+      </div>
+
+      <h3>Compose оборачивает всё в одну сущность</h3>
+      <p class="body">
+        Отдельные контейнеры неудобно запускать по одному. <code>docker-compose.yml</code> —
+        это как <code>package.json</code>, только для инфраструктуры: один манифест всех частей
+        и того, как они связаны. Compose группирует их в <b>проект</b> (по имени папки —
+        <code>dev-vault</code>) с общей сетью и общим жизненным циклом.
+      </p>
+      <div class="stackdiag">        <span class="cmt">docker-compose.yml</span>          <span class="cmt"># одно описание</span>
+                <span class="hl">│</span>
+   docker compose up <span class="hl">─────────────┐</span>
+                <span class="hl">│</span>                 <span class="hl">│</span>
+   <span class="hl">┌────────────┼─────────────────┼──────────┐</span>   <span class="cmt">проект «dev-vault»</span>
+   <span class="hl">│</span>   app          postgres          redis   <span class="hl">│</span>   <span class="cmt">общая сеть, общий up/down</span>
+   <span class="hl">└──────────────────────────────────────────┘</span></div>
+      <p class="body">
+        Снаружи — <b>одна сущность</b> (описал одним файлом, поднял одной командой), внутри —
+        независимые части. Поэтому позже одной строкой можно размножить только приложение:
+        <code>docker compose up --scale app=3</code> — три копии <code>app</code>, но по-прежнему
+        одна база и один Redis. Будь это монолитный контейнер — так бы не вышло.
+      </p>
 
       <h2>Мини-теория: 4 слова Docker</h2>
       <p class="body">Только то, без чего дальше будет непонятно. Аналогии намеренно бытовые.</p>
@@ -471,6 +549,74 @@ docker compose down -v</code></pre>
         <div class="cheat-row"><span class="cheat-cmd">docker stop / rm имя</span><span class="cheat-desc">остановить / удалить контейнер</span></div>
         <div class="cheat-row"><span class="cheat-cmd">docker volume ls</span><span class="cheat-desc">список томов (где данные)</span></div>
         <div class="cheat-row"><span class="cheat-cmd">docker system prune</span><span class="cheat-desc">убрать мусор: висящие образы, сети, кэш</span></div>
+      </div>
+
+      <h2>Частые вопросы новичков</h2>
+      <p class="body">Вопросы, на которых спотыкаются почти все в начале. Разверни нужный.</p>
+      <div class="faq">
+        <details class="faq-item">
+          <summary>Контейнер — это виртуальная машина?</summary>
+          <div class="faq-a">
+            <p>Нет. Виртуальная машина тащит целую гостевую операционную систему — это гигабайты и старт в минуты. Контейнер <b>делит ядро твоей ОС</b> и изолирует только процесс с его файлами и зависимостями.</p>
+            <p>Итог: контейнер весит мегабайты и стартует за секунды. Поэтому нормально держать три контейнера там, где три виртуалки были бы расточительством.</p>
+          </div>
+        </details>
+        <details class="faq-item">
+          <summary>Что с данными при <code>docker compose down</code>?</summary>
+          <div class="faq-a">
+            <p>Контейнеры удаляются — они <b>одноразовые</b>. Но тома (<code>pgdata</code>, <code>redisdata</code>) остаются, поэтому база после <code>down</code> и повторного <code>up</code> будет с теми же данными.</p>
+            <p>Данные сотрёт только явный <code>docker compose down -v</code> (флаг <code>-v</code> = удалить тома). Это твой «полный сброс базы».</p>
+          </div>
+        </details>
+        <details class="faq-item">
+          <summary><code>build</code>, <code>up</code>, <code>run</code> — в чём разница?</summary>
+          <div class="faq-a">
+            <p><b>build</b> — собрать образ из Dockerfile. <b>run</b> — запустить один контейнер из образа. <b>up</b> (это Compose) — собрать, если нужно, и поднять <b>весь стек</b> сразу.</p>
+            <p>В повседневной работе ты почти всегда используешь <code>docker compose up</code>, а «голые» <code>build</code>/<code>run</code> — редко и точечно.</p>
+          </div>
+        </details>
+        <details class="faq-item">
+          <summary>Почему образы с приставкой <code>-alpine</code>?</summary>
+          <div class="faq-a">
+            <p>Alpine — минимальный дистрибутив Linux (~5 МБ). Образ на нём меньше: быстрее качается, быстрее деплоится, меньше поверхность для уязвимостей.</p>
+            <p>Изредка какой-то нативной библиотеки в alpine не хватает — тогда берут обычный <code>node:22</code>. Для старта alpine — разумный дефолт.</p>
+          </div>
+        </details>
+        <details class="faq-item">
+          <summary>Зачем <code>COPY package*.json</code> идёт до <code>COPY . .</code>?</summary>
+          <div class="faq-a">
+            <p>Каждая инструкция Dockerfile — это <b>слой</b>, и Docker их кэширует. Если сначала скопировать только <code>package.json</code> и поставить зависимости, а код копировать после — то при правке кода (но не зависимостей) Docker <b>переиспользует кэш</b> и не переустанавливает npm заново.</p>
+            <p>Результат: пересборка образа ускоряется в разы. Это не случайный порядок, а приём оптимизации.</p>
+          </div>
+        </details>
+        <details class="faq-item">
+          <summary>Зачем <code>depends_on</code> вместе с healthcheck?</summary>
+          <div class="faq-a">
+            <p><code>depends_on</code> задаёт <b>порядок старта</b>, а <code>condition: service_healthy</code> заставляет <code>app</code> ждать, пока Postgres реально готов принимать соединения — а не просто «процесс запустился».</p>
+            <p>Без этого приложение может стартовать раньше базы, не достучаться до неё и упасть на старте.</p>
+          </div>
+        </details>
+        <details class="faq-item">
+          <summary>Почему <code>localhost</code> внутри контейнера не находит базу?</summary>
+          <div class="faq-a">
+            <p>Внутри контейнера <code>localhost</code> — это <b>сам контейнер</b>, а не твоя машина и не соседний контейнер. База живёт в другом контейнере.</p>
+            <p>Её адрес — <b>имя сервиса</b> из compose: <code>postgres:5432</code>. Compose сам поднимает внутренний DNS, где имена сервисов работают как адреса.</p>
+          </div>
+        </details>
+        <details class="faq-item">
+          <summary>Нужно пересобирать образ после каждой правки кода?</summary>
+          <div class="faq-a">
+            <p>В режиме разработки — <b>нет</b>. Код примонтирован томом с хоста, а <code>start:dev</code> следит за изменениями и пересобирает Nest на лету внутри контейнера.</p>
+            <p>Пересборка (<code>docker compose up --build</code>) нужна, только когда меняешь <b>зависимости</b> (<code>package.json</code>) или сам <code>Dockerfile</code>.</p>
+          </div>
+        </details>
+        <details class="faq-item">
+          <summary>Где физически лежат данные базы?</summary>
+          <div class="faq-a">
+            <p>В <b>томе Docker</b> (<code>pgdata</code>), которым управляет сам Docker — не в папке твоего проекта. Список томов: <code>docker volume ls</code>.</p>
+            <p>Именно поэтому данные переживают удаление и пересоздание контейнера: контейнер одноразовый, том — нет.</p>
+          </div>
+        </details>
       </div>
 
       <div class="note win">

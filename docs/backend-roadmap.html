@@ -142,6 +142,10 @@
       .phase-head { display: grid; grid-template-columns: auto 1fr auto; gap: 1rem 1.2rem; align-items: start; margin-bottom: 1.4rem; }
       .phase-num { font-family: var(--serif); font-size: clamp(2rem, 5vw, 3rem); font-weight: 500; color: var(--copper); line-height: 1; font-variant-numeric: tabular-nums; }
       .phase-title { font-family: var(--serif); font-weight: 600; font-size: clamp(1.4rem, 3.5vw, 1.9rem); letter-spacing: -0.01em; }
+      .ptitle-link { color: inherit; text-decoration: none; transition: color 0.15s ease; }
+      .ptitle-link:hover { color: var(--copper); }
+      .phase-lesson { display: inline-block; font-family: var(--mono); font-size: 0.68rem; font-weight: 400; color: var(--copper); border: 1px solid color-mix(in srgb, var(--copper) 45%, transparent); border-radius: 99px; padding: 0.1rem 0.55rem; text-decoration: none; white-space: nowrap; vertical-align: middle; margin-left: 0.55rem; transition: all 0.15s ease; }
+      .phase-lesson:hover { background: var(--copper); color: #14100e; border-color: var(--copper); }
       .phase-sub { color: var(--ink-2); font-size: 0.98rem; margin-top: 0.25rem; max-width: 64ch; }
       .phase-ring { display: flex; flex-direction: column; align-items: flex-end; gap: 0.3rem; font-family: var(--mono); }
       .phase-ring .frac { font-size: 0.82rem; color: var(--ink-2); }
@@ -282,6 +286,7 @@
         {
           id: "p1",
           title: "Локальная среда в Docker",
+          lesson: "lesson-01-docker.html",
           sub: "С первого дня всё живёт в контейнерах — то же окружение, что потом поедет в прод. Никаких «у меня работает, а на сервере нет».",
           steps: [
             {
@@ -625,7 +630,7 @@
             <div class="phase-head">
               <div class="phase-num">${String(i + 1).padStart(2, "0")}</div>
               <div>
-                <div class="phase-title">${esc(p.title)}</div>
+                <div class="phase-title">${p.lesson ? `<a class="ptitle-link" href="${esc(p.lesson)}">${esc(p.title)}</a>` : esc(p.title)}${p.lesson ? ` <a class="phase-lesson" href="${esc(p.lesson)}">📖 урок →</a>` : ""}</div>
                 <p class="phase-sub">${esc(p.sub)}</p>
               </div>
               <div class="phase-ring" data-ring="${p.id}">
