@@ -132,7 +132,13 @@
       .dot.l3 { background: var(--gold); }
 
       /* ---------- phase nav ---------- */
-      .phasenav { position: sticky; top: 52px; z-index: 40; display: flex; gap: 0.4rem; overflow-x: auto; padding: 0.7rem 0; margin-bottom: 1rem; background: color-mix(in srgb, var(--bg) 82%, transparent); backdrop-filter: blur(10px); scrollbar-width: thin; }
+      .controls { position: sticky; top: 52px; z-index: 40; margin-bottom: 1rem; padding: 0.7rem 0 0.2rem; background: color-mix(in srgb, var(--bg) 88%, transparent); backdrop-filter: blur(12px); }
+      .toolbar { display: flex; align-items: center; gap: 0.7rem; margin-bottom: 0.55rem; }
+      .search { flex: 1; min-width: 0; font-family: var(--sans); font-size: 0.92rem; color: var(--ink); background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 0.55rem 0.85rem; transition: border-color 0.15s ease; }
+      .search::placeholder { color: var(--ink-3); }
+      .search:focus { outline: none; border-color: var(--copper); }
+      .count { font-family: var(--mono); font-size: 0.76rem; color: var(--ink-3); white-space: nowrap; }
+      .phasenav { display: flex; gap: 0.4rem; overflow-x: auto; scrollbar-width: thin; }
       .phasenav a { font-family: var(--mono); font-size: 0.75rem; color: var(--ink-2); text-decoration: none; border: 1px solid var(--line); border-radius: 8px; padding: 0.3rem 0.65rem; white-space: nowrap; transition: all 0.15s ease; display: flex; align-items: center; gap: 0.4rem; }
       .phasenav a:hover { color: var(--ink); border-color: var(--line-2); }
       .phasenav a .n { color: var(--copper); }
@@ -206,6 +212,11 @@
 
       @media (prefers-reduced-motion: reduce) { * { transition: none !important; scroll-behavior: auto !important; } }
 
+      /* search filtering */
+      .step.hidden, .phase.hidden { display: none; }
+      .noresults { padding: 3rem 1rem; text-align: center; color: var(--ink-3); font-family: var(--mono); font-size: 0.9rem; }
+      .noresults.hidden { display: none; }
+
       /* staggered load */
       .phase { opacity: 0; transform: translateY(12px); animation: rise 0.6s cubic-bezier(0.22, 1, 0.36, 1) forwards; }
       @keyframes rise { to { opacity: 1; transform: none; } }
@@ -244,9 +255,16 @@
         </div>
       </header>
 
-      <nav class="phasenav" id="phasenav" aria-label="Этапы"></nav>
+      <div class="controls">
+        <div class="toolbar">
+          <input id="search" class="search" type="search" autocomplete="off" placeholder="Поиск по шагам: Docker, GitHub Actions, JWT, миграции…" aria-label="Поиск по шагам" />
+          <span class="count" id="count"></span>
+        </div>
+        <nav class="phasenav" id="phasenav" aria-label="Этапы"></nav>
+      </div>
 
       <main id="roadmap"></main>
+      <p class="noresults hidden" id="noresults">Ничего не найдено. Попробуй другое слово.</p>
 
       <section class="outro">
         <h3>Ты дошёл до конца карты — что дальше?</h3>
@@ -883,6 +901,31 @@
         localStorage.setItem(THEME_KEY, next);
         applyTheme(next);
       });
+
+      /* search */
+      const hay = new Map(
+        PHASES.flatMap((p) => p.steps.map((s) => [s.code, (s.code + " " + s.name + " " + s.what + " " + s.know.join(" ") + " " + s.why + " " + s.links.map((l) => l.l).join(" ")).toLowerCase()]))
+      );
+      const searchEl = document.getElementById("search");
+      const countEl = document.getElementById("count");
+      const noresEl = document.getElementById("noresults");
+      searchEl.addEventListener("input", () => {
+        const q = searchEl.value.trim().toLowerCase();
+        let shown = 0;
+        PHASES.forEach((p) => {
+          let visible = 0;
+          p.steps.forEach((s) => {
+            const el = document.querySelector(`.step[data-id="${s.code}"]`);
+            const match = !q || hay.get(s.code).includes(q);
+            el.classList.toggle("hidden", !match);
+            if (match) { visible++; shown++; }
+          });
+          document.getElementById(p.id).classList.toggle("hidden", visible === 0);
+        });
+        countEl.textContent = q ? `${shown} из ${allIds.length}` : "";
+        noresEl.classList.toggle("hidden", shown > 0);
+      });
+      searchEl.addEventListener("keydown", (e) => { if (e.key === "Escape") { searchEl.value = ""; searchEl.dispatchEvent(new Event("input")); } });
 
       render();
     </script>
