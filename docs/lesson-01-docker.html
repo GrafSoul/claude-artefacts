@@ -231,22 +231,22 @@
 
       <h2>Что построим <span class="stepbadge">результат этапа</span></h2>
       <p class="body">
-        Полная картина: четыре контейнера в одной сети Docker — <code>web</code> (React),
-        <code>app</code> (Nest) и рядом база с кэшем. В <b>этом уроке</b> поднимаем бэкенд-часть
-        (<code>app</code> + <code>postgres</code> + <code>redis</code>); <code>web</code> живёт в
-        своей репе и встаёт в ту же сеть тем же способом — показан, чтобы ты видел систему целиком.
+        Полная картина: фронт <code>web</code> (React, своя репа) и бэкенд-стек — <code>app</code>
+        (Nest) с базой и кэшем в своей сети. В <b>этом уроке</b> поднимаем бэкенд-тройку
+        (<code>app</code> + <code>postgres</code> + <code>redis</code>); <code>web</code> показан
+        рядом — контейнеризуется так же, но живёт отдельно. Связывает их браузер (см. ниже).
       </p>
       <div class="arch">
         <div class="arch-host">твоя машина (host) · порты наружу</div>
+        <div class="svc ext" style="margin-bottom: 0.9rem;">
+          <div class="svc-name">◇ web · репа frontend</div>
+          <div class="svc-img">React · свой compose, своя сеть</div>
+          <div class="svc-port">:5173 → localhost:5173</div>
+          <div class="svc-vol">не в этом уроке · строится так же</div>
+        </div>
         <div class="arch-net">
-          <span class="arch-net-label">docker network: devvault</span>
+          <span class="arch-net-label">docker network: devvault · этот урок</span>
           <div class="arch-grid">
-            <div class="svc ext">
-              <div class="svc-name">◇ web</div>
-              <div class="svc-img">React · репа frontend</div>
-              <div class="svc-port">:5173 → localhost:5173</div>
-              <div class="svc-vol">не в этом уроке · строится так же</div>
-            </div>
             <div class="svc app">
               <div class="svc-name">◆ app</div>
               <div class="svc-img">dev-vault (NestJS)</div>
@@ -333,23 +333,24 @@
         выше. Значит система целиком живёт в Docker: <b>web + app + база + кэш</b>. Фронт
         контейнеризуется тем же способом — свой <code>Dockerfile</code>, те же команды.
       </p>
-      <div class="stackdiag">   <span class="cmt">одна сеть Docker</span>
-   <span class="hl">┌──────────────────────────────────────────────┐</span>
-   <span class="hl">│</span>  web ──HTTP──► app ──► postgres / redis        <span class="hl">│</span>
-   <span class="hl">│</span>  <span class="cmt">React</span>        <span class="cmt">Nest</span>      <span class="cmt">база / кэш</span>            <span class="hl">│</span>
-   <span class="hl">└──────────────────────────────────────────────┘</span>
-   <span class="cmt">репа frontend</span>   <span class="cmt">└──── репа dev-vault ────┘</span></div>
+      <div class="stackdiag">              <span class="cmt">твой браузер</span>
+                 <span class="hl">│</span>  грузит React-страницу с web :5173
+                 <span class="hl">│</span>  шлёт запросы к API app :3000
+                 <span class="hl">▼</span>
+   web :5173                 app :3000  <span class="hl">──►</span>  postgres / redis
+   <span class="cmt">репа frontend</span>             <span class="cmt">└────────── репа dev-vault ──────────┘</span></div>
       <p class="body">
-        <b>Локально:</b> контейнеры в одной Docker-сети; фронт зовёт бэк по
-        <code>localhost:3000</code> — как ты сейчас дёргаешь любой API. <b>В прод</b> (этап 02)
-        Nginx ставит оба под один домен: <code>app.домен</code> → фронт, <code>/api</code> → бэк.
+        <b>Локально:</b> два независимых стека, у каждого свой <code>compose up</code>. Связывает их
+        твой <b>браузер</b>: грузит фронт с <code>localhost:5173</code>, а запросы к API шлёт на
+        <code>localhost:3000</code> — оба порта опубликованы на хост. <b>В прод</b> (этап 02) Nginx
+        ставит оба под один домен: корень → фронт, <code>/api</code> → бэк.
       </p>
       <div class="note">
-        <div class="t">две репы, но одна Docker-картина</div>
+        <div class="t">две репы, две сети — связывает браузер</div>
         <p>
-          Репы разные — разные деплои и жизненные циклы. А Docker и сеть общие: контейнеры видят
-          друг друга. Единственная связь фронт↔бэк — <b>API-контракт</b> (этап 06); CORS и токены
-          тоже там.
+          У каждой репы свой compose и своя Docker-сеть; общей сети между ними нет и не нужно.
+          Настоящий стык фронт↔бэк — <b>HTTP-запросы из браузера</b> плюс <b>API-контракт</b>
+          (этап 06); там же CORS и токены.
         </p>
       </div>
 
@@ -571,6 +572,40 @@ REDIS_URL=redis://redis:6379</code></pre>
           Строка <code>/app/node_modules</code> без хостового пути — это анонимный том. Он
           «прикрывает» node_modules из образа, чтобы твоя папка с хоста их не затёрла. Без
           этого приёма контейнер часто падает с «module not found».
+        </p>
+      </div>
+
+      <h3>docker-compose.yml фронта — для сравнения (другая репа)</h3>
+      <p class="body">
+        У фронта <b>свой</b> compose в его репе, и он <b>проще</b>: фронту не нужны ни база, ни
+        кэш — только собственный контейнер. Ни <code>postgres</code>, ни <code>redis</code>, ни
+        <code>depends_on</code>.
+      </p>
+      <div class="code" data-lang="yaml">
+        <div class="code-head"><span class="code-file">docker-compose.yml · репа frontend (React)</span><span class="code-lang">yaml</span><span class="spacer"></span><button class="copy">копировать</button></div>
+        <pre><code>services:
+  web:
+    build:
+      context: .
+      target: dev
+    command: npm run dev -- --host
+    ports:
+      - "5173:5173"
+    environment:
+      # адрес бэка: он опубликован на хосте, браузер зовёт его сам
+      VITE_API_URL: http://localhost:3000
+    volumes:
+      - .:/app
+      - /app/node_modules</code></pre>
+      </div>
+      <div class="note">
+        <div class="t">ключевой момент: React крутится в браузере, а не в контейнере</div>
+        <p>
+          Контейнер <code>web</code> только <b>отдаёт</b> собранный JS. Сам код React исполняется
+          <b>в твоём браузере</b> — и запросы к API уходят <b>из браузера</b> на
+          <code>localhost:3000</code>. Поэтому общая Docker-сеть между репами фронта и бэка
+          <b>не нужна</b>: связывает их браузер + опубликованные порты, а не внутренняя сеть Docker.
+          Два независимых стека, каждый со своим <code>compose up</code>.
         </p>
       </div>
 
