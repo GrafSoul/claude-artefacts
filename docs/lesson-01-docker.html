@@ -271,7 +271,7 @@
 ├── <span class="add">Dockerfile</span>             <span class="cmt"># ← добавляем</span>
 ├── <span class="add">.dockerignore</span>          <span class="cmt"># ← добавляем</span>
 ├── <span class="add">docker-compose.yml</span>     <span class="cmt"># ← добавляем</span>
-└── <span class="add">.env</span>                   <span class="cmt"># ← добавляем (обязательно в .gitignore!)</span></div>
+└── <span class="add">.env</span>                   <span class="cmt"># ← добавляем (.env уже в .gitignore из коробки — ок)</span></div>
 
       <h2>Шаг 1 — Dockerfile <span class="stepbadge">план 1.1</span></h2>
       <p class="body">
@@ -422,7 +422,7 @@ docker compose up --build</code></pre>
       </div>
       <p class="body">Увидишь <code>Hello World!</code> — приложение из контейнера отвечает наружу. Теперь проверим hot-reload:</p>
       <ol class="body">
-        <li>Открой <code>src/app.controller.ts</code> и поменяй текст в методе <code>getHello()</code>.</li>
+        <li>Открой <code>src/app.service.ts</code> и поменяй строку в методе <code>getHello()</code> (там лежит <code>'Hello World!'</code>).</li>
         <li>Сохрани файл — в логах контейнера Nest сам пересоберётся за секунду.</li>
         <li>Обнови вкладку — текст изменился, хотя ты ничего не перезапускал руками.</li>
       </ol>
