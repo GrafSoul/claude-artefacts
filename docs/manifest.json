@@ -3,12 +3,12 @@
   "subtitle": "Витрина артефактов, собранных в паре с Claude Code",
   "artefacts": [
     {
-      "title": "Атлас бэкенда",
-      "description": "Интерактивная дорожная карта: путь от фронтендера до фулстека — NestJS, PostgreSQL, Redis, Docker, Nginx, CI/CD. 57 шагов с трекингом прогресса и ссылками на доки.",
+      "title": "Бэкенд с нуля до прода",
+      "description": "Практический план сборки в реальном порядке: Docker → сервер → CI/CD → NestJS → PostgreSQL → приложение → Redis → надёжность → масштаб. 42 шага-действия с трекингом прогресса и ссылками на доки.",
       "path": "backend-roadmap.html",
-      "emoji": "🗺️",
+      "emoji": "🛠️",
       "date": "2026-07-15",
-      "tags": ["backend", "nestjs", "roadmap"]
+      "tags": ["backend", "nestjs", "devops", "план"]
     }
   ]
 }
