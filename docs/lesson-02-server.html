@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Урок 1.2 · Боевой сервер (Hetzner) · dev-vault</title>
+    <title>Урок 02 · Боевой сервер (Hetzner) · dev-vault</title>
     <meta
       name="description"
       content="Практический урок: выкатываем стек dev-vault на боевой сервер Hetzner — SSH, защита, Docker, безопасный прод-compose (без открытых портов БД), Nginx и HTTPS."
@@ -150,19 +150,19 @@
   </head>
   <body>
     <div class="topbar">
-      <span class="brand"><b>◆</b> dev-vault · урок 1.2</span>
+      <span class="brand"><b>◆</b> dev-vault · урок 02</span>
       <span class="spacer"></span>
-      <a class="btn" href="lesson-01-docker.html">← урок 1.1</a>
+      <a class="btn" href="lesson-01-docker.html">← урок 01</a>
       <a class="btn" href="backend-roadmap.html">план</a>
       <button class="btn" id="themeBtn" title="Сменить тему">☾</button>
     </div>
 
     <div class="shell">
       <header class="hero">
-        <span class="eyebrow">урок 1.2 · боевой сервер</span>
+        <span class="eyebrow">этап 02 · боевой сервер</span>
         <h1>Боевой сервер <em>на Hetzner</em></h1>
         <p class="lede">
-          Берём стек из <a href="lesson-01-docker.html" style="color:var(--copper)">Урока 1.1</a>
+          Берём стек из <a href="lesson-01-docker.html" style="color:var(--copper)">Урока 01</a>
           и поднимаем его на настоящем сервере: доступ по ключу, защита, Docker, <b>безопасный
           прод-compose</b> (база и кэш закрыты от интернета), Nginx и HTTPS. К концу — сервис
           открывается по <code>https://твой-домен</code>.
@@ -170,7 +170,7 @@
         <div class="meta">
           <span class="chip"><b>~90</b> мин</span>
           <span class="chip">SSH · ufw · Docker · Nginx</span>
-          <span class="chip">этап 01 · часть 2 из 2</span>
+          <span class="chip">шаги плана 2.1–2.5</span>
           <span class="chip" style="color:var(--ink-3)">нужен VPS (Hetzner) + домен</span>
         </div>
       </header>
@@ -178,7 +178,7 @@
       <div class="note">
         <div class="t">что нужно до старта</div>
         <p>
-          <b>1.</b> Пройден <a href="lesson-01-docker.html" style="color:var(--copper)">Урок 1.1</a> —
+          <b>1.</b> Пройден <a href="lesson-01-docker.html" style="color:var(--copper)">Урок 01</a> —
           стек крутится локально. <b>2.</b> Заведён VPS на Hetzner (Ubuntu 24.04), есть его IP.
           <b>3.</b> Есть домен (или поддомен) и доступ к его DNS. <b>4.</b> Твой публичный
           SSH-ключ добавлен в сервер при создании (Hetzner предлагает это в мастере).
@@ -562,14 +562,14 @@ docker compose -f docker-compose.prod.yml exec postgres \
         <div class="t">что у тебя теперь есть</div>
         <p>
           Полный боевой комплект: стек <b>dev-vault + Postgres + Redis</b> работает <b>локально</b>
-          (урок 1.1) и <b>на сервере</b> по HTTPS, с закрытой от интернета базой, автозапуском и
+          (урок 01) и <b>на сервере</b> по HTTPS, с закрытой от интернета базой, автозапуском и
           бэкапами. Осталось автоматизировать выкат — это <b>этап 03 (CI/CD)</b>.
         </p>
       </div>
 
       <div class="lnav">
         <a href="lesson-01-docker.html">
-          <div class="dir">← урок 1.1</div>
+          <div class="dir">← урок 01</div>
           <div class="ttl">Локальная среда в Docker</div>
         </a>
         <a class="next disabled" href="#">
@@ -579,7 +579,7 @@ docker compose -f docker-compose.prod.yml exec postgres \
       </div>
 
       <footer>
-        <span>dev-vault · урок 1.2 · собрано в паре с Claude Code</span>
+        <span>dev-vault · урок 02 · собрано в паре с Claude Code</span>
         <a href="https://github.com/GrafSoul/claude-artefacts">исходники</a>
       </footer>
     </div>
