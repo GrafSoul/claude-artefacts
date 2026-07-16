@@ -25,6 +25,14 @@
       "emoji": "🖥️",
       "date": "2026-07-16",
       "tags": ["devops", "server", "nginx", "урок", "dev-vault"]
+    },
+    {
+      "title": "Docker & Compose построчно",
+      "description": "Справочник-спутник к Уроку 01: расшифровка каждой строчки Dockerfile и docker-compose.yml на реальных файлах dev-vault. Слева строка — справа человеческое объяснение: что это, зачем, где подвох.",
+      "path": "reference-docker-compose.html",
+      "emoji": "🔎",
+      "date": "2026-07-16",
+      "tags": ["docker", "compose", "справочник", "dev-vault"]
     }
   ]
 }

@@ -1,0 +1,325 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Docker & Compose построчно · dev-vault</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🔎</text></svg>" />
+    <meta
+      name="description"
+      content="Справочник: расшифровка каждой строчки Dockerfile и docker-compose.yml на реальных файлах dev-vault — что делает каждая настройка, зачем и какие нюансы."
+    />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --bg: #14100e; --bg-2: #1b1613; --panel: #201a16; --panel-2: #261f1a; --code-bg: #17120f;
+        --line: #382e27; --line-2: #4a3d34; --ink: #f3ece4; --ink-2: #c3b6a8; --ink-3: #8b7d70;
+        --copper: #e0895f; --copper-soft: #d97757; --gold: #e6b86a; --done: #7fa66a;
+        --done-bg: rgba(127, 166, 106, 0.14); --blue: #7fa8c9;
+        --radius: 16px; --serif: "Fraunces", Georgia, serif;
+        --sans: "IBM Plex Sans", -apple-system, BlinkMacSystemFont, sans-serif;
+        --mono: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+      }
+      :root[data-theme="light"] {
+        --bg: #f6f1ea; --bg-2: #efe7db; --panel: #fffdf9; --panel-2: #f1e9dc; --code-bg: #2a2320;
+        --line: #e2d6c6; --line-2: #d2c2ad; --ink: #241c14; --ink-2: #5a4d3f; --ink-3: #8a7a68;
+        --copper: #b8542f; --copper-soft: #c96a3e; --gold: #a9762a; --done: #5c7f45; --done-bg: rgba(92,127,69,0.12); --blue: #3f6b8f;
+      }
+      @media (prefers-color-scheme: light) {
+        :root:not([data-theme="dark"]) {
+          --bg: #f6f1ea; --bg-2: #efe7db; --panel: #fffdf9; --panel-2: #f1e9dc; --code-bg: #2a2320;
+          --line: #e2d6c6; --line-2: #d2c2ad; --ink: #241c14; --ink-2: #5a4d3f; --ink-3: #8a7a68;
+          --copper: #b8542f; --copper-soft: #c96a3e; --gold: #a9762a; --done: #5c7f45; --done-bg: rgba(92,127,69,0.12); --blue: #3f6b8f;
+        }
+      }
+
+      * { box-sizing: border-box; margin: 0; padding: 0; }
+      html { scroll-behavior: smooth; scroll-padding-top: 80px; }
+      body {
+        font-family: var(--sans); background: var(--bg); color: var(--ink); line-height: 1.6;
+        -webkit-font-smoothing: antialiased;
+        background-image: radial-gradient(1100px 550px at 88% -5%, rgba(224,137,95,0.09), transparent 60%);
+        background-attachment: fixed;
+      }
+      ::selection { background: var(--copper); color: #14100e; }
+
+      .topbar { position: sticky; top: 0; z-index: 50; display: flex; align-items: center; gap: 1rem; padding: 0.7rem clamp(1rem,4vw,2.5rem); background: color-mix(in srgb, var(--bg) 82%, transparent); backdrop-filter: blur(14px); border-bottom: 1px solid var(--line); }
+      .brand { font-family: var(--mono); font-size: 0.82rem; color: var(--ink-2); white-space: nowrap; }
+      .brand b { color: var(--copper); font-weight: 500; }
+      .topbar .spacer { flex: 1; }
+      .btn { font-family: var(--mono); font-size: 0.76rem; color: var(--ink-2); background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 0.4rem 0.6rem; cursor: pointer; transition: all 0.15s ease; text-decoration: none; white-space: nowrap; }
+      .btn:hover { color: var(--ink); border-color: var(--line-2); }
+
+      .shell { max-width: 900px; margin: 0 auto; padding: 0 clamp(1rem,4vw,2rem) 6rem; }
+
+      .hero { padding: clamp(2.5rem,7vw,4.5rem) 0 1.5rem; }
+      .eyebrow { font-family: var(--mono); font-size: 0.78rem; letter-spacing: 0.14em; text-transform: uppercase; color: var(--copper); display: flex; align-items: center; gap: 0.6rem; }
+      .eyebrow::before { content: ""; width: 1.8rem; height: 1px; background: var(--copper); }
+      h1 { font-family: var(--serif); font-weight: 600; font-size: clamp(2.2rem,6vw,3.4rem); line-height: 1.05; letter-spacing: -0.015em; margin: 1rem 0 0.5rem; }
+      h1 em { font-style: italic; color: var(--copper); }
+      .lede { font-size: clamp(1.02rem,2.3vw,1.18rem); color: var(--ink-2); max-width: 64ch; margin-top: 0.8rem; }
+      .lede b { color: var(--ink); font-weight: 500; }
+      .meta { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 1.5rem; font-family: var(--mono); font-size: 0.76rem; }
+      .chip { border: 1px solid var(--line); background: var(--panel); color: var(--ink-2); border-radius: 99px; padding: 0.25rem 0.7rem; }
+
+      h2 { font-family: var(--serif); font-weight: 600; font-size: clamp(1.5rem,4vw,2rem); letter-spacing: -0.01em; margin: 3rem 0 0.5rem; scroll-margin-top: 80px; }
+      h3 { font-family: var(--mono); font-weight: 500; font-size: 0.9rem; color: var(--copper); margin: 1.8rem 0 0.6rem; text-transform: uppercase; letter-spacing: 0.04em; }
+      p.body { color: var(--ink-2); margin: 0.7rem 0; }
+      p.body b { color: var(--ink); font-weight: 500; }
+      p.body code, .inline { font-family: var(--mono); font-size: 0.88em; background: var(--panel-2); border: 1px solid var(--line); border-radius: 5px; padding: 0.05rem 0.35rem; color: var(--copper); }
+
+      /* annotated code */
+      .ann { border: 1px solid var(--line); border-radius: 12px; overflow: hidden; margin: 0.9rem 0; background: var(--panel); }
+      .ann-file { font-family: var(--mono); font-size: 0.76rem; color: var(--ink-2); padding: 0.5rem 0.9rem; background: color-mix(in srgb, var(--panel) 60%, black); border-bottom: 1px solid var(--line); }
+      .ann-file b { color: var(--copper); font-weight: 500; }
+      .ann-row { display: grid; grid-template-columns: minmax(0, 0.95fr) minmax(0, 1.05fr); border-top: 1px solid var(--line); }
+      .ann-row:first-of-type { border-top: none; }
+      .ann-code { font-family: var(--mono); font-size: 0.8rem; line-height: 1.55; color: var(--ink); background: var(--code-bg); padding: 0.7rem 0.9rem; white-space: pre-wrap; overflow-wrap: anywhere; }
+      :root[data-theme="light"] .ann-code, :root:not([data-theme="dark"]) .ann-code { color: #f3ece4; }
+      .ann-exp { padding: 0.7rem 0.9rem; font-size: 0.87rem; color: var(--ink-2); border-left: 1px solid var(--line); }
+      .ann-exp k { font-family: var(--mono); font-size: 0.9em; color: var(--copper); font-style: normal; }
+      .ann-exp b { color: var(--ink); font-weight: 500; }
+      .ann-row.head .ann-code, .ann-row.head .ann-exp { background: color-mix(in srgb, var(--copper) 8%, var(--panel)); }
+      .ann-row.head .ann-exp { color: var(--ink); font-weight: 500; }
+      @media (max-width: 640px) {
+        .ann-row { grid-template-columns: 1fr; }
+        .ann-code { border-bottom: 1px solid var(--line); }
+        .ann-exp { border-left: none; }
+      }
+
+      .note { border-left: 3px solid var(--copper); background: color-mix(in srgb, var(--copper) 8%, var(--panel)); border-radius: 0 10px 10px 0; padding: 0.9rem 1.1rem; margin: 1.2rem 0; }
+      .note .t { font-family: var(--mono); font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--copper); margin-bottom: 0.3rem; }
+      .note p { font-size: 0.9rem; color: var(--ink-2); }
+      .note p b { color: var(--ink); }
+      .note p code { font-family: var(--mono); font-size: 0.86em; background: var(--panel-2); border: 1px solid var(--line); border-radius: 5px; padding: 0.05rem 0.35rem; color: var(--copper); }
+
+      .toc { display: flex; flex-wrap: wrap; gap: 0.5rem; margin: 1.5rem 0 0.5rem; }
+      .toc a { font-family: var(--mono); font-size: 0.76rem; color: var(--ink-2); text-decoration: none; border: 1px solid var(--line); border-radius: 8px; padding: 0.35rem 0.7rem; transition: all 0.15s ease; }
+      .toc a:hover { color: var(--copper); border-color: var(--copper); }
+
+      .lnav { display: flex; flex-wrap: wrap; gap: 0.8rem; justify-content: space-between; margin-top: 3.5rem; }
+      .lnav a { flex: 1; min-width: 220px; border: 1px solid var(--line); border-radius: 12px; padding: 1rem 1.2rem; text-decoration: none; background: var(--panel); transition: all 0.15s ease; }
+      .lnav a:hover { border-color: var(--copper); transform: translateY(-2px); }
+      .lnav .dir { font-family: var(--mono); font-size: 0.72rem; color: var(--ink-3); }
+      .lnav .ttl { color: var(--ink); font-weight: 500; margin-top: 0.2rem; }
+
+      footer { margin-top: 3rem; padding-top: 1.5rem; border-top: 1px solid var(--line); font-family: var(--mono); font-size: 0.78rem; color: var(--ink-3); display: flex; flex-wrap: wrap; gap: 0.5rem 1rem; justify-content: space-between; }
+      footer a { color: var(--copper); text-decoration: none; }
+      @media (prefers-reduced-motion: reduce) { * { transition: none !important; scroll-behavior: auto !important; } }
+    </style>
+  </head>
+  <body>
+    <div class="topbar">
+      <span class="brand"><b>◆</b> dev-vault · справочник</span>
+      <span class="spacer"></span>
+      <a class="btn" href="lesson-01-docker.html">← урок 01</a>
+      <a class="btn" href="backend-roadmap.html">план</a>
+      <button class="btn" id="themeBtn" title="Сменить тему">☾</button>
+    </div>
+
+    <div class="shell">
+      <header class="hero">
+        <span class="eyebrow">справочник · построчно</span>
+        <h1>Docker &amp; Compose <em>построчно</em></h1>
+        <p class="lede">
+          Каждая настройка из твоих файлов <b>dev-vault</b> — с человеческим объяснением: что это,
+          зачем и где подвох. Слева — строка, справа — расшифровка. Это спутник к
+          <a href="lesson-01-docker.html" style="color:var(--copper)">Уроку 01</a>: там ты копируешь
+          файлы, здесь понимаешь каждую строку.
+        </p>
+        <div class="meta">
+          <span class="chip">Dockerfile</span>
+          <span class="chip">docker-compose.yml</span>
+          <span class="chip">на реальных файлах</span>
+        </div>
+        <div class="toc">
+          <a href="#df-idea">Как читать Dockerfile</a>
+          <a href="#df-server">Dockerfile сервера</a>
+          <a href="#df-client">Dockerfile клиента</a>
+          <a href="#cp-server">compose сервера</a>
+          <a href="#cp-client">compose клиента</a>
+          <a href="#cp-root">корневой compose</a>
+        </div>
+      </header>
+
+      <h2 id="df-idea">Как читать Dockerfile</h2>
+      <p class="body">
+        Dockerfile — это <b>рецепт образа</b>, читается сверху вниз. Каждая инструкция создаёт
+        <b>слой</b>, который Docker кэширует: если слой и всё до него не изменились — он берётся из
+        кэша, а не пересобирается. Поэтому порядок инструкций влияет на скорость сборки. Ещё один
+        приём — <b>multi-stage</b>: в одном файле несколько стадий (<k>FROM ... AS имя</k>), и в
+        финальный образ попадает только то, что реально нужно.
+      </p>
+
+      <h2 id="df-server">Dockerfile сервера</h2>
+      <p class="body">Backend (<code>dev-vault-server/Dockerfile</code>). Четыре стадии: общая база, установка зависимостей, разработка/сборка, лёгкий прод.</p>
+      <div class="ann">
+        <div class="ann-file"><b>dev-vault-server/Dockerfile</b></div>
+        <div class="ann-row"><div class="ann-code"># syntax=docker/dockerfile:1</div><div class="ann-exp">Директива парсера: использовать актуальный синтаксис Dockerfile (версия 1). Ставится самой первой строкой, даёт доступ к свежим возможностям сборки.</div></div>
+        <div class="ann-row head"><div class="ann-code">FROM node:24-alpine AS base</div><div class="ann-exp"><b>Стадия 1 — база.</b> <k>FROM</k> — с какого образа стартуем. <k>node:24</k> — официальный образ Node.js 24. <k>alpine</k> — минимальный Linux (~5 МБ) внутри. <k>AS base</k> — имя стадии, чтобы дальше на неё ссылаться.</div></div>
+        <div class="ann-row"><div class="ann-code">WORKDIR /app</div><div class="ann-exp">Рабочая папка внутри контейнера. Все следующие команды идут относительно <k>/app</k>. Если папки нет — создастся.</div></div>
+        <div class="ann-row"><div class="ann-code">COPY package*.json ./</div><div class="ann-exp"><k>COPY</k> копирует файлы с твоей машины в образ. <k>package*.json</k> — маска: <k>package.json</k> + <k>package-lock.json</k>. <k>./</k> — в рабочую папку. Копируем <b>только манифесты</b> (не весь код), чтобы слой с зависимостями кэшировался отдельно.</div></div>
+        <div class="ann-row head"><div class="ann-code">FROM base AS deps
+RUN npm ci</div><div class="ann-exp"><b>Стадия 2 — зависимости.</b> Наследует <k>base</k>. <k>RUN</k> выполняет команду <b>при сборке</b> образа. <k>npm ci</k> — чистая установка строго по lock-файлу (быстрее и воспроизводимее <k>npm install</k>). Слой переиспользуется, пока не менялся <k>package.json</k>.</div></div>
+        <div class="ann-row head"><div class="ann-code">FROM deps AS dev
+COPY . .
+CMD ["npm", "run", "start:dev"]</div><div class="ann-exp"><b>Стадия 3 — разработка.</b> Поверх <k>deps</k> (зависимости уже стоят). <k>COPY . .</k> — весь код в образ (после установки зависимостей, чтобы правки кода не сбрасывали их кэш). <k>CMD</k> — команда <b>при запуске</b> контейнера (не при сборке); форма-массив — без обёртки shell.</div></div>
+        <div class="ann-row head"><div class="ann-code">FROM deps AS build
+COPY . .
+RUN npm run build
+RUN npm prune --omit=dev</div><div class="ann-exp"><b>Стадия 4 — сборка прода.</b> <k>npm run build</k> компилирует TypeScript в JS (папка <k>dist/</k>). <k>npm prune --omit=dev</k> выкидывает dev-зависимости — в проде они не нужны, образ меньше.</div></div>
+        <div class="ann-row head"><div class="ann-code">FROM node:24-alpine AS prod
+WORKDIR /app
+ENV NODE_ENV=production</div><div class="ann-exp"><b>Стадия 5 — финальный прод-образ.</b> Начинается с <b>чистого</b> Node — без исходников и dev-инструментов предыдущих стадий. <k>ENV</k> — переменная окружения, зашитая в образ; <k>NODE_ENV=production</k> включает прод-режим у библиотек.</div></div>
+        <div class="ann-row"><div class="ann-code">COPY --from=build --chown=node:node \
+  /app/node_modules ./node_modules
+COPY --from=build --chown=node:node \
+  /app/dist ./dist
+COPY --from=build --chown=node:node \
+  /app/package*.json ./</div><div class="ann-exp"><k>--from=build</k> — копируем не с хоста, а из стадии <k>build</k>. Берём только готовое: node_modules (уже без dev), <k>dist</k>, манифесты. <k>--chown=node:node</k> — сразу назначаем владельцем файлов пользователя <k>node</k>, а не root.</div></div>
+        <div class="ann-row"><div class="ann-code">USER node</div><div class="ann-exp">Дальше контейнер работает под непривилегированным пользователем <k>node</k>, а не root. Если приложение взломают — прав у процесса меньше. Базовая безопасность.</div></div>
+        <div class="ann-row"><div class="ann-code">EXPOSE 3030</div><div class="ann-exp">Документирует, что контейнер слушает порт 3030. <b>Сам порт наружу НЕ открывает</b> — это делает <k>ports</k> в compose. Это подсказка для читателя и инструментов.</div></div>
+        <div class="ann-row"><div class="ann-code">CMD ["node", "dist/main.js"]</div><div class="ann-exp">Команда запуска прод-контейнера: просто <k>node</k> на собранном файле — без npm и nest-cli, которых в проде уже нет.</div></div>
+      </div>
+
+      <h2 id="df-client">Dockerfile клиента — что отличается</h2>
+      <p class="body">
+        Frontend (<code>dev-vault-client/Dockerfile</code>) устроен так же (база → deps → dev → build),
+        но <b>финал другой</b>: React собирается в статику, которую в проде раздаёт <b>Nginx</b>, а не Node.
+      </p>
+      <div class="ann">
+        <div class="ann-file"><b>dev-vault-client/Dockerfile</b> · только отличия</div>
+        <div class="ann-row"><div class="ann-code">EXPOSE 3000
+CMD ["npm", "run", "dev", "--",
+  "--host", "--port", "3000"]</div><div class="ann-exp"><b>dev-стадия.</b> <k>--host</k> — Vite слушает 0.0.0.0, иначе снаружи контейнера к нему не достучаться. <k>--port 3000</k> — фиксируем порт фронта (бэк на 3030). <k>--</k> отделяет аргументы npm от аргументов Vite.</div></div>
+        <div class="ann-row head"><div class="ann-code">FROM nginx:alpine AS prod</div><div class="ann-exp"><b>Прод-стадия — на образе Nginx</b> (веб-сервер), а не Node. Готовую статику раздаёт он. Node в проде фронту не нужен вообще.</div></div>
+        <div class="ann-row"><div class="ann-code">COPY nginx.conf \
+  /etc/nginx/conf.d/default.conf</div><div class="ann-exp">Кладём свой конфиг Nginx в стандартное место — переопределяем дефолтный (в нём — SPA-фолбэк на <k>index.html</k>).</div></div>
+        <div class="ann-row"><div class="ann-code">COPY --from=build /app/dist \
+  /usr/share/nginx/html</div><div class="ann-exp">Берём собранную статику из стадии <k>build</k> и кладём в папку, откуда Nginx раздаёт файлы по умолчанию.</div></div>
+        <div class="ann-row"><div class="ann-code">CMD ["nginx", "-g", "daemon off;"]</div><div class="ann-exp"><k>daemon off;</k> — запускаем Nginx на переднем плане. Контейнер живёт, пока живёт его главный процесс; уйди Nginx в фон — контейнер сразу завершится.</div></div>
+      </div>
+
+      <h2 id="cp-server">docker-compose.yml сервера</h2>
+      <p class="body">Compose описывает, <b>как запускать</b> контейнеры: какие сервисы, порты, тома, связи. Файл сервера — три сервиса: <code>app</code>, <code>postgres</code>, <code>redis</code>.</p>
+      <div class="ann">
+        <div class="ann-file"><b>dev-vault-server/docker-compose.yml</b></div>
+        <div class="ann-row"><div class="ann-code">services:</div><div class="ann-exp">Корневой ключ: список контейнеров-сервисов стека. Всё внутри — отдельные сервисы.</div></div>
+        <div class="ann-row head"><div class="ann-code">  app:</div><div class="ann-exp"><b>Сервис приложения.</b> Имя <k>app</k> — оно же сетевое: другие контейнеры зовут его как <k>app</k>.</div></div>
+        <div class="ann-row"><div class="ann-code">    build:
+      context: .
+      target: dev</div><div class="ann-exp"><k>build</k> — собрать образ из Dockerfile (в отличие от <k>image</k>, который тянет готовый). <k>context: .</k> — папка сборки (где Dockerfile и код). <k>target: dev</k> — собрать multi-stage только до стадии <k>dev</k> (с hot-reload).</div></div>
+        <div class="ann-row"><div class="ann-code">    command: npm run start:dev</div><div class="ann-exp">Переопределяет <k>CMD</k> из Dockerfile при запуске. Здесь — тот же dev-режим, указан явно для наглядности.</div></div>
+        <div class="ann-row"><div class="ann-code">    ports:
+      - "3030:3030"</div><div class="ann-exp">Проброс порта в формате <k>хост:контейнер</k>. Левое число — порт на твоей машине, правое — внутри контейнера. Так <k>localhost:3030</k> попадает в приложение.</div></div>
+        <div class="ann-row"><div class="ann-code">    env_file: .env</div><div class="ann-exp">Загрузить переменные окружения из файла <k>.env</k> в контейнер (PORT, DATABASE_URL, CORS_ORIGIN и т.д.).</div></div>
+        <div class="ann-row"><div class="ann-code">    volumes:
+      - .:/app</div><div class="ann-exp"><b>Bind-mount:</b> папка проекта с хоста (<k>.</k>) монтируется в <k>/app</k> контейнера. Правки кода сразу видны внутри — основа hot-reload.</div></div>
+        <div class="ann-row"><div class="ann-code">      - /app/node_modules</div><div class="ann-exp"><b>Анонимный том</b> поверх <k>/app/node_modules</k>: «прикрывает» node_modules из образа, чтобы хостовая папка их не затёрла. Без него — частое «module not found».</div></div>
+        <div class="ann-row"><div class="ann-code">    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started</div><div class="ann-exp"><k>depends_on</k> — порядок и условия старта. <k>service_healthy</k>: <k>app</k> стартует, только когда postgres прошёл healthcheck (реально готов принимать соединения), а не просто «процесс запущен». Для redis достаточно <k>service_started</k> — что контейнер запустился.</div></div>
+        <div class="ann-row head"><div class="ann-code">  postgres:
+    image: postgres:18-alpine</div><div class="ann-exp"><b>Сервис базы.</b> <k>image</k> (не <k>build</k>) — тянем <b>готовый</b> образ Postgres 18 (alpine) из Docker Hub, ничего не собираем.</div></div>
+        <div class="ann-row"><div class="ann-code">    environment:
+      POSTGRES_USER: devvault
+      POSTGRES_PASSWORD: devvault
+      POSTGRES_DB: devvault</div><div class="ann-exp"><k>environment</k> — переменные, заданные прямо здесь. Это <b>спец-переменные образа Postgres</b>: при первом старте он создаёт пользователя, пароль и базу с этими значениями.</div></div>
+        <div class="ann-row"><div class="ann-code">    ports:
+      - "5432:5432"</div><div class="ann-exp">Проброс порта базы на хост — чтобы подключаться к ней с машины (GUI, psql). <b>Локально удобно; на боевом сервере этот порт наружу не открывают</b> (урок 02).</div></div>
+        <div class="ann-row"><div class="ann-code">    volumes:
+      - pgdata:/var/lib/postgresql</div><div class="ann-exp"><b>Именованный том</b> <k>pgdata</k> монтируется туда, где Postgres 18 хранит данные. Данные переживают пересоздание контейнера. В pg18 путь — <k>/var/lib/postgresql</k> (без <k>/data</k>, как было в 17).</div></div>
+        <div class="ann-row"><div class="ann-code">    healthcheck:
+      test: ["CMD-SHELL",
+        "pg_isready -U devvault"]
+      interval: 5s
+      timeout: 3s
+      retries: 5</div><div class="ann-exp"><k>healthcheck</k> — как Docker проверяет, что сервис реально жив. <k>test</k> — команда проверки (<k>pg_isready</k> спрашивает Postgres, готов ли он); <k>CMD-SHELL</k> — выполнить через шелл. <k>interval</k> — как часто проверять. <k>timeout</k> — сколько ждать ответа. <k>retries</k> — сколько неудач подряд, прежде чем пометить контейнер unhealthy.</div></div>
+        <div class="ann-row head"><div class="ann-code">  redis:
+    image: redis:8-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redisdata:/data</div><div class="ann-exp"><b>Сервис кэша.</b> Готовый образ Redis 8. Порт проброшен на хост, данные — в именованном томе <k>redisdata</k> (путь <k>/data</k> — стандартный для образа Redis).</div></div>
+        <div class="ann-row head"><div class="ann-code">volumes:
+  pgdata:
+  redisdata:</div><div class="ann-exp"><b>Объявление именованных томов</b> (верхний уровень файла). Docker создаёт и хранит их сам, вне папки проекта. Здесь просто регистрируем имена, которые выше использовали сервисы.</div></div>
+      </div>
+
+      <h2 id="cp-client">docker-compose.yml клиента</h2>
+      <p class="body">Проще серверного: один сервис <code>web</code>, без базы и кэша. Ключи те же самые.</p>
+      <div class="ann">
+        <div class="ann-file"><b>dev-vault-client/docker-compose.yml</b></div>
+        <div class="ann-row"><div class="ann-code">services:
+  web:
+    build:
+      context: .
+      target: dev</div><div class="ann-exp"><b>Единственный сервис</b> <k>web</k>. Собирается из своего Dockerfile до стадии <k>dev</k> (Vite dev-сервер).</div></div>
+        <div class="ann-row"><div class="ann-code">    command: npm run dev --
+      --host --port 3000</div><div class="ann-exp">Запускает Vite так, чтобы он был виден снаружи контейнера (<k>--host</k>) и на порту 3000 (<k>--port</k>).</div></div>
+        <div class="ann-row"><div class="ann-code">    ports:
+      - "3000:3000"</div><div class="ann-exp">Фронт доступен на <k>localhost:3000</k>. Другой порт, чем у бэка (3030) — не конфликтуют.</div></div>
+        <div class="ann-row"><div class="ann-code">    env_file: .env
+    volumes:
+      - .:/app
+      - /app/node_modules</div><div class="ann-exp">Тот же приём, что у сервера: env из <k>.env</k> (тут <k>VITE_API_URL</k>), bind-mount кода для hot-reload и анонимный том под node_modules.</div></div>
+      </div>
+
+      <h2 id="cp-root">Корневой compose — include</h2>
+      <p class="body">Крошечный файл в папке <code>dev-vault/</code>, который поднимает весь стек одной командой.</p>
+      <div class="ann">
+        <div class="ann-file"><b>dev-vault/docker-compose.yml</b></div>
+        <div class="ann-row head"><div class="ann-code">include:
+  - dev-vault-server/docker-compose.yml
+  - dev-vault-client/docker-compose.yml</div><div class="ann-exp"><k>include</k> — подключить другие compose-файлы и <b>слить их сервисы в ОДИН проект</b> и общую сеть. Ноль дублирования: каждая репа держит свой compose, а корневой лишь ссылается на них по пути. <k>docker compose up</k> отсюда поднимает и сервер, и клиент, и базу, и кэш.</div></div>
+      </div>
+
+      <div class="note">
+        <div class="t">короткое правило на будущее</div>
+        <p>
+          <b>Dockerfile</b> отвечает на вопрос «<b>как собрать образ</b>» (из чего, что скопировать,
+          чем запускать). <b>compose</b> отвечает «<b>как это запускать вместе</b>» (порты, тома,
+          сеть, связи между сервисами). Одно — рецепт, другое — оркестровка.
+        </p>
+      </div>
+
+      <div class="lnav">
+        <a href="lesson-01-docker.html">
+          <div class="dir">← урок 01</div>
+          <div class="ttl">Локальная среда в Docker</div>
+        </a>
+        <a href="backend-roadmap.html">
+          <div class="dir">план →</div>
+          <div class="ttl">Полный план сборки</div>
+        </a>
+      </div>
+
+      <footer>
+        <span>dev-vault · справочник · собрано в паре с Claude Code</span>
+        <a href="https://github.com/GrafSoul/claude-artefacts">исходники</a>
+      </footer>
+    </div>
+
+    <script>
+      const THEME_KEY = "dev-vault-lesson-theme";
+      const btn = document.getElementById("themeBtn");
+      function applyTheme(t) { document.documentElement.setAttribute("data-theme", t); btn.textContent = t === "dark" ? "☾" : "☀"; }
+      const saved = localStorage.getItem(THEME_KEY);
+      if (saved) applyTheme(saved);
+      else btn.textContent = matchMedia("(prefers-color-scheme: light)").matches ? "☀" : "☾";
+      btn.addEventListener("click", () => {
+        const cur = document.documentElement.getAttribute("data-theme") || (matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark");
+        const next = cur === "dark" ? "light" : "dark";
+        localStorage.setItem(THEME_KEY, next);
+        applyTheme(next);
+      });
+    </script>
+  </body>
+</html>
