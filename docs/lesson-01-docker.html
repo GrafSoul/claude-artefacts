@@ -380,8 +380,8 @@
       </div>
 
       <h2>Куда кладём файлы</h2>
-      <p class="body">Внутри твоей папки <code>dev-vault</code> уже есть Nest. Добавляем 5 файлов (отмечены):</p>
-      <div class="tree"><span class="cmt"># dev-vault/</span>
+      <p class="body">Внутри твоей папки <code>dev-vault-server</code> уже есть Nest. Добавляем 5 файлов (отмечены):</p>
+      <div class="tree"><span class="cmt"># dev-vault-server/</span>
 ├── src/                  <span class="cmt"># уже есть (nest new)</span>
 ├── package.json          <span class="cmt"># уже есть</span>
 ├── <span class="add">Dockerfile</span>             <span class="cmt"># ← добавляем</span>
@@ -397,31 +397,38 @@
       </p>
       <div class="code" data-lang="dockerfile">
         <div class="code-head"><span class="code-file">Dockerfile</span><span class="code-lang">dockerfile</span><span class="spacer"></span><button class="copy">копировать</button></div>
-        <pre><code># ---- база: общая для всех стадий ----
-FROM node:22-alpine AS base
+        <pre><code># syntax=docker/dockerfile:1
+
+# ---- база: общая для всех стадий ----
+FROM node:24-alpine AS base
 WORKDIR /app
 COPY package*.json ./
 
-# ---- dev: с dev-зависимостями и hot-reload ----
-FROM base AS dev
+# ---- deps: установка зависимостей (кэшируемый слой) ----
+FROM base AS deps
 RUN npm ci
+
+# ---- dev: dev-зависимости + hot-reload ----
+FROM deps AS dev
 COPY . .
 CMD ["npm", "run", "start:dev"]
 
-# ---- build: собираем прод-сборку ----
-FROM base AS build
-RUN npm ci
+# ---- build: прод-сборка ----
+FROM deps AS build
 COPY . .
 RUN npm run build
 RUN npm prune --omit=dev
 
 # ---- prod: минимальный образ для сервера ----
-FROM node:22-alpine AS prod
+FROM node:24-alpine AS prod
 WORKDIR /app
 ENV NODE_ENV=production
-COPY --from=build /app/node_modules ./node_modules
-COPY --from=build /app/dist ./dist
-COPY --from=build /app/package*.json ./
+
+COPY --from=build --chown=node:node /app/node_modules ./node_modules
+COPY --from=build --chown=node:node /app/dist ./dist
+COPY --from=build --chown=node:node /app/package*.json ./
+
+USER node
 EXPOSE 3030
 CMD ["node", "dist/main.js"]</code></pre>
       </div>
@@ -437,52 +444,13 @@ Dockerfile
 docker-compose.yml</code></pre>
       </div>
       <div class="note">
-        <div class="t">почему multi-stage</div>
+        <div class="t">почему так — три приёма из твоей рабочей версии</div>
         <p>
-          Стадия <b>dev</b> монтирует твой код и следит за изменениями. Стадия <b>prod</b>
-          не содержит ни dev-зависимостей, ни исходников — только собранный <code>dist</code>.
-          Финальный образ выходит в разы меньше и безопаснее.
-        </p>
-      </div>
-
-      <h3>Dockerfile фронта — для сравнения (другая репа)</h3>
-      <p class="body">
-        У React-морды <b>свой</b> Dockerfile, и он другой — потому что задача другая. Бэк в проде
-        крутит живой Node-процесс; фронт компилируется в <b>статику</b>, которую раздаёт Nginx
-        (Node в проде уже не нужен). Каркас похож, финал — принципиально разный:
-      </p>
-      <div class="code" data-lang="dockerfile">
-        <div class="code-head"><span class="code-file">Dockerfile · репа frontend (React)</span><span class="code-lang">dockerfile</span><span class="spacer"></span><button class="copy">копировать</button></div>
-        <pre><code># ---- dev: Vite dev-сервер с hot-reload ----
-FROM node:22-alpine AS dev
-WORKDIR /app
-COPY package*.json ./
-RUN npm ci
-COPY . .
-EXPOSE 3000
-# --host — виден снаружи контейнера; --port 3000 — фронт на 3000 (бэк на 3030)
-CMD ["npm", "run", "dev", "--", "--host", "--port", "3000"]
-
-# ---- build: собираем статику в папку dist/ ----
-FROM node:22-alpine AS build
-WORKDIR /app
-COPY package*.json ./
-RUN npm ci
-COPY . .
-RUN npm run build
-
-# ---- prod: отдаём статику через Nginx, без Node ----
-FROM nginx:alpine AS prod
-COPY --from=build /app/dist /usr/share/nginx/html
-EXPOSE 80
-CMD ["nginx", "-g", "daemon off;"]</code></pre>
-      </div>
-      <div class="note">
-        <div class="t">«совместимость» тут не про Dockerfile</div>
-        <p>
-          Файлы фронта и бэка не обязаны совпадать — даже версия Node может отличаться. Они
-          общаются по HTTP, а не разделяют код. Связывают их три вещи: <b>адрес API</b> (env-переменная
-          <code>VITE_API_URL</code>), <b>сам API-контракт</b> и <b>CORS</b> на бэке. Подробно — этап 06.
+          <b>Стадия <code>deps</code></b> ставит зависимости один раз — <code>dev</code> и
+          <code>build</code> её переиспользуют (быстрее пересборка). <b>Стадия <code>prod</code></b>
+          не содержит ни dev-зависимостей, ни исходников — только <code>dist</code>, и работает
+          <b>под пользователем <code>node</code></b> (<code>USER node</code>), а не root — так
+          безопаснее. Образ выходит в разы меньше.
         </p>
       </div>
 
@@ -496,7 +464,7 @@ CMD ["nginx", "-g", "daemon off;"]</code></pre>
         <div class="t">откуда берутся Postgres и Redis — их ставить НЕ надо</div>
         <p>
           Главный момент: базу и кэш <b>не нужно устанавливать вручную</b>. Строки
-          <code>image: postgres:17-alpine</code> и <code>image: redis:7-alpine</code> говорят Docker:
+          <code>image: postgres:18-alpine</code> и <code>image: redis:8-alpine</code> говорят Docker:
           «скачай готовый образ из реестра Docker Hub». При первом <code>docker compose up</code>
           Docker сам их подтянет и запустит. На машине тебе нужен <b>только Docker</b> — ни Postgres,
           ни Redis отдельно ставить не требуется.
@@ -523,7 +491,7 @@ CMD ["nginx", "-g", "daemon off;"]</code></pre>
         condition: service_started
 
   postgres:
-    image: postgres:17-alpine
+    image: postgres:18-alpine
     environment:
       POSTGRES_USER: devvault
       POSTGRES_PASSWORD: devvault
@@ -531,7 +499,7 @@ CMD ["nginx", "-g", "daemon off;"]</code></pre>
     ports:
       - "5432:5432"
     volumes:
-      - pgdata:/var/lib/postgresql/data
+      - pgdata:/var/lib/postgresql    # в postgres:18 путь данных без /data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U devvault"]
       interval: 5s
@@ -539,7 +507,7 @@ CMD ["nginx", "-g", "daemon off;"]</code></pre>
       retries: 5
 
   redis:
-    image: redis:7-alpine
+    image: redis:8-alpine
     ports:
       - "6379:6379"
     volumes:
@@ -556,16 +524,20 @@ volumes:
       </p>
       <div class="code" data-lang="env">
         <div class="code-head"><span class="code-file">.env.example</span><span class="code-lang">env</span><span class="spacer"></span><button class="copy">копировать</button></div>
-        <pre><code># значения для локальной разработки (в прод пойдут другие)
-NODE_ENV=development
+        <pre><code># ---- Приложение ----
+# Порт должен совпадать с портом в docker-compose.yml и EXPOSE в Dockerfile
 PORT=3030
+NODE_ENV=development
 
-# внутри сети Docker хост базы — это ИМЯ СЕРВИСА, а не localhost
-DATABASE_URL=postgresql://devvault:devvault@postgres:5432/devvault
+# ---- PostgreSQL ----
+# host = имя сервиса из docker-compose (postgres), не localhost
+DATABASE_URL=postgres://devvault:devvault@postgres:5432/devvault
+
+# ---- Redis ----
 REDIS_URL=redis://redis:6379</code></pre>
       </div>
       <div class="code term" data-lang="bash">
-        <div class="code-head"><span class="code-file">терминал · dev-vault/</span><span class="code-lang">bash</span><span class="spacer"></span><button class="copy">копировать</button></div>
+        <div class="code-head"><span class="code-file">терминал · dev-vault-server/</span><span class="code-lang">bash</span><span class="spacer"></span><button class="copy">копировать</button></div>
         <pre><code># создать рабочий .env из шаблона (для локалки значения те же)
 cp .env.example .env</code></pre>
       </div>
@@ -586,44 +558,10 @@ cp .env.example .env</code></pre>
         </p>
       </div>
 
-      <h3>docker-compose.yml фронта — для сравнения (другая репа)</h3>
-      <p class="body">
-        У фронта <b>свой</b> compose в его репе, и он <b>проще</b>: фронту не нужны ни база, ни
-        кэш — только собственный контейнер. Ни <code>postgres</code>, ни <code>redis</code>, ни
-        <code>depends_on</code>.
-      </p>
-      <div class="code" data-lang="yaml">
-        <div class="code-head"><span class="code-file">docker-compose.yml · репа frontend (React)</span><span class="code-lang">yaml</span><span class="spacer"></span><button class="copy">копировать</button></div>
-        <pre><code>services:
-  web:
-    build:
-      context: .
-      target: dev
-    command: npm run dev -- --host --port 3000
-    ports:
-      - "3000:3000"
-    environment:
-      # адрес бэка: он опубликован на хосте, браузер зовёт его сам
-      VITE_API_URL: http://localhost:3030
-    volumes:
-      - .:/app
-      - /app/node_modules</code></pre>
-      </div>
-      <div class="note">
-        <div class="t">ключевой момент: React крутится в браузере, а не в контейнере</div>
-        <p>
-          Контейнер <code>web</code> только <b>отдаёт</b> собранный JS. Сам код React исполняется
-          <b>в твоём браузере</b> — и запросы к API уходят <b>из браузера</b> на
-          <code>localhost:3030</code>. Поэтому общая Docker-сеть между репами фронта и бэка
-          <b>не нужна</b>: связывает их браузер + опубликованные порты, а не внутренняя сеть Docker.
-          Два независимых стека, каждый со своим <code>compose up</code>.
-        </p>
-      </div>
-
       <h2>Шаг 3 — запуск и hot-reload <span class="stepbadge">план 1.3</span></h2>
-      <p class="body">Из папки <code>dev-vault</code> — одна команда, которая соберёт образ и поднимет все три контейнера:</p>
+      <p class="body">Из папки <code>dev-vault-server</code> — одна команда, которая соберёт образ и поднимет все три контейнера:</p>
       <div class="code term" data-lang="bash">
-        <div class="code-head"><span class="code-file">терминал · dev-vault/</span><span class="code-lang">bash</span><span class="spacer"></span><button class="copy">копировать</button></div>
+        <div class="code-head"><span class="code-file">терминал · dev-vault-server/</span><span class="code-lang">bash</span><span class="spacer"></span><button class="copy">копировать</button></div>
         <pre><code># собрать образы и поднять весь стек (логи в этом же окне)
 docker compose up --build</code></pre>
       </div>
@@ -691,6 +629,84 @@ docker compose down
 
 # остановить И удалить тома (полный сброс данных базы)
 docker compose down -v</code></pre>
+      </div>
+
+      <h2>Клиент (React) — отдельная репа <span class="stepbadge">для полноты картины</span></h2>
+      <p class="body">
+        Сервер готов. Теперь — как в Docker кладётся <b>клиент</b>. React ты знаешь, учить не будем;
+        показываю только <b>его файлы</b>, чтобы система была понятна целиком. Живёт фронт в
+        <b>отдельной репе</b>, у него свои <code>Dockerfile</code> и <code>docker-compose.yml</code> —
+        оба ниже. Они <b>проще</b> серверных: фронту не нужны ни база, ни кэш.
+      </p>
+
+      <h3>Dockerfile клиента</h3>
+      <p class="body">
+        Другой финал, чем у сервера: бэк в проде крутит живой Node-процесс, а фронт компилируется в
+        <b>статику</b>, которую раздаёт Nginx (Node в проде не нужен).
+      </p>
+      <div class="code" data-lang="dockerfile">
+        <div class="code-head"><span class="code-file">Dockerfile · репа frontend (React)</span><span class="code-lang">dockerfile</span><span class="spacer"></span><button class="copy">копировать</button></div>
+        <pre><code># ---- dev: Vite dev-сервер с hot-reload ----
+FROM node:24-alpine AS dev
+WORKDIR /app
+COPY package*.json ./
+RUN npm ci
+COPY . .
+EXPOSE 3000
+# --host — виден снаружи контейнера; --port 3000 — фронт на 3000 (бэк на 3030)
+CMD ["npm", "run", "dev", "--", "--host", "--port", "3000"]
+
+# ---- build: собираем статику в папку dist/ ----
+FROM node:24-alpine AS build
+WORKDIR /app
+COPY package*.json ./
+RUN npm ci
+COPY . .
+RUN npm run build
+
+# ---- prod: отдаём статику через Nginx, без Node ----
+FROM nginx:alpine AS prod
+COPY --from=build /app/dist /usr/share/nginx/html
+EXPOSE 80
+CMD ["nginx", "-g", "daemon off;"]</code></pre>
+      </div>
+
+      <h3>docker-compose.yml клиента</h3>
+      <p class="body">Проще серверного: один сервис <code>web</code>, без <code>postgres</code>, <code>redis</code> и <code>depends_on</code>.</p>
+      <div class="code" data-lang="yaml">
+        <div class="code-head"><span class="code-file">docker-compose.yml · репа frontend (React)</span><span class="code-lang">yaml</span><span class="spacer"></span><button class="copy">копировать</button></div>
+        <pre><code>services:
+  web:
+    build:
+      context: .
+      target: dev
+    command: npm run dev -- --host --port 3000
+    ports:
+      - "3000:3000"
+    environment:
+      # адрес бэка: он опубликован на хосте, браузер зовёт его сам
+      VITE_API_URL: http://localhost:3030
+    volumes:
+      - .:/app
+      - /app/node_modules</code></pre>
+      </div>
+      <div class="note">
+        <div class="t">ключевой момент: React крутится в браузере, а не в контейнере</div>
+        <p>
+          Контейнер <code>web</code> только <b>отдаёт</b> собранный JS. Сам код React исполняется
+          <b>в твоём браузере</b> — и запросы к API уходят <b>из браузера</b> на
+          <code>localhost:3030</code>. Поэтому общая Docker-сеть между репами фронта и бэка
+          <b>не нужна</b>: связывает их браузер + опубликованные порты. Два независимых стека,
+          каждый со своим <code>compose up</code>.
+        </p>
+      </div>
+      <div class="note">
+        <div class="t">«совместимость» тут не про Dockerfile</div>
+        <p>
+          Файлы фронта и бэка не обязаны совпадать. Связывают их три вещи: <b>адрес API</b>
+          (env-переменная <code>VITE_API_URL</code>), <b>сам API-контракт</b> и <b>CORS</b> на
+          бэке. Подробно — этап 06.
+        </p>
       </div>
 
       <h2>Шпаргалка команд Docker</h2>
