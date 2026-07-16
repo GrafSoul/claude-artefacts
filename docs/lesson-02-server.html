@@ -1,0 +1,637 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Урок 1.2 · Боевой сервер (Hetzner) · dev-vault</title>
+    <meta
+      name="description"
+      content="Практический урок: выкатываем стек dev-vault на боевой сервер Hetzner — SSH, защита, Docker, безопасный прод-compose (без открытых портов БД), Nginx и HTTPS."
+    />
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🖥️</text></svg>" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --bg: #14100e; --bg-2: #1b1613; --panel: #201a16; --panel-2: #261f1a; --code-bg: #17120f;
+        --line: #382e27; --line-2: #4a3d34; --ink: #f3ece4; --ink-2: #c3b6a8; --ink-3: #8b7d70;
+        --copper: #e0895f; --copper-soft: #d97757; --gold: #e6b86a; --done: #7fa66a;
+        --done-bg: rgba(127, 166, 106, 0.14); --danger: #d9736a; --danger-bg: rgba(217, 115, 106, 0.12); --blue: #7fa8c9;
+        --radius: 16px; --serif: "Fraunces", Georgia, serif;
+        --sans: "IBM Plex Sans", -apple-system, BlinkMacSystemFont, sans-serif;
+        --mono: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+      }
+      :root[data-theme="light"] {
+        --bg: #f6f1ea; --bg-2: #efe7db; --panel: #fffdf9; --panel-2: #f7f0e6; --code-bg: #2a2320;
+        --line: #e2d6c6; --line-2: #d2c2ad; --ink: #241c14; --ink-2: #5a4d3f; --ink-3: #8a7a68;
+        --copper: #b8542f; --copper-soft: #c96a3e; --gold: #a9762a; --done: #5c7f45; --done-bg: rgba(92,127,69,0.12);
+        --danger: #b23a30; --danger-bg: rgba(178, 58, 48, 0.1); --blue: #3f6b8f;
+      }
+      @media (prefers-color-scheme: light) {
+        :root:not([data-theme="dark"]) {
+          --bg: #f6f1ea; --bg-2: #efe7db; --panel: #fffdf9; --panel-2: #f7f0e6; --code-bg: #2a2320;
+          --line: #e2d6c6; --line-2: #d2c2ad; --ink: #241c14; --ink-2: #5a4d3f; --ink-3: #8a7a68;
+          --copper: #b8542f; --copper-soft: #c96a3e; --gold: #a9762a; --done: #5c7f45; --done-bg: rgba(92,127,69,0.12);
+          --danger: #b23a30; --danger-bg: rgba(178, 58, 48, 0.1); --blue: #3f6b8f;
+        }
+      }
+      :root[data-theme="light"] .code, :root:not([data-theme="dark"]) .code { --ink: #f3ece4; --ink-3: #8b7d70; }
+
+      * { box-sizing: border-box; margin: 0; padding: 0; }
+      html { scroll-behavior: smooth; scroll-padding-top: 80px; }
+      body {
+        font-family: var(--sans); background: var(--bg); color: var(--ink); line-height: 1.65;
+        -webkit-font-smoothing: antialiased;
+        background-image: radial-gradient(1100px 550px at 88% -5%, rgba(224,137,95,0.09), transparent 60%);
+        background-attachment: fixed;
+      }
+      ::selection { background: var(--copper); color: #14100e; }
+
+      .topbar { position: sticky; top: 0; z-index: 50; display: flex; align-items: center; gap: 1rem; padding: 0.7rem clamp(1rem,4vw,2.5rem); background: color-mix(in srgb, var(--bg) 82%, transparent); backdrop-filter: blur(14px); border-bottom: 1px solid var(--line); }
+      .brand { font-family: var(--mono); font-size: 0.82rem; color: var(--ink-2); white-space: nowrap; }
+      .brand b { color: var(--copper); font-weight: 500; }
+      .topbar .spacer { flex: 1; }
+      .btn { font-family: var(--mono); font-size: 0.76rem; color: var(--ink-2); background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 0.4rem 0.6rem; cursor: pointer; transition: all 0.15s ease; text-decoration: none; white-space: nowrap; }
+      .btn:hover { color: var(--ink); border-color: var(--line-2); }
+
+      .shell { max-width: 820px; margin: 0 auto; padding: 0 clamp(1rem,4vw,2rem) 6rem; }
+
+      .hero { padding: clamp(2.5rem,7vw,4.5rem) 0 2rem; }
+      .eyebrow { font-family: var(--mono); font-size: 0.78rem; letter-spacing: 0.14em; text-transform: uppercase; color: var(--copper); display: flex; align-items: center; gap: 0.6rem; }
+      .eyebrow::before { content: ""; width: 1.8rem; height: 1px; background: var(--copper); }
+      h1 { font-family: var(--serif); font-weight: 600; font-size: clamp(2.2rem,6vw,3.4rem); line-height: 1.05; letter-spacing: -0.015em; margin: 1rem 0 0.5rem; }
+      h1 em { font-style: italic; color: var(--copper); }
+      .lede { font-size: clamp(1.02rem,2.3vw,1.18rem); color: var(--ink-2); max-width: 62ch; margin-top: 0.8rem; }
+      .lede b { color: var(--ink); font-weight: 500; }
+      .meta { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 1.5rem; font-family: var(--mono); font-size: 0.76rem; }
+      .chip { border: 1px solid var(--line); background: var(--panel); color: var(--ink-2); border-radius: 99px; padding: 0.25rem 0.7rem; }
+      .chip b { color: var(--ink); font-weight: 500; }
+
+      h2 { font-family: var(--serif); font-weight: 600; font-size: clamp(1.5rem,4vw,2rem); letter-spacing: -0.01em; margin: 3rem 0 0.4rem; scroll-margin-top: 80px; display: flex; align-items: baseline; gap: 0.7rem; flex-wrap: wrap; }
+      h2 .stepbadge { font-family: var(--mono); font-size: 0.72rem; font-weight: 400; color: var(--copper); border: 1px solid color-mix(in srgb, var(--copper) 45%, transparent); border-radius: 99px; padding: 0.12rem 0.55rem; white-space: nowrap; }
+      h3 { font-family: var(--sans); font-weight: 600; font-size: 1.1rem; margin: 1.8rem 0 0.6rem; }
+      p.body { color: var(--ink-2); margin: 0.7rem 0; }
+      p.body b, li b { color: var(--ink); font-weight: 500; }
+      p.body code, li code, .inline { font-family: var(--mono); font-size: 0.88em; background: var(--panel-2); border: 1px solid var(--line); border-radius: 5px; padding: 0.05rem 0.35rem; color: var(--copper); }
+      ul.body, ol.body { color: var(--ink-2); margin: 0.7rem 0; padding-left: 0; list-style: none; display: flex; flex-direction: column; gap: 0.45rem; }
+      ul.body li { position: relative; padding-left: 1.5rem; }
+      ul.body li::before { content: "▪"; position: absolute; left: 0.15rem; color: var(--copper); }
+      ol.body { counter-reset: s; }
+      ol.body li { position: relative; padding-left: 2rem; counter-increment: s; }
+      ol.body li::before { content: counter(s); position: absolute; left: 0; top: 0; width: 1.35rem; height: 1.35rem; background: var(--copper); color: #14100e; border-radius: 50%; font-family: var(--mono); font-size: 0.75rem; font-weight: 500; display: grid; place-items: center; }
+
+      .arch { border: 1px solid var(--line); border-radius: var(--radius); background: var(--panel); padding: 1.4rem; margin: 1.5rem 0; }
+      .flowdiag { font-family: var(--mono); font-size: 0.8rem; color: var(--ink-2); white-space: pre; overflow-x: auto; line-height: 1.7; }
+      .flowdiag .hl { color: var(--copper); }
+      .flowdiag .cmt { color: var(--ink-3); }
+      .flowdiag .ok { color: var(--done); }
+      .flowdiag .bad { color: var(--danger); }
+
+      .code { background: var(--code-bg); border: 1px solid var(--line); border-radius: 12px; margin: 1rem 0; overflow: hidden; }
+      .code-head { display: flex; align-items: center; gap: 0.6rem; padding: 0.5rem 0.8rem; border-bottom: 1px solid var(--line); background: color-mix(in srgb, var(--code-bg) 70%, black); }
+      .code-file { font-family: var(--mono); font-size: 0.78rem; color: var(--ink-2); }
+      .code-lang { font-family: var(--mono); font-size: 0.68rem; color: var(--ink-3); border: 1px solid var(--line-2); border-radius: 99px; padding: 0.05rem 0.45rem; }
+      .code-head .spacer { flex: 1; }
+      .copy { font-family: var(--mono); font-size: 0.72rem; color: var(--ink-2); background: transparent; border: 1px solid var(--line-2); border-radius: 6px; padding: 0.25rem 0.5rem; cursor: pointer; transition: all 0.15s ease; }
+      .copy:hover { color: var(--copper); border-color: var(--copper); }
+      .copy.ok { color: var(--done); border-color: var(--done); }
+      pre { margin: 0; padding: 1rem; overflow-x: auto; }
+      pre code { font-family: var(--mono); font-size: 0.83rem; line-height: 1.7; color: var(--ink); white-space: pre; }
+      .code .cmt { color: var(--ink-3); font-style: italic; }
+      .term .code-file::before { content: "❯ "; color: var(--done); }
+      .term.server .code-file::before { content: "☁ "; color: var(--blue); }
+
+      .note { border-left: 3px solid var(--copper); background: color-mix(in srgb, var(--copper) 8%, var(--panel)); border-radius: 0 10px 10px 0; padding: 0.9rem 1.1rem; margin: 1.2rem 0; }
+      .note.win { border-left-color: var(--done); background: var(--done-bg); }
+      .note.danger { border-left-color: var(--danger); background: var(--danger-bg); }
+      .note .t { font-family: var(--mono); font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--copper); margin-bottom: 0.3rem; }
+      .note.win .t { color: var(--done); }
+      .note.danger .t { color: var(--danger); }
+      .note p { font-size: 0.9rem; color: var(--ink-2); }
+      .note p b { color: var(--ink); }
+      .note p code { font-family: var(--mono); font-size: 0.86em; background: var(--panel-2); border: 1px solid var(--line); border-radius: 5px; padding: 0.05rem 0.35rem; color: var(--copper); }
+
+      .check { display: flex; gap: 0.7rem; align-items: flex-start; border: 1px solid color-mix(in srgb, var(--done) 40%, var(--line)); background: var(--done-bg); border-radius: 12px; padding: 1rem 1.1rem; margin: 1.3rem 0; }
+      .check .ic { color: var(--done); flex-shrink: 0; margin-top: 0.1rem; }
+      .check .t { font-family: var(--mono); font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--done); margin-bottom: 0.3rem; }
+      .check p { font-size: 0.9rem; color: var(--ink); }
+      .check code { font-family: var(--mono); font-size: 0.86em; color: var(--copper); }
+
+      .faq { display: flex; flex-direction: column; gap: 0.55rem; margin: 1.3rem 0; }
+      .faq-item { border: 1px solid var(--line); border-radius: 12px; background: var(--panel); overflow: hidden; }
+      .faq-item summary { cursor: pointer; padding: 0.9rem 1.1rem; font-weight: 500; color: var(--ink); list-style: none; display: flex; align-items: center; gap: 0.7rem; transition: color 0.15s ease; }
+      .faq-item summary::-webkit-details-marker { display: none; }
+      .faq-item summary::before { content: "+"; font-family: var(--mono); color: var(--copper); font-size: 1.15rem; line-height: 1; flex-shrink: 0; width: 1rem; text-align: center; }
+      .faq-item[open] summary::before { content: "–"; }
+      .faq-item summary:hover { color: var(--copper); }
+      .faq-a { padding: 0 1.1rem 1rem 2.8rem; }
+      .faq-a p { color: var(--ink-2); font-size: 0.92rem; }
+      .faq-a p + p { margin-top: 0.5rem; }
+      .faq-a code { font-family: var(--mono); font-size: 0.86em; background: var(--panel-2); border: 1px solid var(--line); border-radius: 5px; padding: 0.05rem 0.35rem; color: var(--copper); }
+      .faq-a b { color: var(--ink); }
+
+      .lnav { display: flex; flex-wrap: wrap; gap: 0.8rem; justify-content: space-between; margin-top: 3.5rem; }
+      .lnav a { flex: 1; min-width: 220px; border: 1px solid var(--line); border-radius: 12px; padding: 1rem 1.2rem; text-decoration: none; background: var(--panel); transition: all 0.15s ease; }
+      .lnav a:hover { border-color: var(--copper); transform: translateY(-2px); }
+      .lnav .dir { font-family: var(--mono); font-size: 0.72rem; color: var(--ink-3); }
+      .lnav .ttl { color: var(--ink); font-weight: 500; margin-top: 0.2rem; }
+      .lnav a.next { text-align: right; }
+      .lnav a.disabled { opacity: 0.5; pointer-events: none; }
+
+      footer { margin-top: 3rem; padding-top: 1.5rem; border-top: 1px solid var(--line); font-family: var(--mono); font-size: 0.78rem; color: var(--ink-3); display: flex; flex-wrap: wrap; gap: 0.5rem 1rem; justify-content: space-between; }
+      footer a { color: var(--copper); text-decoration: none; }
+
+      @media (prefers-reduced-motion: reduce) { * { transition: none !important; scroll-behavior: auto !important; } }
+    </style>
+  </head>
+  <body>
+    <div class="topbar">
+      <span class="brand"><b>◆</b> dev-vault · урок 1.2</span>
+      <span class="spacer"></span>
+      <a class="btn" href="lesson-01-docker.html">← урок 1.1</a>
+      <a class="btn" href="backend-roadmap.html">план</a>
+      <button class="btn" id="themeBtn" title="Сменить тему">☾</button>
+    </div>
+
+    <div class="shell">
+      <header class="hero">
+        <span class="eyebrow">урок 1.2 · боевой сервер</span>
+        <h1>Боевой сервер <em>на Hetzner</em></h1>
+        <p class="lede">
+          Берём стек из <a href="lesson-01-docker.html" style="color:var(--copper)">Урока 1.1</a>
+          и поднимаем его на настоящем сервере: доступ по ключу, защита, Docker, <b>безопасный
+          прод-compose</b> (база и кэш закрыты от интернета), Nginx и HTTPS. К концу — сервис
+          открывается по <code>https://твой-домен</code>.
+        </p>
+        <div class="meta">
+          <span class="chip"><b>~90</b> мин</span>
+          <span class="chip">SSH · ufw · Docker · Nginx</span>
+          <span class="chip">этап 01 · часть 2 из 2</span>
+          <span class="chip" style="color:var(--ink-3)">нужен VPS (Hetzner) + домен</span>
+        </div>
+      </header>
+
+      <div class="note">
+        <div class="t">что нужно до старта</div>
+        <p>
+          <b>1.</b> Пройден <a href="lesson-01-docker.html" style="color:var(--copper)">Урок 1.1</a> —
+          стек крутится локально. <b>2.</b> Заведён VPS на Hetzner (Ubuntu 24.04), есть его IP.
+          <b>3.</b> Есть домен (или поддомен) и доступ к его DNS. <b>4.</b> Твой публичный
+          SSH-ключ добавлен в сервер при создании (Hetzner предлагает это в мастере).
+        </p>
+      </div>
+
+      <h2>Что построим <span class="stepbadge">результат урока</span></h2>
+      <p class="body">
+        Тот же стек, но по-боевому. Наружу смотрит только <b>Nginx</b> (порты 80/443). Он проксирует
+        на приложение, а <b>Postgres и Redis не публикуются вообще</b> — живут во внутренней сети
+        Docker и доступны только приложению.
+      </p>
+      <div class="arch">
+        <div class="flowdiag"><span class="cmt">интернет</span>
+   <span class="hl">│</span> https://api.твой-домен  (443)
+   <span class="hl">▼</span>
+<span class="ok">┌─ сервер (Hetzner) ─── ufw: наружу только 22 / 80 / 443 ──────────┐</span>
+<span class="ok">│</span>                                                                 <span class="ok">│</span>
+<span class="ok">│</span>   Nginx ──proxy──► app :3030 ──► postgres / redis               <span class="ok">│</span>
+<span class="ok">│</span>   <span class="cmt">443/TLS</span>         <span class="cmt">127.0.0.1</span>      <span class="bad">без публикации портов!</span>       <span class="ok">│</span>
+<span class="ok">└─────────────────────────────────────────────────────────────────┘</span></div>
+      </div>
+      <div class="note danger">
+        <div class="t">главное отличие от локалки — безопасность</div>
+        <p>
+          Локально мы публиковали порты <code>5432</code> и <code>6379</code> для удобства. На
+          публичном сервере это <b>дыра</b>: база с интернет-доступом и слабым паролем взламывается
+          ботами за часы. В прод-конфиге эти порты <b>не публикуем</b> — приложение всё равно видит
+          их по внутренней сети (<code>postgres:5432</code>). Разберём это в шаге 5.
+        </p>
+      </div>
+
+      <h2>Шаг 1 — Доступ по SSH <span class="stepbadge">безопасность</span></h2>
+      <p class="body">
+        Первый вход — под <code>root</code> по ключу. Сразу заводим отдельного пользователя (работать
+        под root — плохая привычка) и переносим ему наш ключ.
+      </p>
+      <div class="code term" data-lang="bash">
+        <div class="code-head"><span class="code-file">на своей машине</span><span class="code-lang">bash</span><span class="spacer"></span><button class="copy">копировать</button></div>
+        <pre><code># первый вход на сервер (IP выдал Hetzner)
+ssh root@ТВОЙ_IP</code></pre>
+      </div>
+      <div class="code term server" data-lang="bash">
+        <div class="code-head"><span class="code-file">на сервере</span><span class="code-lang">bash</span><span class="spacer"></span><button class="copy">копировать</button></div>
+        <pre><code># создать пользователя deploy и дать ему sudo
+adduser deploy
+usermod -aG sudo deploy
+
+# перенести наш SSH-ключ пользователю deploy
+rsync --archive --chown=deploy:deploy ~/.ssh /home/deploy</code></pre>
+      </div>
+      <p class="body">Проверь, что заходишь под новым пользователем (в новом окне терминала, не закрывая root):</p>
+      <div class="code term" data-lang="bash">
+        <div class="code-head"><span class="code-file">на своей машине</span><span class="code-lang">bash</span><span class="spacer"></span><button class="copy">копировать</button></div>
+        <pre><code>ssh deploy@ТВОЙ_IP</code></pre>
+      </div>
+      <p class="body">Работает? Тогда закрываем вход под root и по паролю. На сервере отредактируй SSH-конфиг:</p>
+      <div class="code term server" data-lang="bash">
+        <div class="code-head"><span class="code-file">на сервере (под deploy)</span><span class="code-lang">bash</span><span class="spacer"></span><button class="copy">копировать</button></div>
+        <pre><code>sudo nano /etc/ssh/sshd_config</code></pre>
+      </div>
+      <div class="code" data-lang="text">
+        <div class="code-head"><span class="code-file">sshd_config — найти и выставить</span><span class="code-lang">config</span><span class="spacer"></span><button class="copy">копировать</button></div>
+        <pre><code>PermitRootLogin no
+PasswordAuthentication no</code></pre>
+      </div>
+      <div class="code term server" data-lang="bash">
+        <div class="code-head"><span class="code-file">на сервере</span><span class="code-lang">bash</span><span class="spacer"></span><button class="copy">копировать</button></div>
+        <pre><code># применить изменения
+sudo systemctl restart ssh</code></pre>
+      </div>
+      <div class="note danger">
+        <div class="t">не закрывай текущую сессию, пока не проверил</div>
+        <p>
+          После рестарта SSH <b>открой новое окно</b> и убедись, что вход под <code>deploy</code> по
+          ключу работает. Только потом закрывай старую сессию. Иначе рискуешь запереть себя снаружи.
+        </p>
+      </div>
+
+      <h2>Шаг 2 — Защита сервера <span class="stepbadge">безопасность</span></h2>
+      <p class="body">
+        Три вещи базовой гигиены: firewall (пускать только нужные порты), fail2ban (банить перебор) и
+        авто-обновления безопасности.
+      </p>
+      <div class="code term server" data-lang="bash">
+        <div class="code-head"><span class="code-file">на сервере (под deploy)</span><span class="code-lang">bash</span><span class="spacer"></span><button class="copy">копировать</button></div>
+        <pre><code># firewall: разрешить только SSH, HTTP и HTTPS
+sudo ufw allow OpenSSH
+sudo ufw allow 80
+sudo ufw allow 443
+sudo ufw enable
+
+# бан за перебор паролей/ключей
+sudo apt update
+sudo apt install -y fail2ban
+
+# автоматические обновления безопасности
+sudo apt install -y unattended-upgrades
+sudo dpkg-reconfigure -plow unattended-upgrades</code></pre>
+      </div>
+      <div class="note">
+        <div class="t">почему в firewall нет 5432 и 6379</div>
+        <p>
+          Именно поэтому. Наружу открыты только <code>22/80/443</code>. Порты базы и кэша не
+          открываем — и в прод-compose их тоже не публикуем (шаг 5). Два рубежа вместо одного.
+        </p>
+      </div>
+      <div class="note danger">
+        <div class="t">Docker умеет обходить ufw — знай об этом</div>
+        <p>
+          Docker правит <code>iptables</code> напрямую и <b>публикация порта в compose может стать
+          видна из интернета даже при включённом ufw</b>. Поэтому нельзя полагаться только на
+          firewall: главная защита базы — <b>вообще не публиковать её порт</b> в прод-compose.
+        </p>
+      </div>
+
+      <h2>Шаг 3 — Docker на сервере <span class="stepbadge">инфра</span></h2>
+      <p class="body">Ставим Docker Engine и compose-плагин официальным скриптом, добавляем себя в группу docker.</p>
+      <div class="code term server" data-lang="bash">
+        <div class="code-head"><span class="code-file">на сервере</span><span class="code-lang">bash</span><span class="spacer"></span><button class="copy">копировать</button></div>
+        <pre><code># официальный установщик Docker
+curl -fsSL https://get.docker.com | sh
+
+# запускать docker без sudo (перелогинься после этого)
+sudo usermod -aG docker deploy
+
+# проверка
+docker --version
+docker compose version</code></pre>
+      </div>
+      <div class="check">
+        <svg class="ic" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
+        <div>
+          <div class="t">чек-поинт</div>
+          <p>Заходишь на сервер по ключу под <code>deploy</code>, root и пароль закрыты, ufw включён (22/80/443), <code>docker compose version</code> отвечает. Фундамент готов.</p>
+        </div>
+      </div>
+
+      <h2>Шаг 4 — Код на сервер <span class="stepbadge">деплой</span></h2>
+      <p class="body">
+        Забираем репозиторий <code>dev-vault</code> на сервер через git. Пока — вручную; на этапе 03
+        это будет делать GitHub Actions автоматически после коммита.
+      </p>
+      <div class="code term server" data-lang="bash">
+        <div class="code-head"><span class="code-file">на сервере (под deploy)</span><span class="code-lang">bash</span><span class="spacer"></span><button class="copy">копировать</button></div>
+        <pre><code># склонировать проект (для приватной репы понадобится deploy-ключ)
+git clone https://github.com/GrafSoul/dev-vault.git
+cd dev-vault</code></pre>
+      </div>
+
+      <h2>Шаг 5 — Безопасный прод-compose <span class="stepbadge">безопасность</span></h2>
+      <p class="body">
+        Ключевой шаг. Заводим отдельный <code>docker-compose.prod.yml</code> — он отличается от
+        локального тремя вещами: <b>боевой образ</b> (prod-стадия, не dev), <b>restart-политики</b>
+        (переживать перезагрузку и падения) и <b>никаких публичных портов у базы и кэша</b>.
+      </p>
+      <div class="code" data-lang="yaml">
+        <div class="code-head"><span class="code-file">docker-compose.prod.yml</span><span class="code-lang">yaml</span><span class="spacer"></span><button class="copy">копировать</button></div>
+        <pre><code>services:
+  app:
+    build:
+      context: .
+      target: prod            # боевой образ: node dist/main.js (не dev)
+    restart: unless-stopped   # сам поднимется после перезагрузки/падения
+    env_file: .env
+    ports:
+      - "127.0.0.1:3030:3030" # виден ТОЛЬКО серверу (для Nginx), не из интернета
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+
+  postgres:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: devvault
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}   # из .env, сильный пароль
+      POSTGRES_DB: devvault
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U devvault"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    # ← НЕТ секции ports: база не смотрит в интернет
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    volumes:
+      - redisdata:/data
+    # ← НЕТ секции ports: Redis только во внутренней сети
+
+volumes:
+  pgdata:
+  redisdata:</code></pre>
+      </div>
+      <div class="note win">
+        <div class="t">сравни с локальным compose</div>
+        <p>
+          Три отличия: <b>target: prod</b> (собранный dist вместо dev-watch), <b>restart:
+          unless-stopped</b> у всех, и <b>у postgres/redis убрана секция <code>ports</code></b>.
+          У <code>app</code> порт привязан к <code>127.0.0.1</code> — снаружи не достучаться, только
+          Nginx на самом сервере. Приложение по-прежнему ходит к базе по <code>postgres:5432</code>
+          внутри сети Docker.
+        </p>
+      </div>
+
+      <h2>Шаг 6 — Прод-.env с сильными паролями <span class="stepbadge">безопасность</span></h2>
+      <p class="body">
+        На сервере создаём <code>.env</code> из шаблона и вписываем <b>настоящие</b> пароли —
+        не <code>devvault</code> из локалки. Сгенерируй случайный:
+      </p>
+      <div class="code term server" data-lang="bash">
+        <div class="code-head"><span class="code-file">на сервере · dev-vault/</span><span class="code-lang">bash</span><span class="spacer"></span><button class="copy">копировать</button></div>
+        <pre><code># сгенерировать сильный пароль
+openssl rand -base64 24
+
+# создать рабочий .env из шаблона и отредактировать
+cp .env.example .env
+nano .env</code></pre>
+      </div>
+      <div class="code" data-lang="env">
+        <div class="code-head"><span class="code-file">.env (на сервере)</span><span class="code-lang">env</span><span class="spacer"></span><button class="copy">копировать</button></div>
+        <pre><code>NODE_ENV=production
+PORT=3030
+
+# сильный пароль, сгенерированный openssl (одинаковый в обеих строках)
+POSTGRES_PASSWORD=ВСТАВЬ_СГЕНЕРИРОВАННЫЙ_ПАРОЛЬ
+DATABASE_URL=postgresql://devvault:ВСТАВЬ_СГЕНЕРИРОВАННЫЙ_ПАРОЛЬ@postgres:5432/devvault
+REDIS_URL=redis://redis:6379</code></pre>
+      </div>
+      <div class="note">
+        <div class="t">почему пароль в двух местах</div>
+        <p>
+          <code>POSTGRES_PASSWORD</code> задаёт пароль базе, а <code>DATABASE_URL</code> — как
+          приложение к ней подключается. Значения должны совпадать. <code>.env</code> в
+          <code>.gitignore</code>, поэтому реальные пароли в git не попадают — только шаблон.
+        </p>
+      </div>
+
+      <h2>Шаг 7 — Запуск на сервере <span class="stepbadge">деплой</span></h2>
+      <p class="body">Поднимаем стек прод-конфигом в фоне (<code>-d</code>):</p>
+      <div class="code term server" data-lang="bash">
+        <div class="code-head"><span class="code-file">на сервере · dev-vault/</span><span class="code-lang">bash</span><span class="spacer"></span><button class="copy">копировать</button></div>
+        <pre><code># собрать боевой образ и поднять стек в фоне
+docker compose -f docker-compose.prod.yml up -d --build
+
+# проверить статусы
+docker compose -f docker-compose.prod.yml ps
+
+# проверить, что приложение отвечает локально на сервере
+curl http://127.0.0.1:3030</code></pre>
+      </div>
+      <p class="body">
+        <code>curl</code> вернул <code>Hello World!</code> — приложение живо, но пока доступно только
+        внутри сервера. Осталось открыть его миру через Nginx.
+      </p>
+
+      <h2>Шаг 8 — Nginx и HTTPS <span class="stepbadge">инфра</span></h2>
+      <p class="body">
+        Nginx примет трафик из интернета на 80/443 и проксирует на приложение. Сертификат HTTPS
+        бесплатно выдаст Let's Encrypt через certbot. Сначала — направь домен на сервер: в DNS
+        добавь <b>A-запись</b> <code>api.твой-домен → IP сервера</code>.
+      </p>
+      <div class="code term server" data-lang="bash">
+        <div class="code-head"><span class="code-file">на сервере</span><span class="code-lang">bash</span><span class="spacer"></span><button class="copy">копировать</button></div>
+        <pre><code>sudo apt install -y nginx
+sudo nano /etc/nginx/sites-available/dev-vault</code></pre>
+      </div>
+      <div class="code" data-lang="nginx">
+        <div class="code-head"><span class="code-file">/etc/nginx/sites-available/dev-vault</span><span class="code-lang">nginx</span><span class="spacer"></span><button class="copy">копировать</button></div>
+        <pre><code>server {
+    server_name api.твой-домен;
+
+    location / {
+        proxy_pass http://127.0.0.1:3030;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+}</code></pre>
+      </div>
+      <div class="code term server" data-lang="bash">
+        <div class="code-head"><span class="code-file">на сервере</span><span class="code-lang">bash</span><span class="spacer"></span><button class="copy">копировать</button></div>
+        <pre><code># включить сайт и проверить конфиг
+sudo ln -s /etc/nginx/sites-available/dev-vault /etc/nginx/sites-enabled/
+sudo nginx -t
+sudo systemctl reload nginx
+
+# выпустить HTTPS-сертификат (certbot сам пропишет 443 и редирект)
+sudo apt install -y certbot python3-certbot-nginx
+sudo certbot --nginx -d api.твой-домен</code></pre>
+      </div>
+      <div class="check">
+        <svg class="ic" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
+        <div>
+          <div class="t">проверь себя — сервис в бою</div>
+          <p>Открой <code>https://api.твой-домен</code> в браузере — видишь <code>Hello World!</code> по HTTPS. База и Redis наружу закрыты, стек переживает <code>sudo reboot</code> (проверь!). Этап 01 полностью выполнен — и локально, и на сервере.</p>
+        </div>
+      </div>
+
+      <h2>Обновление и полезные команды</h2>
+      <div class="code term server" data-lang="bash">
+        <div class="code-head"><span class="code-file">на сервере · dev-vault/</span><span class="code-lang">bash</span><span class="spacer"></span><button class="copy">копировать</button></div>
+        <pre><code># выкатить новую версию после изменений в репе
+git pull
+docker compose -f docker-compose.prod.yml up -d --build
+
+# логи приложения
+docker compose -f docker-compose.prod.yml logs -f app
+
+# перезапустить стек
+docker compose -f docker-compose.prod.yml restart
+
+# бэкап базы в файл
+docker compose -f docker-compose.prod.yml exec postgres \
+  pg_dump -U devvault devvault > backup_$(date +%F).sql</code></pre>
+      </div>
+      <div class="note">
+        <div class="t">этот ручной деплой — временный</div>
+        <p>
+          Сейчас обновление = <code>git pull</code> + <code>up -d --build</code> руками. На
+          <b>этапе 03 (CI/CD)</b> это возьмёт на себя GitHub Actions: после коммита в <code>main</code>
+          он сам соберёт образ и выполнит деплой на сервер. Ты понял верно — «после коммита автоматом
+          заливает». Но сначала полезно один раз сделать руками, чтобы понимать, что автоматизируем.
+        </p>
+      </div>
+
+      <h2>Частые вопросы</h2>
+      <div class="faq">
+        <details class="faq-item">
+          <summary>Почему нельзя оставить порты Postgres/Redis открытыми, как локально?</summary>
+          <div class="faq-a">
+            <p>Локально <code>localhost</code> доступен только тебе. На сервере публикация порта открывает базу <b>всему интернету</b>. Боты постоянно сканируют 5432/6379 и подбирают пароли — открытая база со слабым паролем живёт часы.</p>
+            <p>Решение простое: приложение ходит к базе по <b>внутренней сети Docker</b> (<code>postgres:5432</code>), а наружу порт не публикуется. Никто извне до базы не дотянется.</p>
+          </div>
+        </details>
+        <details class="faq-item">
+          <summary>Зачем отдельный docker-compose.prod.yml, а не тот же файл?</summary>
+          <div class="faq-a">
+            <p>У прода другие требования: боевой образ вместо dev-watch, restart-политики, закрытые порты БД, сильные пароли. Держать это отдельным файлом — честно и наглядно: видно, чем прод отличается от локалки.</p>
+            <p>Позже, когда почувствуешь Compose увереннее, общие части можно вынести и не дублировать (через override-файлы). Пока нагляднее — отдельным файлом.</p>
+          </div>
+        </details>
+        <details class="faq-item">
+          <summary>А если у меня нет домена?</summary>
+          <div class="faq-a">
+            <p>Для теста можно обращаться по <code>http://IP_сервера</code> (без HTTPS) — но только временно: без домена не выпустить нормальный сертификат, а гонять прод по HTTP небезопасно.</p>
+            <p>Домены стоят копейки. Для боевого сервиса он нужен — и ради HTTPS, и ради адекватного адреса. Certbot без домена работать не будет.</p>
+          </div>
+        </details>
+        <details class="faq-item">
+          <summary>Что делает <code>restart: unless-stopped</code>?</summary>
+          <div class="faq-a">
+            <p>Docker сам перезапустит контейнер, если он упал или если сервер перезагрузился — но <b>не</b> будет поднимать его, если ты остановил вручную (<code>docker compose stop</code>).</p>
+            <p>Это базовая надёжность: после <code>reboot</code> сервера сервис поднимется сам, без твоего участия.</p>
+          </div>
+        </details>
+        <details class="faq-item">
+          <summary>Где физически данные и переживут ли они пересоздание контейнера?</summary>
+          <div class="faq-a">
+            <p>В томах Docker (<code>pgdata</code>, <code>redisdata</code>) на диске сервера — как и локально. Пересборка и перезапуск контейнеров данные не трогают.</p>
+            <p>Но том живёт на одном диске сервера, поэтому делай <b>бэкапы</b> (команда <code>pg_dump</code> выше) и храни их отдельно — на случай смерти сервера.</p>
+          </div>
+        </details>
+        <details class="faq-item">
+          <summary>Nginx лучше пакетом на хосте или контейнером?</summary>
+          <div class="faq-a">
+            <p>Оба варианта рабочие. Здесь мы поставили Nginx <b>пакетом на хост</b> — так проще всего дружит с certbot (он сам правит конфиг и продлевает сертификат).</p>
+            <p>Контейнерный Nginx тоже возможен и удобен, когда фронт и бэк оборачиваешь в один стек — но настройка HTTPS там чуть сложнее. Для старта хостовый Nginx — меньше боли.</p>
+          </div>
+        </details>
+      </div>
+
+      <div class="note win">
+        <div class="t">что у тебя теперь есть</div>
+        <p>
+          Полный боевой комплект: стек <b>dev-vault + Postgres + Redis</b> работает <b>локально</b>
+          (урок 1.1) и <b>на сервере</b> по HTTPS, с закрытой от интернета базой, автозапуском и
+          бэкапами. Осталось автоматизировать выкат — это <b>этап 03 (CI/CD)</b>.
+        </p>
+      </div>
+
+      <div class="lnav">
+        <a href="lesson-01-docker.html">
+          <div class="dir">← урок 1.1</div>
+          <div class="ttl">Локальная среда в Docker</div>
+        </a>
+        <a class="next disabled" href="#">
+          <div class="dir">этап 03 →</div>
+          <div class="ttl">CI/CD: авто-деплой (скоро)</div>
+        </a>
+      </div>
+
+      <footer>
+        <span>dev-vault · урок 1.2 · собрано в паре с Claude Code</span>
+        <a href="https://github.com/GrafSoul/claude-artefacts">исходники</a>
+      </footer>
+    </div>
+
+    <script>
+      document.querySelectorAll(".code code").forEach((code) => {
+        const lines = code.textContent.split("\n");
+        const frag = document.createDocumentFragment();
+        lines.forEach((line, i) => {
+          if (i) frag.appendChild(document.createTextNode("\n"));
+          if (/^\s*#/.test(line)) {
+            const span = document.createElement("span");
+            span.className = "cmt";
+            span.textContent = line;
+            frag.appendChild(span);
+          } else {
+            frag.appendChild(document.createTextNode(line));
+          }
+        });
+        code.textContent = "";
+        code.appendChild(frag);
+      });
+
+      document.querySelectorAll(".code").forEach((block) => {
+        const btn = block.querySelector(".copy");
+        const code = block.querySelector("code");
+        if (!btn || !code) return;
+        btn.addEventListener("click", async () => {
+          try {
+            await navigator.clipboard.writeText(code.textContent);
+            btn.textContent = "скопировано ✓";
+            btn.classList.add("ok");
+            setTimeout(() => { btn.textContent = "копировать"; btn.classList.remove("ok"); }, 1600);
+          } catch (e) {
+            btn.textContent = "ошибка";
+            setTimeout(() => (btn.textContent = "копировать"), 1600);
+          }
+        });
+      });
+
+      const THEME_KEY = "dev-vault-lesson-theme";
+      const btn = document.getElementById("themeBtn");
+      function applyTheme(t) { document.documentElement.setAttribute("data-theme", t); btn.textContent = t === "dark" ? "☾" : "☀"; }
+      const saved = localStorage.getItem(THEME_KEY);
+      if (saved) applyTheme(saved);
+      else btn.textContent = matchMedia("(prefers-color-scheme: light)").matches ? "☀" : "☾";
+      btn.addEventListener("click", () => {
+        const cur = document.documentElement.getAttribute("data-theme") || (matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark");
+        const next = cur === "dark" ? "light" : "dark";
+        localStorage.setItem(THEME_KEY, next);
+        applyTheme(next);
+      });
+    </script>
+  </body>
+</html>

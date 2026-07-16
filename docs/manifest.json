@@ -11,12 +11,20 @@
       "tags": ["backend", "nestjs", "devops", "план"]
     },
     {
-      "title": "Урок 01 · Локальная среда в Docker",
-      "description": "Практикум по этапу 01: заворачиваем пустой Nest-проект dev-vault в контейнер, поднимаем рядом PostgreSQL и Redis, настраиваем hot-reload. Dockerfile, compose, команды, шпаргалка — с копируемыми блоками кода.",
+      "title": "Урок 1.1 · Локальная среда в Docker",
+      "description": "Практикум по этапу 01 (часть 1): заворачиваем пустой Nest-проект dev-vault в контейнер, поднимаем рядом PostgreSQL и Redis, hot-reload. Dockerfile, compose, .env.example, команды — с копируемыми блоками кода.",
       "path": "lesson-01-docker.html",
       "emoji": "🐳",
       "date": "2026-07-15",
       "tags": ["docker", "nestjs", "урок", "dev-vault"]
+    },
+    {
+      "title": "Урок 1.2 · Боевой сервер (Hetzner)",
+      "description": "Практикум по этапу 01 (часть 2): выкатываем стек на боевой сервер — SSH и защита, Docker, безопасный прод-compose (база закрыта от интернета), запуск, Nginx и HTTPS. Продолжение Урока 1.1.",
+      "path": "lesson-02-server.html",
+      "emoji": "🖥️",
+      "date": "2026-07-16",
+      "tags": ["devops", "server", "nginx", "урок", "dev-vault"]
     }
   ]
 }
