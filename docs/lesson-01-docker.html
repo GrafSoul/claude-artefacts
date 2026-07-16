@@ -380,14 +380,15 @@
       </div>
 
       <h2>Куда кладём файлы</h2>
-      <p class="body">Внутри твоей папки <code>dev-vault</code> уже есть Nest. Добавляем 4 файла (отмечены):</p>
+      <p class="body">Внутри твоей папки <code>dev-vault</code> уже есть Nest. Добавляем 5 файлов (отмечены):</p>
       <div class="tree"><span class="cmt"># dev-vault/</span>
 ├── src/                  <span class="cmt"># уже есть (nest new)</span>
 ├── package.json          <span class="cmt"># уже есть</span>
 ├── <span class="add">Dockerfile</span>             <span class="cmt"># ← добавляем</span>
 ├── <span class="add">.dockerignore</span>          <span class="cmt"># ← добавляем</span>
 ├── <span class="add">docker-compose.yml</span>     <span class="cmt"># ← добавляем</span>
-└── <span class="add">.env</span>                   <span class="cmt"># ← добавляем (.env уже в .gitignore из коробки — ок)</span></div>
+├── <span class="add">.env.example</span>           <span class="cmt"># ← шаблон, коммитится в git</span>
+└── <span class="add">.env</span>                   <span class="cmt"># ← из шаблона: cp .env.example .env (в .gitignore)</span></div>
 
       <h2>Шаг 1 — Dockerfile <span class="stepbadge">план 1.1</span></h2>
       <p class="body">
@@ -548,8 +549,13 @@ volumes:
   pgdata:
   redisdata:</code></pre>
       </div>
+      <p class="body">
+        Настройки держим в env-файлах. <b>Шаблон <code>.env.example</code> коммитим</b> — чтобы было
+        видно, какие переменные нужны. Рабочий <b><code>.env</code> — не коммитим</b> (он в
+        <code>.gitignore</code>): в нём потом будут реальные пароли. Рабочий получаем копией шаблона.
+      </p>
       <div class="code" data-lang="env">
-        <div class="code-head"><span class="code-file">.env</span><span class="code-lang">env</span><span class="spacer"></span><button class="copy">копировать</button></div>
+        <div class="code-head"><span class="code-file">.env.example</span><span class="code-lang">env</span><span class="spacer"></span><button class="copy">копировать</button></div>
         <pre><code># значения для локальной разработки (в прод пойдут другие)
 NODE_ENV=development
 PORT=3030
@@ -557,6 +563,11 @@ PORT=3030
 # внутри сети Docker хост базы — это ИМЯ СЕРВИСА, а не localhost
 DATABASE_URL=postgresql://devvault:devvault@postgres:5432/devvault
 REDIS_URL=redis://redis:6379</code></pre>
+      </div>
+      <div class="code term" data-lang="bash">
+        <div class="code-head"><span class="code-file">терминал · dev-vault/</span><span class="code-lang">bash</span><span class="spacer"></span><button class="copy">копировать</button></div>
+        <pre><code># создать рабочий .env из шаблона (для локалки значения те же)
+cp .env.example .env</code></pre>
       </div>
       <div class="note">
         <div class="t">частая ловушка</div>
@@ -634,6 +645,21 @@ docker compose up --build</code></pre>
         <li>Сохрани файл — в логах контейнера Nest сам пересоберётся за секунду.</li>
         <li>Обнови вкладку — текст изменился, хотя ты ничего не перезапускал руками.</li>
       </ol>
+      <div class="note">
+        <div class="t">на macOS hot-reload не сработал?</div>
+        <p>
+          На Mac события файловой системы не всегда доходят в контейнер через bind-mount, и
+          <code>nest start --watch</code> может не замечать правки. Лечится <b>поллингом</b> — добавь
+          блок <code>watchOptions</code> на верхний уровень <code>tsconfig.json</code> (рядом с
+          <code>compilerOptions</code>) и перезапусти стек:
+        </p>
+      </div>
+      <div class="code" data-lang="json">
+        <div class="code-head"><span class="code-file">tsconfig.json</span><span class="code-lang">json</span><span class="spacer"></span><button class="copy">копировать</button></div>
+        <pre><code>"watchOptions": {
+  "watchFile": "priorityPollingInterval"
+}</code></pre>
+      </div>
       <div class="check">
         <svg class="ic" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
         <div>
