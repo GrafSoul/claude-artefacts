@@ -12,7 +12,7 @@
     },
     {
       "title": "Урок 01 · Локальная среда в Docker",
-      "description": "Практикум по этапу 01: заворачиваем пустой Nest-проект dev-vault в контейнер, поднимаем рядом PostgreSQL и Redis, hot-reload. Dockerfile, compose, .env.example, команды — с копируемыми блоками кода.",
+      "description": "Практикум по этапу 01: весь стек dev-vault (сервер Nest + клиент React + PostgreSQL + Redis) в Docker, одной командой из корня через compose include. Точные рабочие файлы обеих реп, hot-reload, CORS, шпаргалка — с копируемыми блоками.",
       "path": "lesson-01-docker.html",
       "emoji": "🐳",
       "date": "2026-07-15",
