@@ -7,7 +7,7 @@
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🐳</text></svg>" />
     <meta
       name="description"
-      content="Практический урок: весь стек dev-vault в Docker — сервер (Nest), клиент (React), PostgreSQL и Redis — поднимается одной командой из корня через compose include."
+      content="Практический урок: четыре репы dev-vault (server, client, admin, infra). Локальная разработка — независимые сервисы в Docker с hot-reload, cross-origin + CORS."
     />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -17,24 +17,11 @@
     />
     <style>
       :root {
-        --bg: #14100e;
-        --bg-2: #1b1613;
-        --panel: #201a16;
-        --panel-2: #261f1a;
-        --code-bg: #17120f;
-        --line: #382e27;
-        --line-2: #4a3d34;
-        --ink: #f3ece4;
-        --ink-2: #c3b6a8;
-        --ink-3: #8b7d70;
-        --copper: #e0895f;
-        --copper-soft: #d97757;
-        --gold: #e6b86a;
-        --done: #7fa66a;
-        --done-bg: rgba(127, 166, 106, 0.14);
-        --blue: #7fa8c9;
-        --radius: 16px;
-        --serif: "Fraunces", Georgia, serif;
+        --bg: #14100e; --bg-2: #1b1613; --panel: #201a16; --panel-2: #261f1a; --code-bg: #17120f;
+        --line: #382e27; --line-2: #4a3d34; --ink: #f3ece4; --ink-2: #c3b6a8; --ink-3: #8b7d70;
+        --copper: #e0895f; --copper-soft: #d97757; --gold: #e6b86a; --done: #7fa66a;
+        --done-bg: rgba(127, 166, 106, 0.14); --blue: #7fa8c9;
+        --radius: 16px; --serif: "Fraunces", Georgia, serif;
         --sans: "IBM Plex Sans", -apple-system, BlinkMacSystemFont, sans-serif;
         --mono: "IBM Plex Mono", ui-monospace, Menlo, monospace;
       }
@@ -50,7 +37,6 @@
           --copper: #b8542f; --copper-soft: #c96a3e; --gold: #a9762a; --done: #5c7f45; --done-bg: rgba(92,127,69,0.12); --blue: #3f6b8f;
         }
       }
-      /* code stays dark even in light theme for readability */
       :root[data-theme="light"] .code, :root:not([data-theme="dark"]) .code { --ink: #f3ece4; --ink-3: #8b7d70; }
 
       * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -70,14 +56,14 @@
       .btn { font-family: var(--mono); font-size: 0.76rem; color: var(--ink-2); background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 0.4rem 0.6rem; cursor: pointer; transition: all 0.15s ease; text-decoration: none; white-space: nowrap; }
       .btn:hover { color: var(--ink); border-color: var(--line-2); }
 
-      .shell { max-width: 820px; margin: 0 auto; padding: 0 clamp(1rem,4vw,2rem) 6rem; }
+      .shell { max-width: 860px; margin: 0 auto; padding: 0 clamp(1rem,4vw,2rem) 6rem; }
 
       .hero { padding: clamp(2.5rem,7vw,4.5rem) 0 2rem; }
       .eyebrow { font-family: var(--mono); font-size: 0.78rem; letter-spacing: 0.14em; text-transform: uppercase; color: var(--copper); display: flex; align-items: center; gap: 0.6rem; }
       .eyebrow::before { content: ""; width: 1.8rem; height: 1px; background: var(--copper); }
       h1 { font-family: var(--serif); font-weight: 600; font-size: clamp(2.2rem,6vw,3.4rem); line-height: 1.05; letter-spacing: -0.015em; margin: 1rem 0 0.5rem; }
       h1 em { font-style: italic; color: var(--copper); }
-      .lede { font-size: clamp(1.02rem,2.3vw,1.18rem); color: var(--ink-2); max-width: 62ch; margin-top: 0.8rem; }
+      .lede { font-size: clamp(1.02rem,2.3vw,1.18rem); color: var(--ink-2); max-width: 64ch; margin-top: 0.8rem; }
       .lede b { color: var(--ink); font-weight: 500; }
       .meta { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 1.5rem; font-family: var(--mono); font-size: 0.76rem; }
       .chip { border: 1px solid var(--line); background: var(--panel); color: var(--ink-2); border-radius: 99px; padding: 0.25rem 0.7rem; }
@@ -88,39 +74,34 @@
       h3 { font-family: var(--sans); font-weight: 600; font-size: 1.1rem; margin: 1.8rem 0 0.6rem; }
       p.body { color: var(--ink-2); margin: 0.7rem 0; }
       p.body b, li b { color: var(--ink); font-weight: 500; }
-      p.body code, li code, .inline { font-family: var(--mono); font-size: 0.88em; background: var(--panel-2); border: 1px solid var(--line); border-radius: 5px; padding: 0.05rem 0.35rem; color: var(--copper); }
-      ul.body, ol.body { color: var(--ink-2); margin: 0.7rem 0 0.7rem 0; padding-left: 0; list-style: none; display: flex; flex-direction: column; gap: 0.45rem; }
+      p.body code, li code, td code, .inline { font-family: var(--mono); font-size: 0.88em; background: var(--panel-2); border: 1px solid var(--line); border-radius: 5px; padding: 0.05rem 0.35rem; color: var(--copper); }
+      ul.body, ol.body { color: var(--ink-2); margin: 0.7rem 0; padding-left: 0; list-style: none; display: flex; flex-direction: column; gap: 0.45rem; }
       ul.body li { position: relative; padding-left: 1.5rem; }
       ul.body li::before { content: "▪"; position: absolute; left: 0.15rem; color: var(--copper); }
       ol.body { counter-reset: s; }
       ol.body li { position: relative; padding-left: 2rem; counter-increment: s; }
       ol.body li::before { content: counter(s); position: absolute; left: 0; top: 0; width: 1.35rem; height: 1.35rem; background: var(--copper); color: #14100e; border-radius: 50%; font-family: var(--mono); font-size: 0.75rem; font-weight: 500; display: grid; place-items: center; }
 
-      /* architecture diagram */
-      .arch { border: 1px solid var(--line); border-radius: var(--radius); background: var(--panel); padding: 1.4rem; margin: 1.5rem 0; }
-      .arch-host { font-family: var(--mono); font-size: 0.72rem; color: var(--ink-3); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 0.9rem; display: flex; align-items: center; gap: 0.5rem; }
-      .arch-host::before { content: "🖥"; }
-      .arch-net { border: 1px dashed var(--line-2); border-radius: 12px; padding: 1rem; position: relative; }
-      .arch-net-label { position: absolute; top: -0.65rem; left: 0.9rem; background: var(--panel); padding: 0 0.5rem; font-family: var(--mono); font-size: 0.7rem; color: var(--copper); }
-      .arch-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 0.8rem; }
-      .svc { border: 1px solid var(--line); border-radius: 10px; padding: 0.85rem; background: var(--panel-2); }
-      .svc.app { border-color: color-mix(in srgb, var(--copper) 45%, var(--line)); }
-      .svc.client { border-color: color-mix(in srgb, var(--blue) 45%, var(--line)); }
-      .svc.client .svc-name { color: var(--blue); }
-      .svc-name { font-family: var(--mono); font-weight: 500; font-size: 0.92rem; color: var(--ink); display: flex; align-items: center; gap: 0.4rem; }
-      .svc.app .svc-name { color: var(--copper); }
-      .svc-img { font-family: var(--mono); font-size: 0.74rem; color: var(--ink-3); margin-top: 0.2rem; }
-      .svc-port { font-family: var(--mono); font-size: 0.74rem; color: var(--blue); margin-top: 0.5rem; }
-      .svc-vol { font-family: var(--mono); font-size: 0.72rem; color: var(--ink-3); margin-top: 0.25rem; }
+      .tbl-wrap { overflow-x: auto; margin: 1rem 0; border: 1px solid var(--line); border-radius: 12px; }
+      .tbl { width: 100%; border-collapse: collapse; font-size: 0.86rem; }
+      .tbl th, .tbl td { text-align: left; padding: 0.6rem 0.85rem; border-bottom: 1px solid var(--line); }
+      .tbl th { font-family: var(--mono); font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--copper); background: color-mix(in srgb, var(--copper) 8%, var(--panel)); white-space: nowrap; }
+      .tbl td { color: var(--ink-2); }
+      .tbl td:first-child { font-family: var(--mono); color: var(--ink); white-space: nowrap; }
+      .tbl tr:last-child td { border-bottom: none; }
 
-      /* concept cards */
+      .arch { border: 1px solid var(--line); border-radius: var(--radius); background: var(--panel); padding: 1.4rem; margin: 1.5rem 0; }
+      .flowdiag { font-family: var(--mono); font-size: 0.8rem; color: var(--ink-2); white-space: pre; overflow-x: auto; line-height: 1.7; }
+      .flowdiag .hl { color: var(--copper); }
+      .flowdiag .cmt { color: var(--ink-3); }
+      .flowdiag .blue { color: var(--blue); }
+
       .concepts { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 0.8rem; margin: 1.3rem 0; }
       .concept { border: 1px solid var(--line); border-radius: 12px; background: var(--panel); padding: 1.1rem; }
       .concept .ic { font-size: 1.3rem; }
       .concept h4 { font-family: var(--mono); font-size: 0.86rem; color: var(--copper); margin: 0.5rem 0 0.35rem; }
       .concept p { font-size: 0.88rem; color: var(--ink-2); }
 
-      /* code block */
       .code { background: var(--code-bg); border: 1px solid var(--line); border-radius: 12px; margin: 1rem 0; overflow: hidden; }
       .code-head { display: flex; align-items: center; gap: 0.6rem; padding: 0.5rem 0.8rem; border-bottom: 1px solid var(--line); background: color-mix(in srgb, var(--code-bg) 70%, black); }
       .code-file { font-family: var(--mono); font-size: 0.78rem; color: var(--ink-2); }
@@ -134,28 +115,26 @@
       .code .cmt { color: var(--ink-3); font-style: italic; }
       .term .code-file::before { content: "❯ "; color: var(--done); }
 
-      /* callout */
       .note { border-left: 3px solid var(--copper); background: color-mix(in srgb, var(--copper) 8%, var(--panel)); border-radius: 0 10px 10px 0; padding: 0.9rem 1.1rem; margin: 1.2rem 0; }
       .note.win { border-left-color: var(--done); background: var(--done-bg); }
+      .note.blue { border-left-color: var(--blue); background: color-mix(in srgb, var(--blue) 8%, var(--panel)); }
       .note .t { font-family: var(--mono); font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--copper); margin-bottom: 0.3rem; }
       .note.win .t { color: var(--done); }
+      .note.blue .t { color: var(--blue); }
       .note p { font-size: 0.9rem; color: var(--ink-2); }
       .note p b { color: var(--ink); }
       .note p code { font-family: var(--mono); font-size: 0.86em; background: var(--panel-2); border: 1px solid var(--line); border-radius: 5px; padding: 0.05rem 0.35rem; color: var(--copper); }
 
-      /* checkpoint */
       .check { display: flex; gap: 0.7rem; align-items: flex-start; border: 1px solid color-mix(in srgb, var(--done) 40%, var(--line)); background: var(--done-bg); border-radius: 12px; padding: 1rem 1.1rem; margin: 1.3rem 0; }
       .check .ic { color: var(--done); flex-shrink: 0; margin-top: 0.1rem; }
       .check .t { font-family: var(--mono); font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--done); margin-bottom: 0.3rem; }
       .check p { font-size: 0.9rem; color: var(--ink); }
       .check code { font-family: var(--mono); font-size: 0.86em; color: var(--copper); }
 
-      /* tree */
       .tree { font-family: var(--mono); font-size: 0.82rem; color: var(--ink-2); background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 1rem 1.2rem; margin: 1rem 0; white-space: pre; overflow-x: auto; line-height: 1.7; }
       .tree .add { color: var(--copper); }
       .tree .cmt { color: var(--ink-3); }
 
-      /* FAQ accordion */
       .faq { display: flex; flex-direction: column; gap: 0.55rem; margin: 1.3rem 0; }
       .faq-item { border: 1px solid var(--line); border-radius: 12px; background: var(--panel); overflow: hidden; }
       .faq-item summary { cursor: pointer; padding: 0.9rem 1.1rem; font-weight: 500; color: var(--ink); list-style: none; display: flex; align-items: center; gap: 0.7rem; transition: color 0.15s ease; }
@@ -169,20 +148,17 @@
       .faq-a code { font-family: var(--mono); font-size: 0.86em; background: var(--panel-2); border: 1px solid var(--line); border-radius: 5px; padding: 0.05rem 0.35rem; color: var(--copper); }
       .faq-a b { color: var(--ink); }
 
-      /* cheat sheet */
       .cheat { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 0.7rem; margin: 1.3rem 0; }
       .cheat-row { display: flex; flex-direction: column; gap: 0.2rem; border: 1px solid var(--line); border-radius: 10px; background: var(--panel); padding: 0.7rem 0.9rem; }
       .cheat-cmd { font-family: var(--mono); font-size: 0.82rem; color: var(--copper); }
       .cheat-desc { font-size: 0.82rem; color: var(--ink-2); }
 
-      /* nav */
       .lnav { display: flex; flex-wrap: wrap; gap: 0.8rem; justify-content: space-between; margin-top: 3.5rem; }
       .lnav a { flex: 1; min-width: 220px; border: 1px solid var(--line); border-radius: 12px; padding: 1rem 1.2rem; text-decoration: none; background: var(--panel); transition: all 0.15s ease; }
       .lnav a:hover { border-color: var(--copper); transform: translateY(-2px); }
       .lnav .dir { font-family: var(--mono); font-size: 0.72rem; color: var(--ink-3); }
       .lnav .ttl { color: var(--ink); font-weight: 500; margin-top: 0.2rem; }
       .lnav a.next { text-align: right; }
-      .lnav a.disabled { opacity: 0.5; pointer-events: none; }
 
       footer { margin-top: 3rem; padding-top: 1.5rem; border-top: 1px solid var(--line); font-family: var(--mono); font-size: 0.78rem; color: var(--ink-3); display: flex; flex-wrap: wrap; gap: 0.5rem 1rem; justify-content: space-between; }
       footer a { color: var(--copper); text-decoration: none; }
@@ -201,90 +177,66 @@
 
     <div class="shell">
       <header class="hero">
-        <span class="eyebrow">этап 01 · локальная среда</span>
+        <span class="eyebrow">этап 01 · локальная разработка</span>
         <h1>Локальная среда <em>в Docker</em></h1>
         <p class="lede">
-          Собираем весь стек: <b>сервер</b> (Nest), <b>клиент</b> (React), <b>PostgreSQL</b> и
-          <b>Redis</b> — и поднимаем его <b>одной командой из корня</b>. Две репы держат свои
-          Docker-файлы, а тонкий корневой compose через <code>include</code> запускает всё вместе.
+          <b>dev-vault</b> — не монолит, а <b>четыре независимых репы</b>: API, клиент, админка и
+          инфраструктура. Каждое приложение разрабатывается и деплоится само по себе, а фронты ходят
+          к API по HTTP — это <b>разные origin</b>, поэтому нужен <b>CORS</b>. В этом уроке —
+          локальная разработка: Docker-файлы каждого приложения и два способа поднять стек.
         </p>
         <div class="meta">
-          <span class="chip"><b>~50</b> мин</span>
-          <span class="chip">Docker · Compose · include</span>
+          <span class="chip"><b>~60</b> мин</span>
+          <span class="chip">Docker · Compose</span>
           <span class="chip">этап 01 плана</span>
-          <span class="chip" style="color:var(--ink-3)">нужен установленный Docker Desktop</span>
+          <span class="chip" style="color:var(--ink-3)">нужен Docker Desktop (или только Node)</span>
         </div>
       </header>
 
-      <h2>Что построим <span class="stepbadge">результат этапа</span></h2>
+      <h2>Проект: четыре репы <span class="stepbadge">архитектура</span></h2>
       <p class="body">
-        Четыре контейнера в одной сети Docker. Так как корневой compose через <code>include</code>
-        собирает обе репы в <b>один проект</b>, все сервисы попадают в общую сеть и видят друг друга
-        по именам. Наружу порты проброшены на твою машину.
+        Разделение по репозиториям — не прихоть: у каждого свой цикл, свои коммиты, свой деплой.
+        Связывает их только <b>HTTP-контракт</b> (API), а не общий код.
+      </p>
+      <div class="tbl-wrap"><table class="tbl">
+        <tr><th>Репозиторий</th><th>Роль</th><th>Локально</th></tr>
+        <tr><td>dev-vault-server</td><td>Backend API (NestJS)</td><td><code>localhost:3030</code></td></tr>
+        <tr><td>dev-vault-client</td><td>Клиентский SPA (React + Vite)</td><td><code>localhost:3000</code></td></tr>
+        <tr><td>dev-vault-admin</td><td>Админка SPA (React + Vite)</td><td><code>localhost:3001</code></td></tr>
+        <tr><td>dev-vault-infra</td><td>Оркестрация (Compose + Caddy)</td><td>—</td></tr>
+      </table></div>
+      <div class="tree"><span class="cmt"># репы лежат рядом друг с другом</span>
+dev-vault/
+├── dev-vault-server/     <span class="cmt"># API (Nest) + Postgres + Redis</span>
+├── dev-vault-client/     <span class="cmt"># публичный фронт</span>
+├── dev-vault-admin/      <span class="cmt"># админка</span>
+└── dev-vault-infra/      <span class="cmt"># compose.dev.yml · compose.prod.yml · Caddyfile</span></div>
+
+      <h2>Что построим локально <span class="stepbadge">результат этапа</span></h2>
+      <p class="body">
+        Пять контейнеров. Фронты стучатся к API по его адресу с хоста — <code>localhost:3000</code> и
+        <code>localhost:3030</code> это <b>разные origin</b>, поэтому API должен явно разрешить их
+        через <code>CORS_ORIGIN</code>.
       </p>
       <div class="arch">
-        <div class="arch-host">твоя машина (host) · порты наружу</div>
-        <div class="arch-net">
-          <span class="arch-net-label">docker network: один проект через include</span>
-          <div class="arch-grid">
-            <div class="svc client">
-              <div class="svc-name">◇ web</div>
-              <div class="svc-img">dev-vault-client · React</div>
-              <div class="svc-port">:3000 → localhost:3000</div>
-              <div class="svc-vol">том: код (bind-mount) + hot-reload</div>
-            </div>
-            <div class="svc app">
-              <div class="svc-name">◆ app</div>
-              <div class="svc-img">dev-vault-server · NestJS</div>
-              <div class="svc-port">:3030 → localhost:3030</div>
-              <div class="svc-vol">том: код (bind-mount) + hot-reload</div>
-            </div>
-            <div class="svc">
-              <div class="svc-name">▣ postgres</div>
-              <div class="svc-img">postgres:18-alpine</div>
-              <div class="svc-port">:5432 → localhost:5432</div>
-              <div class="svc-vol">том: pgdata (данные)</div>
-            </div>
-            <div class="svc">
-              <div class="svc-name">▣ redis</div>
-              <div class="svc-img">redis:8-alpine</div>
-              <div class="svc-port">:6379 → localhost:6379</div>
-              <div class="svc-vol">том: redisdata</div>
-            </div>
-          </div>
-        </div>
+        <div class="flowdiag"><span class="cmt">браузер</span>
+   <span class="hl">│</span> <span class="blue">localhost:3000</span> клиент     <span class="hl">──запрос к API──┐</span>
+   <span class="hl">│</span> <span class="blue">localhost:3001</span> админка    <span class="hl">──запрос к API──┤</span>  <span class="cmt">cross-origin → CORS</span>
+   <span class="hl">▼</span>                                             <span class="hl">▼</span>
+<span class="cmt">(статика/dev-сервер Vite)</span>                <span class="hl">localhost:3030</span> <span class="cmt">API (Nest)</span>
+                                                  <span class="hl">│</span>
+                                        <span class="hl">┌─────────┴─────────┐</span>
+                                     <span class="cmt">postgres :5432   redis :6379</span></div>
       </div>
       <div class="note">
         <div class="t">важно про этот урок</div>
         <p>
-          Код <b>не подключаем</b> к базе (это этап 05, Prisma) и не пишем логику. Задача — чтобы
-          весь стек поднимался одной командой, был доступен и перезапускался сам. Инфраструктура
-          вперёд, логика потом.
-        </p>
-      </div>
-
-      <h2>Структура: две репы + корневой оркестратор</h2>
-      <p class="body">
-        <b>Сервер</b> и <b>клиент</b> — отдельные репозитории, каждый самодостаточный (свои
-        <code>Dockerfile</code> и <code>docker-compose.yml</code>). Рядом — тонкая рабочая папка
-        <code>dev-vault/</code> с <b>корневым</b> compose, который ничего не дублирует, а просто
-        через <code>include</code> подключает обе репы. Запуск — из неё.
-      </p>
-      <div class="tree"><span class="cmt"># dev-vault/                    — рабочая папка, запускаем отсюда</span>
-├── <span class="add">docker-compose.yml</span>          <span class="cmt"># корневой: include обеих реп</span>
-├── dev-vault-server/          <span class="cmt"># репа бэка (Nest)</span>
-└── dev-vault-client/          <span class="cmt"># репа фронта (React)</span></div>
-      <div class="note">
-        <div class="t">почему так, а не один общий проект</div>
-        <p>
-          Репы независимы: свои коммиты, свой деплой, можно вести разными людьми. Корневой compose —
-          лишь удобство для <b>локального</b> запуска всего разом. На сервере каждый сервис едет
-          сам по себе (этап 02).
+          Код <b>не подключаем</b> к базе (это этап 05, Prisma) и не пишем логику. Цель — рабочее
+          локальное окружение и понимание, как устроены Docker-файлы каждого приложения.
         </p>
       </div>
 
       <h2>Мини-теория: 4 слова Docker</h2>
-      <p class="body">Только то, без чего дальше будет непонятно. Аналогии намеренно бытовые.</p>
       <div class="concepts">
         <div class="concept">
           <div class="ic">📦</div>
@@ -304,26 +256,17 @@
         <div class="concept">
           <div class="ic">🕸️</div>
           <h4>сеть (network)</h4>
-          <p>Compose соединяет контейнеры в одну сеть, где они находят друг друга по имени сервиса, а не по IP.</p>
+          <p>Compose соединяет контейнеры в сеть, где они находят друг друга по имени сервиса — так API видит базу как <code>postgres</code>.</p>
         </div>
       </div>
 
-      <h2>Сервер — dev-vault-server <span class="stepbadge">backend</span></h2>
-      <p class="body">Внутри репы <code>dev-vault-server</code> уже есть Nest (<code>nest new</code>). Добавляем 5 файлов:</p>
-      <div class="tree"><span class="cmt"># dev-vault-server/</span>
-├── src/                  <span class="cmt"># уже есть (nest new)</span>
-├── package.json          <span class="cmt"># уже есть</span>
-├── <span class="add">Dockerfile</span>             <span class="cmt"># ← добавляем</span>
-├── <span class="add">.dockerignore</span>          <span class="cmt"># ← добавляем</span>
-├── <span class="add">docker-compose.yml</span>     <span class="cmt"># ← добавляем</span>
-├── <span class="add">.env.example</span>           <span class="cmt"># ← шаблон, коммитится</span>
-└── <span class="add">.env</span>                   <span class="cmt"># ← cp .env.example .env (в .gitignore)</span></div>
+      <h2>Сервер — dev-vault-server <span class="stepbadge">API + база + кэш</span></h2>
 
       <h3>Dockerfile</h3>
       <p class="body">
-        Multi-stage: общая база → <code>deps</code> (ставит зависимости один раз) → <code>dev</code>
-        и <code>build</code> её переиспользуют. Прод-образ — минимальный и <b>под non-root</b>
-        (<code>USER node</code>).
+        Multi-stage: база → <code>deps</code> (зависимости одним слоем) → <code>dev</code> и
+        <code>build</code> её переиспользуют → <code>prod</code> — минимальный образ под
+        <b>non-root</b> (<code>USER node</code>). Один файл обслуживает и локалку, и прод.
       </p>
       <div class="code" data-lang="dockerfile">
         <div class="code-head"><span class="code-file">dev-vault-server/Dockerfile</span><span class="code-lang">dockerfile</span><span class="spacer"></span><button class="copy">копировать</button></div>
@@ -363,31 +306,10 @@ EXPOSE 3030
 CMD ["node", "dist/main.js"]</code></pre>
       </div>
 
-      <h3>.dockerignore</h3>
-      <div class="code" data-lang="text">
-        <div class="code-head"><span class="code-file">dev-vault-server/.dockerignore</span><span class="code-lang">text</span><span class="spacer"></span><button class="copy">копировать</button></div>
-        <pre><code># keep needless files out of the image — faster build, smaller size
-node_modules
-dist
-.git
-.env
-npm-debug.log
-Dockerfile
-docker-compose.yml</code></pre>
-      </div>
-
-      <h3>docker-compose.yml</h3>
-      <p class="body">Три сервиса репы: <code>app</code> (Nest), <code>postgres</code>, <code>redis</code>. <code>depends_on</code> с проверкой здоровья держит старт app, пока база реально не готова.</p>
-      <div class="note win">
-        <div class="t">Postgres и Redis ставить НЕ надо</div>
-        <p>
-          Строки <code>image: postgres:18-alpine</code> и <code>image: redis:8-alpine</code> —
-          команда Docker «скачай готовый образ». При первом <code>up</code> он подтянет их сам. На
-          машине нужен <b>только Docker</b>.
-        </p>
-      </div>
+      <h3>docker-compose.yml — локальная разработка</h3>
+      <p class="body">Поднимает API + Postgres + Redis. Порты БД открыты наружу — это удобно локально (psql, GUI). В проде так делать нельзя, там свой файл (урок 02).</p>
       <div class="code" data-lang="yaml">
-        <div class="code-head"><span class="code-file">dev-vault-server/docker-compose.yml</span><span class="code-lang">yaml</span><span class="spacer"></span><button class="copy">копировать</button></div>
+        <div class="code-head"><span class="code-file">dev-vault-server/docker-compose.yml</span><span class="code-lang">yaml · dev</span><span class="spacer"></span><button class="copy">копировать</button></div>
         <pre><code>services:
   app:
     build:
@@ -434,21 +356,17 @@ volumes:
   redisdata:</code></pre>
       </div>
       <div class="note">
-        <div class="t">две ловушки, которые легко словить</div>
+        <div class="t">две ловушки</div>
         <p>
-          <b>1.</b> В <code>postgres:18</code> путь данных — <code>/var/lib/postgresql</code>
-          (без <code>/data</code>, как было в 17). <b>2.</b> Из контейнера app база доступна как
-          <code>postgres:5432</code>, а не <code>localhost</code> — <code>localhost</code> внутри
-          контейнера это сам контейнер, а имя сервиса из compose = адрес соседа.
+          <b>1.</b> В <code>postgres:18</code> путь данных — <code>/var/lib/postgresql</code> (без
+          <code>/data</code>, как было в 17). <b>2.</b> Из контейнера app база доступна как
+          <code>postgres:5432</code>, а не <code>localhost</code>: внутри контейнера
+          <code>localhost</code> — это он сам, а имя сервиса из compose = адрес соседа.
         </p>
       </div>
 
-      <h3>.env.example и рабочий .env</h3>
-      <p class="body">
-        Шаблон <code>.env.example</code> <b>коммитим</b>, рабочий <code>.env</code> — <b>нет</b>
-        (в нём потом реальные пароли). Обрати внимание на <code>CORS_ORIGIN</code> — адрес фронта,
-        которому разрешено звать API (про это ниже).
-      </p>
+      <h3>.env.example</h3>
+      <p class="body">Шаблон коммитим, рабочий <code>.env</code> — нет. <code>CORS_ORIGIN</code> — белый список origin'ов фронтов, которым разрешено звать API.</p>
       <div class="code" data-lang="env">
         <div class="code-head"><span class="code-file">dev-vault-server/.env.example</span><span class="code-lang">env</span><span class="spacer"></span><button class="copy">копировать</button></div>
         <pre><code># ---- Application ----
@@ -456,8 +374,9 @@ volumes:
 PORT=3030
 NODE_ENV=development
 
-# Frontend origin allowed to call the API (CORS)
-CORS_ORIGIN=http://localhost:3000
+# Frontend origins allowed to call the API (CORS) — comma-separated allowlist.
+# Dev: client (3000) + admin (3001). Prod: https://app.YOUR_DOMAIN,https://admin.YOUR_DOMAIN
+CORS_ORIGIN=http://localhost:3000,http://localhost:3001
 
 # ---- PostgreSQL ----
 # host = the service name from docker-compose (postgres), not localhost
@@ -466,41 +385,15 @@ DATABASE_URL=postgres://devvault:devvault@postgres:5432/devvault
 # ---- Redis ----
 REDIS_URL=redis://redis:6379</code></pre>
       </div>
-      <div class="code term" data-lang="bash">
-        <div class="code-head"><span class="code-file">терминал · dev-vault-server/</span><span class="code-lang">bash</span><span class="spacer"></span><button class="copy">копировать</button></div>
-        <pre><code># создать рабочий .env из шаблона
-cp .env.example .env</code></pre>
-      </div>
-      <div class="note win">
-        <div class="t">про том node_modules</div>
-        <p>
-          Строка <code>/app/node_modules</code> без хостового пути — анонимный том. Он «прикрывает»
-          node_modules из образа, чтобы твоя папка с хоста их не затёрла. Без этого контейнер часто
-          падает с «module not found».
-        </p>
-      </div>
 
-      <h2>Клиент — dev-vault-client <span class="stepbadge">frontend</span></h2>
+      <h2>Клиент — dev-vault-client <span class="stepbadge">React SPA</span></h2>
       <p class="body">
-        Репа <code>dev-vault-client</code> — Vite + React (<code>npm create vite</code>). Файлы
-        проще серверных: базы и кэша фронту не нужно. Но есть <code>nginx.conf</code> — для раздачи
-        статики в проде.
+        Vite + React. Dockerfile тот же по форме, но финал другой: в проде фронт — это
+        <b>статика</b>, которую раздаёт Nginx, а не Node. Ключевая деталь — <code>ARG VITE_API_URL</code>
+        на стадии сборки.
       </p>
-      <div class="tree"><span class="cmt"># dev-vault-client/</span>
-├── src/                  <span class="cmt"># уже есть (Vite + React)</span>
-├── package.json          <span class="cmt"># уже есть</span>
-├── <span class="add">Dockerfile</span>             <span class="cmt"># ← добавляем</span>
-├── <span class="add">.dockerignore</span>          <span class="cmt"># ← добавляем</span>
-├── <span class="add">docker-compose.yml</span>     <span class="cmt"># ← добавляем</span>
-├── <span class="add">nginx.conf</span>             <span class="cmt"># ← добавляем (SPA-раздача в проде)</span>
-├── <span class="add">.env.example</span>           <span class="cmt"># ← шаблон, коммитится</span>
-└── <span class="add">.env</span>                   <span class="cmt"># ← cp .env.example .env (в .gitignore)</span></div>
 
       <h3>Dockerfile</h3>
-      <p class="body">
-        Каркас тот же, но финал другой: бэк в проде крутит Node-процесс, а фронт компилируется в
-        <b>статику</b> и раздаётся через <b>Nginx</b> (Node в проде не нужен).
-      </p>
       <div class="code" data-lang="dockerfile">
         <div class="code-head"><span class="code-file">dev-vault-client/Dockerfile</span><span class="code-lang">dockerfile</span><span class="spacer"></span><button class="copy">копировать</button></div>
         <pre><code># syntax=docker/dockerfile:1
@@ -522,7 +415,11 @@ EXPOSE 3000
 CMD ["npm", "run", "dev", "--", "--host", "--port", "3000"]
 
 # ---- build: compile static assets into dist/ ----
+# VITE_API_URL is baked into the bundle at build time, so it must be passed
+# per environment via --build-arg (dev: localhost, prod: https://api.YOUR_DOMAIN).
 FROM deps AS build
+ARG VITE_API_URL
+ENV VITE_API_URL=$VITE_API_URL
 COPY . .
 RUN npm run build
 
@@ -533,10 +430,20 @@ COPY --from=build /app/dist /usr/share/nginx/html
 EXPOSE 80
 CMD ["nginx", "-g", "daemon off;"]</code></pre>
       </div>
+      <div class="note blue">
+        <div class="t">почему VITE_API_URL — это build-arg, а не runtime-переменная</div>
+        <p>
+          Vite <b>запекает</b> <code>VITE_</code>-переменные в бандл на этапе сборки. После сборки их
+          уже не поменять — в браузер уезжает готовый JS. Поэтому локально значение берётся из
+          <code>.env</code>, а для прода передаётся при сборке образа:
+          <code>--build-arg VITE_API_URL=https://api.твой-домен</code> (это делает
+          <code>compose.prod.yml</code>, урок 02).
+        </p>
+      </div>
 
-      <h3>docker-compose.yml</h3>
+      <h3>docker-compose.yml, vite.config.ts, .env.example</h3>
       <div class="code" data-lang="yaml">
-        <div class="code-head"><span class="code-file">dev-vault-client/docker-compose.yml</span><span class="code-lang">yaml</span><span class="spacer"></span><button class="copy">копировать</button></div>
+        <div class="code-head"><span class="code-file">dev-vault-client/docker-compose.yml</span><span class="code-lang">yaml · dev</span><span class="spacer"></span><button class="copy">копировать</button></div>
         <pre><code>services:
   web:
     build:
@@ -550,11 +457,37 @@ CMD ["nginx", "-g", "daemon off;"]</code></pre>
       - .:/app               # mount host code into the container for hot-reload
       - /app/node_modules    # but keep node_modules from the image</code></pre>
       </div>
+      <div class="code" data-lang="ts">
+        <div class="code-head"><span class="code-file">dev-vault-client/vite.config.ts</span><span class="code-lang">typescript</span><span class="spacer"></span><button class="copy">копировать</button></div>
+        <pre><code>import { defineConfig } from 'vite'
+import react from '@vitejs/plugin-react'
 
-      <h3>nginx.conf</h3>
-      <p class="body">Нужен для прод-стадии: раздаёт собранную статику и отдаёт <code>index.html</code> на любой путь — иначе клиентский роутинг ломается при обновлении страницы.</p>
+// https://vite.dev/config/
+export default defineConfig({
+  plugins: [react()],
+  // Client runs on 3000 locally (admin uses 3001, backend 3030).
+  server: {
+    port: 3000,
+    strictPort: true,
+  },
+  preview: {
+    port: 3000,
+  },
+})</code></pre>
+      </div>
+      <div class="code" data-lang="env">
+        <div class="code-head"><span class="code-file">dev-vault-client/.env.example</span><span class="code-lang">env</span><span class="spacer"></span><button class="copy">копировать</button></div>
+        <pre><code># ---- Client (Vite) ----
+# Vite variables MUST be prefixed with VITE_ — otherwise Vite won't expose them to the code.
+# Note: VITE_ variables are embedded in the built bundle and visible in the browser — no secrets here.
+
+# Backend API address (dev-vault-server listens on 3030).
+# Dev only — used by `npm run dev`/`npm run build` locally.
+# In prod the value is injected at image build via --build-arg VITE_API_URL=https://api.YOUR_DOMAIN.
+VITE_API_URL=http://localhost:3030</code></pre>
+      </div>
       <div class="code" data-lang="nginx">
-        <div class="code-head"><span class="code-file">dev-vault-client/nginx.conf</span><span class="code-lang">nginx</span><span class="spacer"></span><button class="copy">копировать</button></div>
+        <div class="code-head"><span class="code-file">dev-vault-client/nginx.conf</span><span class="code-lang">nginx · для прод-стадии</span><span class="spacer"></span><button class="copy">копировать</button></div>
         <pre><code>server {
     listen 80;
     server_name _;
@@ -569,213 +502,164 @@ CMD ["nginx", "-g", "daemon off;"]</code></pre>
 }</code></pre>
       </div>
 
-      <h3>.dockerignore, .env.example и рабочий .env</h3>
-      <div class="code" data-lang="text">
-        <div class="code-head"><span class="code-file">dev-vault-client/.dockerignore</span><span class="code-lang">text</span><span class="spacer"></span><button class="copy">копировать</button></div>
-        <pre><code># keep needless files out of the image — faster build, smaller size
-node_modules
-dist
-.git
-.env
-*.log
-Dockerfile
-docker-compose.yml</code></pre>
-      </div>
-      <div class="code" data-lang="env">
-        <div class="code-head"><span class="code-file">dev-vault-client/.env.example</span><span class="code-lang">env</span><span class="spacer"></span><button class="copy">копировать</button></div>
-        <pre><code># ---- Client (Vite) ----
-# Vite variables MUST be prefixed with VITE_ — otherwise Vite won't expose them to the code.
-# Note: VITE_ variables are embedded in the built bundle and visible in the browser — no secrets here.
-
-# Backend API address (dev-vault-server listens on 3030)
-VITE_API_URL=http://localhost:3030</code></pre>
-      </div>
-      <div class="code term" data-lang="bash">
-        <div class="code-head"><span class="code-file">терминал · dev-vault-client/</span><span class="code-lang">bash</span><span class="spacer"></span><button class="copy">копировать</button></div>
-        <pre><code># создать рабочий .env из шаблона
-cp .env.example .env</code></pre>
-      </div>
-      <div class="note">
-        <div class="t">ключевой момент: React крутится в браузере, а не в контейнере</div>
-        <p>
-          Контейнер <code>web</code> только <b>отдаёт</b> собранный JS. Сам код React исполняется
-          <b>в твоём браузере</b> — и запросы к API уходят из браузера на <code>localhost:3030</code>.
-          Поэтому фронт и знать не знает про внутреннюю сеть Docker: он бьёт по опубликованному порту.
-        </p>
-      </div>
-
-      <h2>Корневой compose — весь стек одной командой <span class="stepbadge">оркестратор</span></h2>
+      <h2>Админка — dev-vault-admin <span class="stepbadge">React SPA</span></h2>
       <p class="body">
-        Теперь самое приятное. В рабочей папке <code>dev-vault/</code> — крошечный compose, который
-        <b>ничего не дублирует</b>, а через <code>include</code> подключает compose-файлы обеих реп.
-        Одна команда отсюда поднимает всё: сервер, клиент, базу и кэш.
+        Второй фронт к тому же API. <b>Dockerfile, nginx.conf и .env.example — идентичны клиенту.</b>
+        Отличается только compose: имя сервиса <code>admin</code> и проброс порта
+        <b><code>3001:3000</code></b> — внутри контейнера Vite слушает свой обычный 3000, а на хосте
+        занимает 3001, чтобы не конфликтовать с клиентом.
       </p>
       <div class="code" data-lang="yaml">
-        <div class="code-head"><span class="code-file">dev-vault/docker-compose.yml</span><span class="code-lang">yaml</span><span class="spacer"></span><button class="copy">копировать</button></div>
-        <pre><code># Root compose: brings up the whole dev-vault stack with one command.
-# Reuses each project's own compose file — no duplicated config here.
-#   docker compose up        (from this directory)
-include:
-  - dev-vault-server/docker-compose.yml
-  - dev-vault-client/docker-compose.yml</code></pre>
-      </div>
-      <div class="note win">
-        <div class="t">что даёт include</div>
-        <p>
-          Compose берёт указанные файлы и <b>сливает их в один проект</b>. Все четыре сервиса
-          оказываются в общей сети, поднимаются и гасятся вместе. При этом каждая репа остаётся
-          самодостаточной — можно зайти в неё и запустить только её <code>docker compose up</code>.
-        </p>
+        <div class="code-head"><span class="code-file">dev-vault-admin/docker-compose.yml</span><span class="code-lang">yaml · dev</span><span class="spacer"></span><button class="copy">копировать</button></div>
+        <pre><code>services:
+  admin:
+    build:
+      context: .
+      target: dev            # use the dev stage from the Dockerfile
+    command: npm run dev -- --host --port 3000
+    ports:
+      - "3001:3000"          # host 3001 -> container 3000 (client uses 3000)
+    env_file: .env
+    volumes:
+      - .:/app               # mount host code into the container for hot-reload
+      - /app/node_modules    # but keep node_modules from the image</code></pre>
       </div>
 
-      <h2>Запуск и проверка <span class="stepbadge">поехали</span></h2>
-      <p class="body">Из корневой папки <code>dev-vault/</code> — одна команда собирает образы и поднимает весь стек:</p>
+      <h2>Запуск: два способа <span class="stepbadge">поехали</span></h2>
+      <p class="body">
+        Сервисы независимы, поэтому и запускать их можно по-разному. Выбирай под задачу.
+      </p>
+
+      <h3>A. Без Docker — когда работаешь над одним приложением</h3>
+      <p class="body">Самый частый режим: правишь один фронт, а API уже поднят. Каждое приложение стартует само:</p>
       <div class="code term" data-lang="bash">
-        <div class="code-head"><span class="code-file">терминал · dev-vault/</span><span class="code-lang">bash</span><span class="spacer"></span><button class="copy">копировать</button></div>
-        <pre><code># собрать образы и поднять весь стек (логи в этом же окне)
-docker compose up --build</code></pre>
+        <div class="code-head"><span class="code-file">терминал</span><span class="code-lang">bash</span><span class="spacer"></span><button class="copy">копировать</button></div>
+        <pre><code># terminal 1
+cd dev-vault-server && npm run start:dev    # http://localhost:3030
+# terminal 2
+cd dev-vault-client && npm run dev          # http://localhost:3000
+# terminal 3
+cd dev-vault-admin  && npm run dev          # http://localhost:3001</code></pre>
+      </div>
+
+      <h3>B. Одной командой — весь стек в Docker</h3>
+      <p class="body">
+        В <code>dev-vault-infra</code> лежит <code>compose.dev.yml</code>, который ничего не дублирует —
+        он просто <code>include</code>-ит compose-файлы трёх приложений:
+      </p>
+      <div class="code" data-lang="yaml">
+        <div class="code-head"><span class="code-file">dev-vault-infra/compose.dev.yml</span><span class="code-lang">yaml · dev</span><span class="spacer"></span><button class="copy">копировать</button></div>
+        <pre><code># Local development stack: brings up all three apps + Postgres + Redis with one
+# command. Reuses each app's own docker-compose.yml — no duplicated config here.
+# Expects the app repos cloned side by side next to this one. Run from here:
+#   docker compose -f compose.dev.yml up
+include:
+  - ../dev-vault-server/docker-compose.yml
+  - ../dev-vault-client/docker-compose.yml
+  - ../dev-vault-admin/docker-compose.yml</code></pre>
+      </div>
+      <div class="code term" data-lang="bash">
+        <div class="code-head"><span class="code-file">терминал · dev-vault-infra/</span><span class="code-lang">bash</span><span class="spacer"></span><button class="copy">копировать</button></div>
+        <pre><code># перед первым запуском в каждой репе: cp .env.example .env
+docker compose -f compose.dev.yml up</code></pre>
       </div>
       <div class="note">
-        <div class="t">первый запуск — дольше, это норма</div>
-        <p>В первый раз Docker <b>скачивает образы</b> (Node, Postgres, Redis, Nginx) и собирает твои — пара минут. Дальше секунды: образы кэшированы.</p>
-      </div>
-      <p class="body">Когда логи успокоятся — открывай обе точки:</p>
-      <div class="code term" data-lang="bash">
-        <div class="code-head"><span class="code-file">браузер</span><span class="code-lang">url</span><span class="spacer"></span><button class="copy">копировать</button></div>
-        <pre><code>http://localhost:3030    # сервер (Nest) → Hello World!
-http://localhost:3000    # клиент (React) → страница Vite</code></pre>
-      </div>
-      <p class="body">Теперь проверь hot-reload на любой из сторон — правка в коде подхватывается без перезапуска:</p>
-      <ol class="body">
-        <li><b>Сервер:</b> поменяй строку в <code>dev-vault-server/src/app.service.ts</code> (метод <code>getHello()</code>).</li>
-        <li><b>Клиент:</b> поменяй текст в <code>dev-vault-client/src/App.tsx</code>.</li>
-        <li>Сохрани — контейнер сам пересоберётся, обнови вкладку, текст изменился.</li>
-      </ol>
-      <div class="note">
-        <div class="t">на macOS hot-reload не сработал?</div>
+        <div class="t">dev и prod — намеренно разные файлы</div>
         <p>
-          На Mac события файловой системы не всегда доходят в контейнер через bind-mount. Для сервера
-          лечится поллингом — в <code>dev-vault-server/tsconfig.json</code> добавь на верхний уровень:
+          <code>compose.dev.yml</code> — для локальной работы, <code>compose.prod.yml</code> — для
+          сервера. <b>Вместе их не запускают.</b> Общее у них — <code>Dockerfile</code> каждого
+          приложения: одна и та же multi-stage сборка, просто разные стадии (<code>dev</code> / <code>prod</code>).
         </p>
       </div>
-      <div class="code" data-lang="json">
-        <div class="code-head"><span class="code-file">dev-vault-server/tsconfig.json</span><span class="code-lang">json</span><span class="spacer"></span><button class="copy">копировать</button></div>
-        <pre><code>"watchOptions": {
-  "watchFile": "priorityPollingInterval"
-}</code></pre>
+      <p class="body">Открывай:</p>
+      <div class="code term" data-lang="bash">
+        <div class="code-head"><span class="code-file">браузер</span><span class="code-lang">url</span><span class="spacer"></span><button class="copy">копировать</button></div>
+        <pre><code>http://localhost:3030    # API (Nest)
+http://localhost:3000    # клиент (React)
+http://localhost:3001    # админка (React)</code></pre>
       </div>
       <div class="check">
         <svg class="ic" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
         <div>
           <div class="t">проверь себя</div>
-          <p>Четыре контейнера в <code>docker compose ps</code> со статусом up, <code>localhost:3030</code> отдаёт Hello World, <code>localhost:3000</code> — страницу React, правки кода подхватываются. Если так — этап 01 выполнен.</p>
+          <p>API отвечает на <code>localhost:3030</code>, клиент и админка открываются на <code>3000</code>/<code>3001</code>, их запросы к API проходят (в консоли браузера нет ошибок CORS), правки кода подхватываются без ручного перезапуска.</p>
         </div>
       </div>
-
-      <h2>CORS — почему сервер знает про localhost:3000</h2>
-      <p class="body">
-        Фронт (<code>localhost:3000</code>) и бэк (<code>localhost:3030</code>) — <b>разные origin</b>
-        (отличается порт). Браузер по умолчанию <b>блокирует</b> запросы между разными origin — это
-        защита CORS. Чтобы фронту разрешили звать API, сервер должен явно сказать «этому адресу
-        можно». Поэтому в серверном <code>.env</code> и появился <code>CORS_ORIGIN=http://localhost:3000</code>
-        — сервер прочитает его и разрешит. Саму настройку CORS в коде Nest включим на этапе 06; сейчас
-        достаточно понимать, зачем эта переменная.
-      </p>
-
-      <h3>Полезные команды (из корня dev-vault/)</h3>
-      <div class="code term" data-lang="bash">
-        <div class="code-head"><span class="code-file">терминал · dev-vault/</span><span class="code-lang">bash</span><span class="spacer"></span><button class="copy">копировать</button></div>
-        <pre><code># статусы всех контейнеров стека
-docker compose ps
-
-# живые логи одного сервиса (app / web / postgres / redis)
-docker compose logs -f app
-
-# зайти в контейнер
-docker compose exec app sh
-
-# подключиться к базе прямо в контейнере
-docker compose exec postgres psql -U devvault -d devvault
-
-# проверить, что Redis жив — ответит PONG
-docker compose exec redis redis-cli ping
-
-# остановить стек (данные в томах сохранятся)
-docker compose down
-
-# остановить И удалить тома (полный сброс данных базы)
-docker compose down -v</code></pre>
+      <div class="note">
+        <div class="t">на macOS hot-reload не сработал?</div>
+        <p>
+          На Mac события файловой системы не всегда доходят в контейнер через bind-mount. Для сервера
+          лечится поллингом — в <code>dev-vault-server/tsconfig.json</code> добавь на верхний уровень
+          <code>"watchOptions": { "watchFile": "priorityPollingInterval" }</code> и перезапусти.
+        </p>
       </div>
 
-      <h2>Шпаргалка команд Docker</h2>
-      <p class="body">Базовый набор. <code>compose</code> — для всего стека, «голый» <code>docker</code> — для отдельных контейнеров и уборки.</p>
+      <h2>CORS — почему он нужен и никуда не денется</h2>
+      <p class="body">
+        Клиент (<code>:3000</code>), админка (<code>:3001</code>) и API (<code>:3030</code>) — <b>разные
+        origin</b>. Браузер по умолчанию <b>блокирует</b> запросы между разными origin. Чтобы фронтам
+        разрешили звать API, сервер обязан явно перечислить их адреса — это и есть
+        <code>CORS_ORIGIN</code>.
+      </p>
+      <p class="body">
+        Так и в проде: приложения деплоятся <b>отдельно</b>, на разных поддоменах
+        (<code>api.</code>, <code>app.</code>, <code>admin.</code>) — снова разные origin, снова CORS
+        (только список уже боевой). Поэтому CORS — <b>сквозной механизм</b> dev → prod, а не локальный
+        костыль. Саму настройку в коде Nest включим на этапе 06.
+      </p>
+
+      <h2>Шпаргалка команд</h2>
       <div class="cheat">
-        <div class="cheat-row"><span class="cheat-cmd">docker compose up -d</span><span class="cheat-desc">поднять стек в фоне (без логов в окне)</span></div>
+        <div class="cheat-row"><span class="cheat-cmd">docker compose up</span><span class="cheat-desc">поднять сервис из его репы (с логами)</span></div>
+        <div class="cheat-row"><span class="cheat-cmd">docker compose -f compose.dev.yml up</span><span class="cheat-desc">весь стек из dev-vault-infra</span></div>
         <div class="cheat-row"><span class="cheat-cmd">docker compose up --build</span><span class="cheat-desc">пересобрать образы и поднять</span></div>
         <div class="cheat-row"><span class="cheat-cmd">docker compose down</span><span class="cheat-desc">остановить и удалить контейнеры</span></div>
-        <div class="cheat-row"><span class="cheat-cmd">docker compose restart web</span><span class="cheat-desc">перезапустить один сервис</span></div>
         <div class="cheat-row"><span class="cheat-cmd">docker compose logs -f app</span><span class="cheat-desc">следить за логами сервиса</span></div>
         <div class="cheat-row"><span class="cheat-cmd">docker compose exec app sh</span><span class="cheat-desc">оболочка внутри контейнера</span></div>
-        <div class="cheat-row"><span class="cheat-cmd">docker ps</span><span class="cheat-desc">все запущенные контейнеры</span></div>
-        <div class="cheat-row"><span class="cheat-cmd">docker images</span><span class="cheat-desc">список локальных образов</span></div>
-        <div class="cheat-row"><span class="cheat-cmd">docker volume ls</span><span class="cheat-desc">список томов (где данные)</span></div>
-        <div class="cheat-row"><span class="cheat-cmd">docker system prune</span><span class="cheat-desc">убрать мусор: висящие образы, сети, кэш</span></div>
+        <div class="cheat-row"><span class="cheat-cmd">docker compose exec postgres psql -U devvault -d devvault</span><span class="cheat-desc">подключиться к базе</span></div>
+        <div class="cheat-row"><span class="cheat-cmd">docker compose down -v</span><span class="cheat-desc">+ удалить тома (полный сброс базы)</span></div>
       </div>
 
       <h2>Частые вопросы</h2>
       <div class="faq">
         <details class="faq-item">
-          <summary>Что делает <code>include</code> в корневом compose?</summary>
+          <summary>Почему четыре репы, а не один проект?</summary>
           <div class="faq-a">
-            <p>Берёт указанные compose-файлы и сливает их сервисы в <b>один проект</b> — как будто ты написал их в одном файле. Все контейнеры попадают в общую сеть и управляются вместе.</p>
-            <p>Плюс: ноль дублирования. Каждая репа хранит свой compose, а корневой лишь ссылается на них. Правишь сервер — правишь только его файл.</p>
+            <p>У каждого приложения свой жизненный цикл: свои коммиты, свои зависимости, свой деплой, могут вести разные люди. Они не связаны общим кодом — только HTTP-контрактом (API).</p>
+            <p>Четвёртая репа, <code>dev-vault-infra</code>, не содержит приложения — только оркестрацию: как всё поднять локально и как развернуть в проде.</p>
           </div>
         </details>
         <details class="faq-item">
-          <summary>Почему две репы, а не один общий проект?</summary>
+          <summary>Зачем CORS, если можно было бы проксировать через один origin?</summary>
           <div class="faq-a">
-            <p>Сервер и клиент независимы: свои коммиты, свой деплой, разные жизненные циклы, могут вести разные люди. Их не связывают импортом — только по HTTP через API.</p>
-            <p>Корневой compose — это удобство <b>локальной</b> разработки, чтобы поднять всё одной командой. На сервере (этап 02) каждый едет сам.</p>
+            <p>Потому что приложения <b>независимы</b> и работают отдельно: обычно ты правишь один фронт, а API уже развёрнут (у тебя на хосте или на деве). Фронт зовёт его напрямую — это другой origin.</p>
+            <p>Прокси «в один origin» работал бы только когда всё крутится вместе — а это не наш режим. Cross-origin + CORS одинаково работает и локально, и в проде.</p>
           </div>
         </details>
         <details class="faq-item">
-          <summary>Зачем серверу переменная CORS_ORIGIN?</summary>
+          <summary>Почему <code>VITE_API_URL</code> нельзя задать при запуске контейнера?</summary>
           <div class="faq-a">
-            <p>Фронт на <code>:3000</code> и бэк на <code>:3030</code> — разные origin. Браузер блокирует запросы между разными origin, пока сервер явно не разрешит. <code>CORS_ORIGIN</code> и есть этот «разрешённый адрес фронта».</p>
-            <p>Саму логику CORS в Nest включим на этапе 06 — сейчас переменная просто лежит наготове.</p>
+            <p>Vite запекает <code>VITE_</code>-переменные в бандл <b>при сборке</b>. В браузер уезжает готовый JS — менять переменную в рантайме уже нечему.</p>
+            <p>Поэтому для прода адрес API передают в <b>сборку образа</b>: <code>--build-arg VITE_API_URL=...</code>. Меняешь домен — пересобираешь образ.</p>
           </div>
         </details>
         <details class="faq-item">
-          <summary>Контейнер — это виртуальная машина?</summary>
+          <summary>Почему у админки порт <code>3001:3000</code>, а не <code>3001:3001</code>?</summary>
           <div class="faq-a">
-            <p>Нет. ВМ тащит целую гостевую ОС — гигабайты и старт в минуты. Контейнер <b>делит ядро твоей ОС</b> и изолирует только процесс. Отсюда мегабайты и старт за секунды.</p>
-            <p>Поэтому нормально держать четыре контейнера там, где четыре виртуалки были бы расточительством.</p>
+            <p>Внутри контейнера Vite слушает свой обычный <code>3000</code> — контейнеры изолированы, конфликта там нет. А на хосте порт 3000 уже занят клиентом, поэтому админку выставляем на <code>3001</code>.</p>
+            <p>Слева — порт хоста, справа — порт внутри контейнера. Классический приём.</p>
           </div>
         </details>
         <details class="faq-item">
           <summary>Что с данными при <code>docker compose down</code>?</summary>
           <div class="faq-a">
-            <p>Контейнеры удаляются — они одноразовые. Но тома (<code>pgdata</code>, <code>redisdata</code>) остаются, поэтому после <code>down</code> и <code>up</code> база с теми же данными.</p>
-            <p>Сотрёт только <code>docker compose down -v</code> (флаг <code>-v</code> = удалить тома) — это «полный сброс базы».</p>
+            <p>Контейнеры удаляются, но тома (<code>pgdata</code>, <code>redisdata</code>) остаются — база после <code>up</code> будет с теми же данными. Сотрёт только <code>down -v</code>.</p>
           </div>
         </details>
         <details class="faq-item">
-          <summary>Зачем отдельная стадия <code>deps</code> в Dockerfile?</summary>
+          <summary>Зачем стадия <code>deps</code> в Dockerfile?</summary>
           <div class="faq-a">
-            <p>Она ставит зависимости (<code>npm ci</code>) один раз, а стадии <code>dev</code> и <code>build</code> её переиспользуют. Правишь код (но не <code>package.json</code>) — Docker берёт зависимости из кэша и не переустанавливает. Сборка быстрее.</p>
-          </div>
-        </details>
-        <details class="faq-item">
-          <summary>Нужно пересобирать образ после каждой правки кода?</summary>
-          <div class="faq-a">
-            <p>В режиме разработки — нет. Код примонтирован томом, а dev-сервер (<code>start:dev</code> у бэка, Vite у фронта) следит за изменениями и пересобирает на лету.</p>
-            <p>Пересборка (<code>up --build</code>) нужна, только когда меняешь <b>зависимости</b> или сам <code>Dockerfile</code>.</p>
-          </div>
-        </details>
-        <details class="faq-item">
-          <summary>Почему у сервера порт 3030, а не 3000?</summary>
-          <div class="faq-a">
-            <p>Порт <code>3000</code> занят фронтом (типичный порт React-стека). Чтобы фронт и бэк не конфликтовали на одной машине, бэк уводим на <code>3030</code>. Оба порта проброшены на хост и не мешают друг другу.</p>
+            <p>Она ставит зависимости один раз, а <code>dev</code> и <code>build</code> её переиспользуют. Правишь код (но не <code>package.json</code>) — Docker берёт слой из кэша, сборка быстрее.</p>
           </div>
         </details>
       </div>
@@ -783,24 +667,9 @@ docker compose down -v</code></pre>
       <div class="note win">
         <div class="t">что у тебя теперь есть</div>
         <p>
-          Воспроизводимое окружение: <b>сервер + клиент + Postgres + Redis</b> поднимаются <b>одной
-          командой из корня</b>, код перезагружается на лету, данные живут в томах. Ровно эти же
-          compose-файлы станут основой боевого стека на сервере (этап 02).
-        </p>
-      </div>
-
-      <h2>Перенос на сервер — превью</h2>
-      <p class="body">
-        Сила Docker в том, что те же compose-файлы поедут на сервер почти без изменений. На твоём
-        <b>Hetzner</b> в общих чертах: SSH → установить Docker → забрать репы → прод-<code>.env</code>
-        → <code>docker compose up -d</code>.
-      </p>
-      <div class="note">
-        <div class="t">но «боевой» сервер — это больше</div>
-        <p>
-          По-настоящему рабочий сервер — это ещё вход по ключу, firewall, <b>Nginx</b>, <b>HTTPS</b>,
-          автозапуск и — важно — <b>закрытые наружу порты базы</b>. Всё по шагам под твой Hetzner — в
-          <a href="lesson-02-server.html" style="color: var(--copper); font-weight: 500;">Уроке 02 «Боевой сервер» →</a>.
+          Локальное окружение четырёх реп: API + база + кэш и два фронта, hot-reload, cross-origin +
+          CORS. Те же <code>Dockerfile</code> (стадия <code>prod</code>) поедут на сервер — через
+          <code>compose.prod.yml</code> и Caddy. Это <a href="lesson-02-server.html" style="color:var(--copper)">Урок 02</a>.
         </p>
       </div>
 
@@ -822,7 +691,6 @@ docker compose down -v</code></pre>
     </div>
 
     <script>
-      // подсветка строк-комментариев (начинаются с #)
       document.querySelectorAll(".code code").forEach((code) => {
         const lines = code.textContent.split("\n");
         const frag = document.createDocumentFragment();
@@ -841,7 +709,6 @@ docker compose down -v</code></pre>
         code.appendChild(frag);
       });
 
-      // копирование
       document.querySelectorAll(".code").forEach((block) => {
         const btn = block.querySelector(".copy");
         const code = block.querySelector("code");
@@ -859,7 +726,6 @@ docker compose down -v</code></pre>
         });
       });
 
-      // тема
       const THEME_KEY = "dev-vault-lesson-theme";
       const btn = document.getElementById("themeBtn");
       function applyTheme(t) { document.documentElement.setAttribute("data-theme", t); btn.textContent = t === "dark" ? "☾" : "☀"; }
