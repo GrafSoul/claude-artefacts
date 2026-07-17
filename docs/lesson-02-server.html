@@ -134,6 +134,17 @@
       .faq-a code { font-family: var(--mono); font-size: 0.86em; background: var(--panel-2); border: 1px solid var(--line); border-radius: 5px; padding: 0.05rem 0.35rem; color: var(--copper); }
       .faq-a b { color: var(--ink); }
 
+      /* spec table */
+      .tbl-wrap { overflow-x: auto; margin: 1rem 0; border: 1px solid var(--line); border-radius: 12px; }
+      .tbl { width: 100%; border-collapse: collapse; font-size: 0.86rem; }
+      .tbl th, .tbl td { text-align: left; padding: 0.6rem 0.85rem; border-bottom: 1px solid var(--line); }
+      .tbl th { font-family: var(--mono); font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--copper); background: color-mix(in srgb, var(--copper) 8%, var(--panel)); white-space: nowrap; }
+      .tbl td { color: var(--ink-2); }
+      .tbl td:first-child { font-family: var(--mono); color: var(--ink); white-space: nowrap; }
+      .tbl tr:last-child td { border-bottom: none; }
+      ul.body li b, ol.body li b { color: var(--ink); font-weight: 500; }
+      ul.body li code { font-family: var(--mono); font-size: 0.88em; background: var(--panel-2); border: 1px solid var(--line); border-radius: 5px; padding: 0.05rem 0.35rem; color: var(--copper); }
+
       .lnav { display: flex; flex-wrap: wrap; gap: 0.8rem; justify-content: space-between; margin-top: 3.5rem; }
       .lnav a { flex: 1; min-width: 220px; border: 1px solid var(--line); border-radius: 12px; padding: 1rem 1.2rem; text-decoration: none; background: var(--panel); transition: all 0.15s ease; }
       .lnav a:hover { border-color: var(--copper); transform: translateY(-2px); }
@@ -175,13 +186,71 @@
         </div>
       </header>
 
+      <h2>Выбор железа на Hetzner <span class="stepbadge">с чего начать</span></h2>
+      <p class="body">
+        Прежде чем что-то настраивать — правильно выбрать сервер. Разберём по порядку: тип, линейку и
+        сколько ресурсов нужно именно нашему стеку.
+      </p>
+
+      <h3>Cloud, а не Dedicated</h3>
+      <p class="body">
+        У Hetzner два мира: <b>Cloud</b> (виртуальные серверы — создаются за минуты, почасовая
+        оплата, легко масштабируются) и <b>Dedicated</b> (физические машины — мощно и дорого, под
+        серьёзную нагрузку). Для старта и учёбы — однозначно <b>Cloud</b>.
+      </p>
+
+      <h3>Какая линейка Cloud</h3>
+      <div class="tbl-wrap"><table class="tbl">
+        <tr><th>Линейка</th><th>Ядра</th><th>Когда брать</th></tr>
+        <tr><td>CX</td><td>Intel, общие</td><td>дешёвый старт на x86 — нам подходит</td></tr>
+        <tr><td>CPX</td><td>AMD, общие</td><td>чуть мощнее, тоже x86</td></tr>
+        <tr><td>CAX</td><td>Ampere, ARM64</td><td>дёшево и экономично, но следи за ARM-совместимостью образов</td></tr>
+        <tr><td>CCX</td><td>выделенные</td><td>прод под стабильной нагрузкой, дороже</td></tr>
+      </table></div>
+      <div class="note">
+        <div class="t">про ARM (CAX) — важный нюанс</div>
+        <p>
+          CAX дешевле, но это архитектура <b>ARM64</b>. Наши образы (<code>node</code>,
+          <code>postgres</code>, <code>redis</code>, <code>nginx</code>) — мультиарх, под ARM работают.
+          Но если однажды попадётся образ только под x86 — на ARM он не запустится. Для
+          предсказуемости на старте бери <b>CX / CPX (x86)</b>; ARM — когда освоишься.
+        </p>
+      </div>
+
+      <h3>Сколько ресурсов нужно нашему стеку</h3>
+      <p class="body">
+        На сервере крутятся Nest (Node), PostgreSQL, Redis, Nginx и статика клиента. Главный
+        ограничитель — <b>память</b>.
+      </p>
+      <ul class="body">
+        <li><b>RAM</b> — сердце выбора. Postgres + Node + Redis: минимум <b>2 ГБ</b>, комфортно <b>4 ГБ</b>. На 2 ГБ жить можно, но тесно.</li>
+        <li><b>vCPU</b> — 2 ядра достаточно для старта.</li>
+        <li><b>Диск (NVMe)</b> — 40 ГБ надолго хватит (образы + база). Следи за ростом базы.</li>
+      </ul>
+      <div class="note win">
+        <div class="t">рекомендация для старта</div>
+        <p>
+          <b>CX22</b> или <b>CPX21</b>: 2 vCPU, <b>4 ГБ RAM</b>, ~40 ГБ NVMe. Золотая середина — не
+          тесно и недорого (пара евро в месяц). Совсем мало данных и трафика — можно и 2 ГБ, но с
+          запасом спокойнее.
+        </p>
+      </div>
+
+      <h3>Что ещё выбрать при создании</h3>
+      <ul class="body">
+        <li><b>Локация</b> — ближе к пользователям (Германия/Финляндия для EU, США, Сингапур). Меньше пинг.</li>
+        <li><b>ОС — Ubuntu 24.04 LTS</b>: именно на неё рассчитан этот урок.</li>
+        <li><b>SSH-ключ</b> — добавь свой публичный ключ прямо в мастере (не пароль). Дальше вход только по ключу.</li>
+        <li><b>Backups</b> — авто-бэкапы Hetzner (+20% к цене) для прода стоит включить; плюс свой <code>pg_dump</code> (в конце урока).</li>
+      </ul>
+
       <div class="note">
         <div class="t">что нужно до старта</div>
         <p>
           <b>1.</b> Пройден <a href="lesson-01-docker.html" style="color:var(--copper)">Урок 01</a> —
-          стек крутится локально. <b>2.</b> Заведён VPS на Hetzner (Ubuntu 24.04), есть его IP.
-          <b>3.</b> Есть домен (или поддомен) и доступ к его DNS. <b>4.</b> Твой публичный
-          SSH-ключ добавлен в сервер при создании (Hetzner предлагает это в мастере).
+          стек крутится локально. <b>2.</b> Создан Cloud-сервер по разделу выше (Ubuntu 24.04), есть
+          его IP. <b>3.</b> Есть домен (или поддомен) и доступ к его DNS. <b>4.</b> Твой публичный
+          SSH-ключ добавлен в сервер при создании.
         </p>
       </div>
 
