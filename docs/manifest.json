@@ -82,6 +82,19 @@
       ]
     },
     {
+      "title": "PostgreSQL — источник правды",
+      "description": "Что такое реляционная база простыми словами: таблицы, строки, столбцы, внешние ключи, связи один-ко-многим. Интерактивный SQL-плейграунд (SELECT/WHERE/JOIN/COUNT с подсветкой строк), миграции, ACID и транзакции, разбор конфигурации dev-vault и FAQ.",
+      "path": "postgresql-explained.html",
+      "emoji": "🐘",
+      "date": "2026-07-18",
+      "tags": [
+        "postgresql",
+        "sql",
+        "концепция",
+        "dev-vault"
+      ]
+    },
+    {
       "title": "Docker & Compose построчно",
       "description": "Справочник: расшифровка каждой строчки Dockerfile и compose на реальных файлах dev-vault. Слева строка — справа человеческое объяснение: что это, зачем, где подвох.",
       "path": "reference-docker-compose.html",

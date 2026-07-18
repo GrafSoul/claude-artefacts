@@ -1,0 +1,479 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>PostgreSQL · источник правды · dev-vault</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🐘</text></svg>" />
+    <meta
+      name="description"
+      content="Что такое PostgreSQL и реляционная база простыми словами: таблицы, строки, связи, внешние ключи, SQL, миграции, ACID — с интерактивным SQL-плейграундом и разбором конфигурации dev-vault."
+    />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --bg: #14100e; --bg-2: #1b1613; --panel: #201a16; --panel-2: #261f1a; --code-bg: #17120f;
+        --line: #382e27; --line-2: #4a3d34; --ink: #f3ece4; --ink-2: #c3b6a8; --ink-3: #8b7d70;
+        --copper: #e0895f; --copper-soft: #d97757; --gold: #e6b86a; --done: #7fa66a;
+        --done-bg: rgba(127, 166, 106, 0.14); --blue: #7fa8c9;
+        --radius: 16px; --serif: "Fraunces", Georgia, serif;
+        --sans: "IBM Plex Sans", -apple-system, BlinkMacSystemFont, sans-serif;
+        --mono: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+      }
+      :root[data-theme="light"] {
+        --bg: #f6f1ea; --bg-2: #efe7db; --panel: #fffdf9; --panel-2: #f1e9dc; --code-bg: #2a2320;
+        --line: #e2d6c6; --line-2: #d2c2ad; --ink: #241c14; --ink-2: #5a4d3f; --ink-3: #8a7a68;
+        --copper: #b8542f; --copper-soft: #c96a3e; --gold: #a9762a; --done: #5c7f45; --done-bg: rgba(92,127,69,0.12); --blue: #3f6b8f;
+      }
+      @media (prefers-color-scheme: light) {
+        :root:not([data-theme="dark"]) {
+          --bg: #f6f1ea; --bg-2: #efe7db; --panel: #fffdf9; --panel-2: #f1e9dc; --code-bg: #2a2320;
+          --line: #e2d6c6; --line-2: #d2c2ad; --ink: #241c14; --ink-2: #5a4d3f; --ink-3: #8a7a68;
+          --copper: #b8542f; --copper-soft: #c96a3e; --gold: #a9762a; --done: #5c7f45; --done-bg: rgba(92,127,69,0.12); --blue: #3f6b8f;
+        }
+      }
+
+      * { box-sizing: border-box; margin: 0; padding: 0; }
+      html { scroll-behavior: smooth; scroll-padding-top: 80px; }
+      body {
+        font-family: var(--sans); background: var(--bg); color: var(--ink); line-height: 1.6;
+        -webkit-font-smoothing: antialiased;
+        background-image: radial-gradient(1100px 550px at 88% -5%, rgba(224,137,95,0.09), transparent 60%);
+        background-attachment: fixed;
+      }
+      ::selection { background: var(--copper); color: #14100e; }
+
+      .topbar { position: sticky; top: 0; z-index: 50; display: flex; align-items: center; gap: 1rem; padding: 0.7rem clamp(1rem,4vw,2.5rem); background: color-mix(in srgb, var(--bg) 82%, transparent); backdrop-filter: blur(14px); border-bottom: 1px solid var(--line); }
+      .brand { font-family: var(--mono); font-size: 0.82rem; color: var(--ink-2); white-space: nowrap; }
+      .brand b { color: var(--copper); font-weight: 500; }
+      .topbar .spacer { flex: 1; }
+      .btn { font-family: var(--mono); font-size: 0.76rem; color: var(--ink-2); background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 0.4rem 0.6rem; cursor: pointer; transition: all 0.15s ease; text-decoration: none; white-space: nowrap; }
+      .btn:hover { color: var(--ink); border-color: var(--line-2); }
+
+      .shell { max-width: 900px; margin: 0 auto; padding: 0 clamp(1rem,4vw,2rem) 6rem; }
+
+      .hero { padding: clamp(2.5rem,7vw,4.5rem) 0 1rem; }
+      .eyebrow { font-family: var(--mono); font-size: 0.78rem; letter-spacing: 0.14em; text-transform: uppercase; color: var(--copper); display: flex; align-items: center; gap: 0.6rem; }
+      .eyebrow::before { content: ""; width: 1.8rem; height: 1px; background: var(--copper); }
+      h1 { font-family: var(--serif); font-weight: 600; font-size: clamp(2.2rem,6vw,3.4rem); line-height: 1.05; letter-spacing: -0.015em; margin: 1rem 0 0.5rem; }
+      h1 em { font-style: italic; color: var(--copper); }
+      .lede { font-size: clamp(1.02rem,2.3vw,1.18rem); color: var(--ink-2); max-width: 64ch; margin-top: 0.8rem; }
+      .lede b { color: var(--ink); font-weight: 500; }
+      .meta { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 1.5rem; font-family: var(--mono); font-size: 0.76rem; }
+      .chip { border: 1px solid var(--line); background: var(--panel); color: var(--ink-2); border-radius: 99px; padding: 0.25rem 0.7rem; }
+
+      h2 { font-family: var(--serif); font-weight: 600; font-size: clamp(1.5rem,4vw,2rem); letter-spacing: -0.01em; margin: 3rem 0 0.5rem; scroll-margin-top: 80px; }
+      h3 { font-family: var(--mono); font-weight: 500; font-size: 0.9rem; color: var(--copper); margin: 1.8rem 0 0.6rem; text-transform: uppercase; letter-spacing: 0.04em; }
+      p.body { color: var(--ink-2); margin: 0.7rem 0; }
+      p.body b { color: var(--ink); font-weight: 500; }
+      p.body code, .inline { font-family: var(--mono); font-size: 0.88em; background: var(--panel-2); border: 1px solid var(--line); border-radius: 5px; padding: 0.05rem 0.35rem; color: var(--copper); }
+
+      .cards { display: grid; grid-template-columns: 1fr 1fr; gap: 0.9rem; margin: 1.2rem 0; }
+      @media (max-width: 640px) { .cards { grid-template-columns: 1fr; } }
+      .card { border: 1px solid var(--line); border-radius: 12px; background: var(--panel); padding: 1rem 1.1rem; }
+      .card .h { font-family: var(--mono); font-size: 0.78rem; color: var(--copper); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.4rem; display: flex; align-items: center; gap: 0.4rem; }
+      .card .big { font-family: var(--serif); font-size: 1.15rem; color: var(--ink); margin-bottom: 0.4rem; }
+      .card p { font-size: 0.9rem; color: var(--ink-2); }
+      .card p b { color: var(--ink); font-weight: 500; }
+
+      /* sql playground */
+      .play { border: 1px solid var(--line); border-radius: var(--radius); background: linear-gradient(180deg, color-mix(in srgb, var(--panel) 70%, transparent), var(--panel)); padding: 0.9rem; margin: 1.1rem 0; }
+      .qbtns { display: flex; flex-direction: column; gap: 0.4rem; margin-bottom: 0.85rem; }
+      .qbtns button { font-family: var(--mono); font-size: 0.78rem; color: var(--ink); background: var(--code-bg); border: 1px solid var(--line); border-radius: 8px; padding: 0.5rem 0.7rem; cursor: pointer; transition: all 0.15s ease; text-align: left; }
+      :root[data-theme="light"] .qbtns button, :root:not([data-theme="dark"]) .qbtns button { background: #221c19; }
+      .qbtns button:hover { border-color: var(--copper); }
+      .qbtns button.on { border-color: var(--copper); background: color-mix(in srgb, var(--copper) 14%, var(--code-bg)); }
+      .qbtns button .kw { color: var(--copper); }
+      .qbtns button .fn { color: var(--gold); }
+      .tbls { display: grid; grid-template-columns: 1fr 1fr; gap: 0.8rem; }
+      @media (max-width: 680px) { .tbls { grid-template-columns: 1fr; } }
+      .tbl { border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
+      .tbl .cap { font-family: var(--mono); font-size: 0.72rem; color: var(--ink-2); padding: 0.4rem 0.6rem; background: color-mix(in srgb, var(--panel) 55%, black); border-bottom: 1px solid var(--line); }
+      .tbl .cap b { color: var(--copper); font-weight: 500; }
+      table.grid { width: 100%; border-collapse: collapse; font-family: var(--mono); font-size: 0.74rem; }
+      table.grid th { text-align: left; padding: 0.35rem 0.6rem; color: var(--ink-3); border-bottom: 1px solid var(--line); font-weight: 500; background: var(--panel); }
+      table.grid td { padding: 0.35rem 0.6rem; color: var(--ink-2); border-bottom: 1px solid var(--line); transition: background 0.2s ease, color 0.2s ease; }
+      table.grid tr:last-child td { border-bottom: none; }
+      table.grid tr.hit td { background: color-mix(in srgb, var(--copper) 16%, var(--panel)); color: var(--ink); }
+      table.grid td.fk { color: var(--gold); }
+      table.grid tr.dim td { opacity: 0.4; }
+      .result { margin-top: 0.85rem; border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
+      .result .cap { font-family: var(--mono); font-size: 0.72rem; color: var(--done); padding: 0.4rem 0.6rem; background: var(--done-bg); border-bottom: 1px solid var(--line); }
+      .qexpl { margin-top: 0.6rem; font-size: 0.88rem; color: var(--ink-2); border-left: 3px solid var(--copper); background: color-mix(in srgb, var(--copper) 8%, var(--panel)); border-radius: 0 10px 10px 0; padding: 0.55rem 0.85rem; }
+      .qexpl b { color: var(--ink); font-weight: 500; }
+      .qexpl code { font-family: var(--mono); font-size: 0.86em; color: var(--copper); }
+
+      /* annotated code */
+      .ann { border: 1px solid var(--line); border-radius: 12px; overflow: hidden; margin: 0.9rem 0; background: var(--panel); }
+      .ann-file { font-family: var(--mono); font-size: 0.76rem; color: var(--ink-2); padding: 0.5rem 0.9rem; background: color-mix(in srgb, var(--panel) 60%, black); border-bottom: 1px solid var(--line); }
+      .ann-file b { color: var(--copper); font-weight: 500; }
+      .ann-row { display: grid; grid-template-columns: minmax(0, 0.95fr) minmax(0, 1.05fr); border-top: 1px solid var(--line); }
+      .ann-row:first-of-type { border-top: none; }
+      .ann-code { font-family: var(--mono); font-size: 0.8rem; line-height: 1.55; color: var(--ink); background: var(--code-bg); padding: 0.7rem 0.9rem; white-space: pre-wrap; overflow-wrap: anywhere; }
+      :root[data-theme="light"] .ann-code, :root:not([data-theme="dark"]) .ann-code { color: #f3ece4; }
+      .ann-exp { padding: 0.7rem 0.9rem; font-size: 0.87rem; color: var(--ink-2); border-left: 1px solid var(--line); }
+      .ann-exp k { font-family: var(--mono); font-size: 0.9em; color: var(--copper); font-style: normal; }
+      .ann-exp b { color: var(--ink); font-weight: 500; }
+      .ann-row.head .ann-code, .ann-row.head .ann-exp { background: color-mix(in srgb, var(--copper) 8%, var(--panel)); }
+      .ann-row.head .ann-exp { color: var(--ink); font-weight: 500; }
+      @media (max-width: 640px) {
+        .ann-row { grid-template-columns: 1fr; }
+        .ann-code { border-bottom: 1px solid var(--line); }
+        .ann-exp { border-left: none; }
+      }
+
+      .note { border-left: 3px solid var(--copper); background: color-mix(in srgb, var(--copper) 8%, var(--panel)); border-radius: 0 10px 10px 0; padding: 0.9rem 1.1rem; margin: 1.4rem 0; }
+      .note .t { font-family: var(--mono); font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--copper); margin-bottom: 0.3rem; }
+      .note p { font-size: 0.9rem; color: var(--ink-2); }
+      .note p b { color: var(--ink); }
+      .note p code { font-family: var(--mono); font-size: 0.86em; background: var(--panel-2); border: 1px solid var(--line); border-radius: 5px; padding: 0.05rem 0.35rem; color: var(--copper); }
+      .note.blue { border-left-color: var(--blue); background: color-mix(in srgb, var(--blue) 9%, var(--panel)); }
+      .note.blue .t { color: var(--blue); }
+
+      .toc { display: flex; flex-wrap: wrap; gap: 0.5rem; margin: 1.5rem 0 0.5rem; }
+      .toc a { font-family: var(--mono); font-size: 0.76rem; color: var(--ink-2); text-decoration: none; border: 1px solid var(--line); border-radius: 8px; padding: 0.35rem 0.7rem; transition: all 0.15s ease; }
+      .toc a:hover { color: var(--copper); border-color: var(--copper); }
+
+      .faq { border: 1px solid var(--line); border-radius: 12px; background: var(--panel); margin: 0.7rem 0; overflow: hidden; }
+      .faq summary { cursor: pointer; padding: 0.85rem 1rem; font-weight: 500; color: var(--ink); list-style: none; display: flex; align-items: center; gap: 0.6rem; font-size: 0.95rem; }
+      .faq summary::-webkit-details-marker { display: none; }
+      .faq summary::before { content: "＋"; font-family: var(--mono); color: var(--copper); font-size: 1rem; }
+      .faq[open] summary::before { content: "－"; }
+      .faq summary:hover { color: var(--copper); }
+      .faq .a { padding: 0 1rem 0.95rem 2.2rem; color: var(--ink-2); font-size: 0.9rem; }
+      .faq .a code { font-family: var(--mono); font-size: 0.86em; background: var(--panel-2); border: 1px solid var(--line); border-radius: 5px; padding: 0.05rem 0.35rem; color: var(--copper); }
+      .faq .a b { color: var(--ink); font-weight: 500; }
+
+      .lnav { display: flex; flex-wrap: wrap; gap: 0.8rem; justify-content: space-between; margin-top: 3.5rem; }
+      .lnav a { flex: 1; min-width: 220px; border: 1px solid var(--line); border-radius: 12px; padding: 1rem 1.2rem; text-decoration: none; background: var(--panel); transition: all 0.15s ease; }
+      .lnav a:hover { border-color: var(--copper); transform: translateY(-2px); }
+      .lnav .dir { font-family: var(--mono); font-size: 0.72rem; color: var(--ink-3); }
+      .lnav .ttl { color: var(--ink); font-weight: 500; margin-top: 0.2rem; }
+
+      footer { margin-top: 3rem; padding-top: 1.5rem; border-top: 1px solid var(--line); font-family: var(--mono); font-size: 0.78rem; color: var(--ink-3); display: flex; flex-wrap: wrap; gap: 0.5rem 1rem; justify-content: space-between; }
+      footer a { color: var(--copper); text-decoration: none; }
+      @media (prefers-reduced-motion: reduce) { * { transition: none !important; scroll-behavior: auto !important; } }
+    </style>
+  </head>
+  <body>
+    <div class="topbar">
+      <span class="brand"><b>◆</b> dev-vault · концепции</span>
+      <span class="spacer"></span>
+      <a class="btn" href="redis-explained.html">← redis</a>
+      <a class="btn" href="system-map.html">карта</a>
+      <button class="btn" id="themeBtn" title="Сменить тему">☾</button>
+    </div>
+
+    <div class="shell">
+      <header class="hero">
+        <span class="eyebrow">данные · источник правды</span>
+        <h1>PostgreSQL — <em>источник правды</em></h1>
+        <p class="lede">
+          Если Redis — блокнот под рукой, то <b>PostgreSQL</b> — надёжный архив, где данные лежат
+          <b>долго и структурно</b>: пользователи, записи, связи между ними. Это <b>реляционная</b>
+          база — данные в таблицах, а спрашиваешь их языком <b>SQL</b>. Ниже — как это устроено,
+          поиграй с запросами на живых таблицах.
+        </p>
+        <div class="meta">
+          <span class="chip">реляционная БД</span>
+          <span class="chip">таблицы · строки</span>
+          <span class="chip">SQL</span>
+          <span class="chip">источник правды</span>
+        </div>
+        <div class="toc">
+          <a href="#what">Что это</a>
+          <a href="#play">SQL-плейграунд</a>
+          <a href="#relations">Связи таблиц</a>
+          <a href="#migrations">Миграции</a>
+          <a href="#project">В dev-vault</a>
+          <a href="#acid">Надёжность (ACID)</a>
+          <a href="#faq">Частые вопросы</a>
+        </div>
+      </header>
+
+      <h2 id="what">Что такое реляционная база</h2>
+      <p class="body">
+        Представь <b>Excel со строгими правилами</b>. Данные лежат в <b>таблицах</b>; у таблицы есть
+        <b>столбцы</b> (например, <code>id</code>, <code>name</code>, <code>role</code>) с заданными
+        типами, а каждая <b>строка</b> — одна запись (один пользователь). «Реляционная» значит, что
+        таблицы <b>связаны</b> между собой — заметка знает, какому пользователю принадлежит.
+      </p>
+      <div class="cards">
+        <div class="card">
+          <div class="h">📋 структура</div>
+          <div class="big">схема заранее</div>
+          <p>У таблицы фиксированные столбцы и типы. Попытка записать текст в числовое поле — ошибка. Это дисциплина, которая бережёт данные от мусора.</p>
+        </div>
+        <div class="card">
+          <div class="h">🔎 запросы</div>
+          <div class="big">язык SQL</div>
+          <p>Данные достаёшь запросами: «дай всех admin», «сколько заметок у пользователя 2». Postgres умеет фильтровать, соединять и считать на своей стороне.</p>
+        </div>
+      </div>
+
+      <h2 id="play">SQL-плейграунд: пощупай запросы</h2>
+      <p class="body">
+        Две таблицы — <b>users</b> и <b>notes</b>. Нажимай запрос слева и смотри, какие строки он
+        вернёт (подсветятся) и что окажется в результате. Это и есть работа с реляционной базой.
+      </p>
+      <div class="play">
+        <div class="qbtns" id="qbtns">
+          <button data-q="all-users"><span class="kw">SELECT</span> * <span class="kw">FROM</span> users</button>
+          <button data-q="admins"><span class="kw">SELECT</span> * <span class="kw">FROM</span> users <span class="kw">WHERE</span> role = 'admin'</button>
+          <button data-q="notes-of-2"><span class="kw">SELECT</span> * <span class="kw">FROM</span> notes <span class="kw">WHERE</span> user_id = 2</button>
+          <button data-q="join"><span class="kw">SELECT</span> u.name, n.title <span class="kw">FROM</span> notes n <span class="kw">JOIN</span> users u <span class="kw">ON</span> n.user_id = u.id</button>
+          <button data-q="count"><span class="kw">SELECT</span> user_id, <span class="fn">COUNT</span>(*) <span class="kw">FROM</span> notes <span class="kw">GROUP BY</span> user_id</button>
+        </div>
+        <div class="tbls">
+          <div class="tbl">
+            <div class="cap">таблица <b>users</b></div>
+            <table class="grid" id="t-users">
+              <thead><tr><th>id</th><th>name</th><th>role</th></tr></thead>
+              <tbody>
+                <tr data-uid="1"><td>1</td><td>Брюс</td><td>admin</td></tr>
+                <tr data-uid="2"><td>2</td><td>Дмитрий</td><td>user</td></tr>
+                <tr data-uid="3"><td>3</td><td>Кларк</td><td>user</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="tbl">
+            <div class="cap">таблица <b>notes</b></div>
+            <table class="grid" id="t-notes">
+              <thead><tr><th>id</th><th>user_id</th><th>title</th></tr></thead>
+              <tbody>
+                <tr data-nid="101" data-uid="1"><td>101</td><td class="fk">1</td><td>Пароли от бэткомпьютера</td></tr>
+                <tr data-nid="102" data-uid="2"><td>102</td><td class="fk">2</td><td>Идеи для dev-vault</td></tr>
+                <tr data-nid="103" data-uid="2"><td>103</td><td class="fk">2</td><td>Купить кофе</td></tr>
+                <tr data-nid="104" data-uid="3"><td>104</td><td class="fk">3</td><td>Статья про Redis</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+        <div class="result" id="result"></div>
+        <div class="qexpl" id="qexpl"></div>
+      </div>
+      <p class="body" style="font-size:0.88rem;color:var(--ink-3)">
+        <b style="color:var(--ink-2)">Ключевой момент —</b> столбец <code style="color:var(--gold)">user_id</code>
+        в notes (золотом). Это <b>внешний ключ</b>: он не хранит имя пользователя заново, а лишь
+        ссылается на <code>id</code> в users. Имя лежит в <b>одном месте</b>; поменяешь его там — оно
+        поменяется везде. Это и есть «реляционность».
+      </p>
+
+      <h2 id="relations">Связи: почему не дублируем данные</h2>
+      <p class="body">
+        Можно было бы в каждой заметке писать имя автора текстом. Но тогда у Дмитрия <b>три</b>
+        заметки — и имя записано трижды. Переименовал — правь в трёх местах, забыл одно — данные
+        разъехались. Реляционная модель решает это <b>ссылкой</b>.
+      </p>
+      <div class="cards">
+        <div class="card">
+          <div class="h">🔗 внешний ключ (FK)</div>
+          <p><code>notes.user_id</code> ссылается на <code>users.id</code>. База может даже запретить создать заметку с несуществующим автором — это <b>целостность</b>.</p>
+        </div>
+        <div class="card">
+          <div class="h">1 → ∞ один-ко-многим</div>
+          <p>Один пользователь — много заметок. Классическая связь. Ещё бывают «один-к-одному» и «многие-ко-многим» (через промежуточную таблицу).</p>
+        </div>
+      </div>
+      <div class="note blue">
+        <div class="t">Postgres и Redis — про разное</div>
+        <p>Здесь видно, чем Postgres отличается от <a href="redis-explained.html" style="color:var(--blue)">Redis</a>: там доступ <b>по одному ключу</b>, тут — <b>связи и сложные запросы</b> (JOIN, фильтры, подсчёты). Поэтому главные данные держат в Postgres, а Redis ускоряет доступ к ним.</p>
+      </div>
+
+      <h2 id="migrations">Миграции: схема меняется во времени</h2>
+      <p class="body">
+        Схема (какие таблицы и столбцы существуют) не высечена в камне — по мере роста проекта
+        добавляются поля, таблицы, связи. <b>Миграция</b> — это записанный шаг изменения схемы:
+        «добавить таблицу notes», «добавить столбец avatar в users».
+      </p>
+      <p class="body">
+        Зачем формально: миграции <b>версионируют</b> базу, как git — код. Каждый разработчик и
+        боевой сервер применяют одни и те же шаги в одном порядке и получают <b>одинаковую</b>
+        структуру. Не «накликал руками у себя», а воспроизводимо у всех.
+      </p>
+      <div class="note">
+        <div class="t">как это выглядит в жизни</div>
+        <p>
+          Обычно миграции пишет <b>ORM</b> — библиотека-посредник между кодом и базой (Prisma,
+          TypeORM, Drizzle). Ты описываешь модель в коде, ORM генерирует SQL-миграцию и умеет
+          «накатить» её командой. В dev-vault ORM <b>ещё не выбран</b> — это ближайший шаг по
+          <a href="backend-roadmap.html" style="color:var(--copper)">плану</a>.
+        </p>
+      </div>
+
+      <h2 id="project">PostgreSQL в dev-vault прямо сейчас</h2>
+      <p class="body">
+        Как и с Redis — честно: контейнер базы <b>поднят</b>, адрес прописан в <code>.env</code>, том
+        для данных подключён. <b>Таблиц, схемы и ORM в коде пока нет</b> — они появятся, когда дойдём
+        до моделей. Инфраструктура готова.
+      </p>
+      <div class="ann">
+        <div class="ann-file"><b>dev-vault-server/docker-compose.yml</b> · сервис postgres</div>
+        <div class="ann-row head"><div class="ann-code">  postgres:
+    image: postgres:18-alpine</div><div class="ann-exp"><b>Готовый образ</b> PostgreSQL 18. При первом старте сам создаёт пользователя, пароль и базу из переменных окружения.</div></div>
+        <div class="ann-row"><div class="ann-code">    ports:
+      - "5432:5432"</div><div class="ann-exp">Стандартный порт Postgres. Проброшен локально — можно подключиться GUI-клиентом (DBeaver, TablePlus). <b>В проде порт не открывают</b> — база живёт в приватной сети.</div></div>
+        <div class="ann-row"><div class="ann-code">    volumes:
+      - pgdata:/var/lib/postgresql</div><div class="ann-exp"><b>Том с данными.</b> Сюда Postgres пишет всё содержимое базы — том нужен, чтобы данные пережили пересоздание контейнера. В Postgres 18 путь — <k>/var/lib/postgresql</k> (в 17 был с <k>/data</k>).</div></div>
+        <div class="ann-row"><div class="ann-code">    healthcheck:
+      test: pg_isready -U devvault</div><div class="ann-exp"><k>pg_isready</k> спрашивает базу: «готова принимать соединения?». Backend ждёт этого <b>healthy</b>-статуса, прежде чем стартовать — иначе упадёт на первом же запросе.</div></div>
+      </div>
+      <div class="ann">
+        <div class="ann-file"><b>dev-vault-server/.env</b> · строка подключения</div>
+        <div class="ann-row"><div class="ann-code">DATABASE_URL=
+  postgres://devvault:devvault@postgres:5432/devvault</div><div class="ann-exp">Всё подключение в одной строке: <k>postgres://</k> — протокол; <k>devvault:devvault</k> — пользователь и пароль; <k>postgres</k> — хост (имя сервиса в сети, не <k>localhost</k>); <k>5432</k> — порт; последний <k>devvault</k> — имя базы. В проде пароль подставляется из секрета.</div></div>
+      </div>
+
+      <h2 id="acid">Надёжность: почему ей доверяют данные</h2>
+      <p class="body">
+        У Postgres есть свойство, ради которого его выбирают для важного, — <b>ACID</b>. Самое главное
+        в нём — <b>транзакции</b>: группа операций выполняется по принципу «<b>всё или ничего</b>».
+      </p>
+      <div class="note">
+        <div class="t">пример транзакции</div>
+        <p>
+          Перевод денег: «списать у А» и «зачислить Б» — два шага. Если между ними случится сбой,
+          нельзя, чтобы деньги <b>списались, но не зачислились</b>. Транзакция гарантирует: либо
+          оба шага прошли, либо <b>ни одного</b> (откат). База не оставит данные в «половинчатом»
+          состоянии.
+        </p>
+      </div>
+      <p class="body">
+        Плюс данные <b>на диске</b> (том <code>pgdata</code>), а для боевой эксплуатации делают
+        регулярные <b>бэкапы</b> — чтобы пережить не только перезапуск контейнера, но и потерю
+        сервера. Именно поэтому источником правды делают Postgres, а не кэш в памяти.
+      </p>
+
+      <h2 id="faq">Частые вопросы</h2>
+      <details class="faq">
+        <summary>Чем PostgreSQL отличается от MySQL?</summary>
+        <div class="a">Оба — зрелые реляционные базы с SQL. Postgres традиционно богаче на возможности (продвинутые типы вроде <code>JSONB</code>, строгое следование стандарту, расширения), MySQL исторически проще и чуть быстрее на простых сценариях. Для нового проекта Postgres — безопасный выбор по умолчанию, что и сделано в dev-vault.</div>
+      </details>
+      <details class="faq">
+        <summary>Что такое ORM и обязателен ли он?</summary>
+        <div class="a"><b>ORM</b> (Object-Relational Mapping) — библиотека, позволяющая работать с таблицами через объекты в коде, а не писать SQL руками. Она же обычно ведёт миграции. Не обязателен — можно и чистым SQL — но на практике ORM (Prisma, TypeORM, Drizzle) экономит время и уменьшает ошибки. В dev-vault выбор ORM — ближайший шаг.</div>
+      </details>
+      <details class="faq">
+        <summary>Что значит <code>alpine</code> в <code>postgres:18-alpine</code>?</summary>
+        <div class="a">Это вариант образа на базе Alpine Linux — очень маленького дистрибутива. Образ весит меньше, качается быстрее. На саму работу базы не влияет; отличается только «начинка» контейнера вокруг Postgres.</div>
+      </details>
+      <details class="faq">
+        <summary>Почему база не должна торчать в интернет?</summary>
+        <div class="a">Открытый порт базы — прямая мишень: боты сканируют <code>5432</code> и подбирают пароли. Поэтому в проде у сервиса нет секции <code>ports</code>: Postgres виден только backend'у по имени <code>postgres</code> внутри приватной сети Docker. Снаружи к нему не подключиться в принципе.</div>
+      </details>
+      <details class="faq">
+        <summary>Данные точно не пропадут при перезапуске контейнера?</summary>
+        <div class="a">Нет, если есть <b>том</b> (<code>pgdata</code>) — а он есть. Контейнер можно удалить и пересоздать, данные останутся в томе. Пропадут они только если удалить сам том. Для защиты от потери сервера дополнительно делают бэкапы.</div>
+      </details>
+
+      <div class="note">
+        <div class="t">итог одной строкой</div>
+        <p><b>PostgreSQL — структурированная память системы:</b> таблицы, связи, SQL и гарантии надёжности. Сюда кладут всё, что нельзя потерять, а Redis ставят рядом для скорости.</p>
+      </div>
+
+      <div class="lnav">
+        <a href="redis-explained.html">
+          <div class="dir">← redis</div>
+          <div class="ttl">Redis — быстрая память</div>
+        </a>
+        <a href="system-map.html">
+          <div class="dir">карта →</div>
+          <div class="ttl">Карта системы</div>
+        </a>
+      </div>
+
+      <footer>
+        <span>dev-vault · концепции · собрано в паре с Claude Code</span>
+        <a href="https://github.com/GrafSoul/claude-artefacts">исходники</a>
+      </footer>
+    </div>
+
+    <script>
+      /* theme */
+      const THEME_KEY = "dev-vault-lesson-theme";
+      const tbtn = document.getElementById("themeBtn");
+      function applyTheme(t) { document.documentElement.setAttribute("data-theme", t); tbtn.textContent = t === "dark" ? "☾" : "☀"; }
+      const savedTheme = localStorage.getItem(THEME_KEY);
+      if (savedTheme) applyTheme(savedTheme);
+      else tbtn.textContent = matchMedia("(prefers-color-scheme: light)").matches ? "☀" : "☾";
+      tbtn.addEventListener("click", () => {
+        const cur = document.documentElement.getAttribute("data-theme") || (matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark");
+        const next = cur === "dark" ? "light" : "dark";
+        localStorage.setItem(THEME_KEY, next); applyTheme(next);
+      });
+
+      /* sql playground */
+      const usersRows = () => [...document.querySelectorAll("#t-users tbody tr")];
+      const notesRows = () => [...document.querySelectorAll("#t-notes tbody tr")];
+      const resultEl = document.getElementById("result");
+      const qexpl = document.getElementById("qexpl");
+
+      function clearHits() {
+        [...usersRows(), ...notesRows()].forEach(r => r.classList.remove("hit", "dim"));
+      }
+      function renderResult(cap, cols, rows) {
+        let html = `<div class="cap">${cap} · ${rows.length} строк(и)</div>`;
+        html += `<table class="grid"><thead><tr>${cols.map(c => `<th>${c}</th>`).join("")}</tr></thead><tbody>`;
+        html += rows.map(r => `<tr>${r.map(c => `<td>${c}</td>`).join("")}</tr>`).join("");
+        html += `</tbody></table>`;
+        resultEl.innerHTML = html;
+      }
+
+      const QUERIES = {
+        "all-users": () => {
+          clearHits();
+          usersRows().forEach(r => r.classList.add("hit"));
+          renderResult("результат", ["id", "name", "role"], [["1","Брюс","admin"],["2","Дмитрий","user"],["3","Кларк","user"]]);
+          qexpl.innerHTML = `<b>Вся таблица.</b> <code>SELECT *</code> берёт все столбцы, без <code>WHERE</code> — все строки. Простейший запрос.`;
+        },
+        "admins": () => {
+          clearHits();
+          usersRows().forEach(r => r.classList.add(r.dataset.uid === "1" ? "hit" : "dim"));
+          renderResult("результат", ["id", "name", "role"], [["1","Брюс","admin"]]);
+          qexpl.innerHTML = `<b>Фильтр.</b> <code>WHERE role = 'admin'</code> оставляет только строки, где условие истинно. Вернулся один Брюс.`;
+        },
+        "notes-of-2": () => {
+          clearHits();
+          usersRows().forEach(r => r.classList.add(r.dataset.uid === "2" ? "hit" : "dim"));
+          notesRows().forEach(r => r.classList.add(r.dataset.uid === "2" ? "hit" : "dim"));
+          renderResult("результат", ["id", "user_id", "title"], [["102","2","Идеи для dev-vault"],["103","2","Купить кофе"]]);
+          qexpl.innerHTML = `<b>Фильтр по внешнему ключу.</b> <code>WHERE user_id = 2</code> — все заметки Дмитрия. Видно, как <code>user_id</code> связывает строки с таблицей users.`;
+        },
+        "join": () => {
+          clearHits();
+          usersRows().forEach(r => r.classList.add("hit"));
+          notesRows().forEach(r => r.classList.add("hit"));
+          renderResult("результат", ["name", "title"], [
+            ["Брюс","Пароли от бэткомпьютера"],
+            ["Дмитрий","Идеи для dev-vault"],
+            ["Дмитрий","Купить кофе"],
+            ["Кларк","Статья про Redis"]
+          ]);
+          qexpl.innerHTML = `<b>JOIN — соединение таблиц.</b> Postgres по <code>n.user_id = u.id</code> подставляет к каждой заметке имя её автора. Данные лежат раздельно, а в ответе — вместе.`;
+        },
+        "count": () => {
+          clearHits();
+          notesRows().forEach(r => r.classList.add("hit"));
+          renderResult("результат", ["user_id", "count"], [["1","1"],["2","2"],["3","1"]]);
+          qexpl.innerHTML = `<b>Агрегация.</b> <code>GROUP BY user_id</code> + <code>COUNT(*)</code> считает заметки на каждого пользователя. База считает сама — приложению приходит готовый ответ.`;
+        }
+      };
+
+      const qbtns = [...document.querySelectorAll("#qbtns button")];
+      qbtns.forEach(b => b.addEventListener("click", () => {
+        qbtns.forEach(x => x.classList.remove("on"));
+        b.classList.add("on");
+        QUERIES[b.dataset.q]();
+      }));
+
+      /* init */
+      qbtns[0].classList.add("on");
+      QUERIES["all-users"]();
+    </script>
+  </body>
+</html>
