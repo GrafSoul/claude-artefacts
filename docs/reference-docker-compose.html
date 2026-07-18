@@ -134,7 +134,8 @@
         </p>
         <div class="meta">
           <span class="chip">Dockerfile</span>
-          <span class="chip">docker-compose.yml</span>
+          <span class="chip">compose · dev + prod</span>
+          <span class="chip">nginx + certbot</span>
           <span class="chip">на реальных файлах</span>
         </div>
         <div class="toc">
@@ -143,7 +144,10 @@
           <a href="#df-client">Dockerfile клиента</a>
           <a href="#cp-server">compose сервера</a>
           <a href="#cp-client">compose клиента</a>
-          <a href="#cp-root">корневой compose</a>
+          <a href="#cp-admin">compose админки</a>
+          <a href="#cp-dev">compose.dev</a>
+          <a href="#cp-prod">compose.prod</a>
+          <a href="#nginx-tpl">nginx-конфиг</a>
         </div>
       </header>
 
@@ -197,6 +201,11 @@ COPY --from=build --chown=node:node \
         <div class="ann-row"><div class="ann-code">EXPOSE 3000
 CMD ["npm", "run", "dev", "--",
   "--host", "--port", "3000"]</div><div class="ann-exp"><b>dev-стадия.</b> <k>--host</k> — Vite слушает 0.0.0.0, иначе снаружи контейнера к нему не достучаться. <k>--port 3000</k> — фиксируем порт фронта (бэк на 3030). <k>--</k> отделяет аргументы npm от аргументов Vite.</div></div>
+        <div class="ann-row head"><div class="ann-code">FROM deps AS build
+ARG VITE_API_URL
+ENV VITE_API_URL=$VITE_API_URL
+COPY . .
+RUN npm run build</div><div class="ann-exp"><b>build-стадия — тут запекается адрес API.</b> <k>ARG VITE_API_URL</k> — аргумент сборки; <k>ENV</k> кладёт его в окружение, и <k>npm run build</k> (Vite) <b>зашивает</b> значение прямо в бандл. Поэтому адрес API нельзя поменять в рантайме — только пересборкой. Локально берётся из <k>.env</k>, в проде передаётся через <k>--build-arg</k> (см. compose.prod.yml).</div></div>
         <div class="ann-row head"><div class="ann-code">FROM nginx:alpine AS prod</div><div class="ann-exp"><b>Прод-стадия — на образе Nginx</b> (веб-сервер), а не Node. Готовую статику раздаёт он. Node в проде фронту не нужен вообще.</div></div>
         <div class="ann-row"><div class="ann-code">COPY nginx.conf \
   /etc/nginx/conf.d/default.conf</div><div class="ann-exp">Кладём свой конфиг Nginx в стандартное место — переопределяем дефолтный (в нём — SPA-фолбэк на <k>index.html</k>).</div></div>
@@ -272,13 +281,104 @@ CMD ["npm", "run", "dev", "--",
       - /app/node_modules</div><div class="ann-exp">Тот же приём, что у сервера: env из <k>.env</k> (тут <k>VITE_API_URL</k>), bind-mount кода для hot-reload и анонимный том под node_modules.</div></div>
       </div>
 
-      <h2 id="cp-root">Корневой compose — include</h2>
-      <p class="body">Крошечный файл в папке <code>dev-vault/</code>, который поднимает весь стек одной командой.</p>
+      <h2 id="cp-admin">docker-compose.yml админки</h2>
+      <p class="body">Как клиентский, отличается двумя строками.</p>
       <div class="ann">
-        <div class="ann-file"><b>dev-vault/docker-compose.yml</b></div>
+        <div class="ann-file"><b>dev-vault-admin/docker-compose.yml</b> · отличия</div>
+        <div class="ann-row head"><div class="ann-code">services:
+  admin:</div><div class="ann-exp">Сервис называется <k>admin</k> (у клиента — <k>web</k>). Разные имена важны, если поднимать оба в одном проекте.</div></div>
+        <div class="ann-row"><div class="ann-code">    ports:
+      - "3001:3000"</div><div class="ann-exp"><b>хост:контейнер</b>. Внутри контейнера Vite слушает обычный <k>3000</k> — контейнеры изолированы, конфликта нет. А на <b>хосте</b> отдаём <k>3001</k>, потому что 3000 уже занят клиентом.</div></div>
+      </div>
+
+      <h2 id="cp-dev">infra: compose.dev.yml — весь стек разом</h2>
+      <p class="body">Крошечный файл в репе <code>dev-vault-infra</code>. Ничего не дублирует — через <code>include</code> подключает compose трёх приложений.</p>
+      <div class="ann">
+        <div class="ann-file"><b>dev-vault-infra/compose.dev.yml</b></div>
         <div class="ann-row head"><div class="ann-code">include:
-  - dev-vault-server/docker-compose.yml
-  - dev-vault-client/docker-compose.yml</div><div class="ann-exp"><k>include</k> — подключить другие compose-файлы и <b>слить их сервисы в ОДИН проект</b> и общую сеть. Ноль дублирования: каждая репа держит свой compose, а корневой лишь ссылается на них по пути. <k>docker compose up</k> отсюда поднимает и сервер, и клиент, и базу, и кэш.</div></div>
+  - ../dev-vault-server/docker-compose.yml
+  - ../dev-vault-client/docker-compose.yml
+  - ../dev-vault-admin/docker-compose.yml</div><div class="ann-exp"><k>include</k> — подключить чужие compose-файлы и слить их сервисы в один проект и общую сеть. Пути с <k>../</k> — репы лежат рядом. Запуск: <k>docker compose -f compose.dev.yml up</k>. Каждая репа держит свой compose, тут только ссылки.</div></div>
+      </div>
+
+      <h2 id="cp-prod">compose.prod.yml — боевой файл</h2>
+      <p class="body">Отдельный файл для сервера (dev и prod <b>не</b> запускают вместе). Разбираем только то, чем он отличается от dev.</p>
+      <div class="ann">
+        <div class="ann-file"><b>dev-vault-infra/compose.prod.yml</b> · ключевые отличия</div>
+        <div class="ann-row head"><div class="ann-code">  backend:
+    build:
+      context: ../dev-vault-server
+      target: prod</div><div class="ann-exp">Собирается из <b>соседней репы</b> (<k>../dev-vault-server</k>), стадия <k>prod</k> — собранный <k>dist</k> под non-root, без dev-инструментов.</div></div>
+        <div class="ann-row"><div class="ann-code">    environment:
+      CORS_ORIGIN: https://app.${DOMAIN},...
+      DATABASE_URL: postgres://devvault:${POSTGRES_PASSWORD}@postgres:5432/devvault</div><div class="ann-exp"><k>${DOMAIN}</k> и <k>${POSTGRES_PASSWORD}</k> Compose подставляет из <k>.env</k>. Так и CORS-список, и строка подключения выводятся из <b>одного</b> домена и пароля. Хосты БД/кэша — имена сервисов приватной сети.</div></div>
+        <div class="ann-row"><div class="ann-code">    restart: unless-stopped</div><div class="ann-exp">Docker сам поднимет контейнер после падения или перезагрузки сервера. Стоит у всех сервисов прод-файла.</div></div>
+        <div class="ann-row head"><div class="ann-code">  client:
+    build:
+      context: ../dev-vault-client
+      target: prod
+      args:
+        VITE_API_URL: https://api.${DOMAIN}</div><div class="ann-exp"><k>args</k> — аргументы <b>сборки</b> (не рантайма). <k>VITE_API_URL</k> уезжает в тот самый <k>ARG</k> Dockerfile и запекается в бандл. Admin — так же. Сменишь домен → нужен <k>--build</k>.</div></div>
+        <div class="ann-row head"><div class="ann-code">  postgres:
+    image: postgres:18-alpine
+    # НЕТ секции ports</div><div class="ann-exp"><b>Главное отличие от dev.</b> У postgres и redis <b>нет</b> <k>ports</k> — наружу не смотрят вообще. Backend достаёт их по приватной сети как <k>postgres</k> / <k>redis</k>. Открыть порт = открыть базу интернету.</div></div>
+        <div class="ann-row head"><div class="ann-code">  nginx:
+    image: nginx:alpine
+    ports:
+      - "80:80"
+      - "443:443"</div><div class="ann-exp"><b>Единственный публичный сервис.</b> Только он публикует порты. Внутри — reverse-proxy на три поддомена и TLS.</div></div>
+        <div class="ann-row"><div class="ann-code">    volumes:
+      - ./nginx/templates:/etc/nginx/templates:ro
+      - ./nginx/snippets:/etc/nginx/snippets:ro
+      - certbot_conf:/etc/letsencrypt:ro
+      - certbot_www:/var/www/certbot:ro</div><div class="ann-exp">Конфиг и snippets — <k>:ro</k> (read-only). <k>certbot_conf</k> — сертификаты (их пишет certbot, nginx только читает). <k>certbot_www</k> — папка для ACME-проверки.</div></div>
+        <div class="ann-row"><div class="ann-code">    command: >
+      envsubst '$${DOMAIN}' &lt; ...template
+      &gt; ...default.conf;
+      while :; do sleep 6h; nginx -s reload;
+      done &amp; exec nginx -g 'daemon off;'</div><div class="ann-exp"><k>envsubst '$${DOMAIN}'</k> подставляет в шаблон <b>только</b> <k>${DOMAIN}</k>, не трогая переменные nginx (<k>$host</k>, <k>$scheme</k>). <k>$$</k> — чтобы Compose не съел <k>$</k> сам. Цикл <k>reload</k> раз в 6ч — подхватить обновлённый сертификат.</div></div>
+        <div class="ann-row head"><div class="ann-code">  certbot:
+    image: certbot/certbot
+    entrypoint: >
+      while :; do certbot renew ...;
+      sleep 12h; done</div><div class="ann-exp">Отдельный сервис, каждые 12ч пробует продлить сертификат (сам certbot действует только когда срок близок). <b>Первый</b> выпуск — скриптом <k>init-letsencrypt.sh</k>.</div></div>
+        <div class="ann-row head"><div class="ann-code">volumes:
+  pgdata:
+  redisdata:
+  certbot_conf:
+  certbot_www:</div><div class="ann-exp">Именованные тома. <k>certbot_conf</k> хранит <b>выпущенные сертификаты</b> — терять нельзя (у Let's Encrypt лимиты на выпуск). <k>certbot_www</k> — общая папка ACME между nginx и certbot.</div></div>
+      </div>
+
+      <h2 id="nginx-tpl">Конфиг Nginx — ключевые строки</h2>
+      <div class="ann">
+        <div class="ann-file"><b>dev-vault-infra/nginx/templates/default.conf.template</b></div>
+        <div class="ann-row"><div class="ann-code">map $http_upgrade $connection_upgrade {
+    default upgrade;
+    ''      close;
+}</div><div class="ann-exp"><k>map</k> вычисляет <k>$connection_upgrade</k> из заголовка <k>Upgrade</k>: <k>upgrade</k> для WebSocket, иначе <k>close</k>. Используется в <k>proxy.conf</k>.</div></div>
+        <div class="ann-row"><div class="ann-code">location /.well-known/acme-challenge/ {
+    root /var/www/certbot;
+}</div><div class="ann-exp">На <k>:80</k> — сюда certbot кладёт файл-проверку, Let's Encrypt его забирает. Так подтверждается, что домен реально твой.</div></div>
+        <div class="ann-row"><div class="ann-code">location / {
+    return 301 https://$host$request_uri;
+}</div><div class="ann-exp">Весь остальной HTTP — редирект на HTTPS. <k>$host</k>/<k>$request_uri</k> — переменные nginx (их <k>envsubst</k> трогать не должен).</div></div>
+        <div class="ann-row"><div class="ann-code">ssl_certificate     /etc/letsencrypt/live/api.${DOMAIN}/fullchain.pem;
+ssl_certificate_key /etc/letsencrypt/live/api.${DOMAIN}/privkey.pem;</div><div class="ann-exp">Один сертификат на все три поддомена (SAN), лежит в папке <b>первого</b> домена — <k>api.${DOMAIN}</k>. Поэтому все три server-блока ссылаются сюда.</div></div>
+        <div class="ann-row"><div class="ann-code">location / {
+    include /etc/nginx/snippets/proxy.conf;
+    proxy_pass http://backend:3030;
+}</div><div class="ann-exp"><k>proxy_pass</k> — куда переслать: <k>backend:3030</k> (api), <k>client:80</k> (app), <k>admin:80</k> (admin) — по именам сервисов приватной сети. <k>include proxy.conf</k> — общие заголовки.</div></div>
+      </div>
+      <div class="note">
+        <div class="t">snippets и init-letsencrypt.sh</div>
+        <p>
+          <code>proxy.conf</code> — общие заголовки прокси (<code>X-Forwarded-*</code>, WebSocket).
+          <code>ssl-params.conf</code> — TLS по профилю Mozilla Intermediate + HSTS. А
+          <code>init-letsencrypt.sh</code> запускается <b>один раз</b>: разрывает «курицу и яйцо»
+          (nginx не стартует без сертификата, а сертификат не выпустить без nginx) — кладёт
+          пустышку, поднимает nginx, выпускает настоящий, перезагружает. Подробно — в
+          <a href="lesson-02-server.html" style="color:var(--copper)">Уроке 02</a>.
+        </p>
       </div>
 
       <div class="note">
