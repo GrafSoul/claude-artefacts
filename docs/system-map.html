@@ -1,0 +1,642 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Карта системы · dev-vault</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🗺️</text></svg>" />
+    <meta
+      name="description"
+      content="Интерактивная карта dev-vault: как связаны client, admin, сервер, Nginx, PostgreSQL, Redis и certbot. Переключение dev/prod, пошаговая анимация пути запроса, глоссарий сокращений."
+    />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --bg: #14100e; --bg-2: #1b1613; --panel: #201a16; --panel-2: #261f1a; --code-bg: #17120f;
+        --line: #382e27; --line-2: #4a3d34; --ink: #f3ece4; --ink-2: #c3b6a8; --ink-3: #8b7d70;
+        --copper: #e0895f; --copper-soft: #d97757; --gold: #e6b86a; --done: #7fa66a;
+        --done-bg: rgba(127, 166, 106, 0.14); --blue: #7fa8c9;
+        --radius: 16px; --serif: "Fraunces", Georgia, serif;
+        --sans: "IBM Plex Sans", -apple-system, BlinkMacSystemFont, sans-serif;
+        --mono: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+      }
+      :root[data-theme="light"] {
+        --bg: #f6f1ea; --bg-2: #efe7db; --panel: #fffdf9; --panel-2: #f1e9dc; --code-bg: #2a2320;
+        --line: #e2d6c6; --line-2: #d2c2ad; --ink: #241c14; --ink-2: #5a4d3f; --ink-3: #8a7a68;
+        --copper: #b8542f; --copper-soft: #c96a3e; --gold: #a9762a; --done: #5c7f45; --done-bg: rgba(92,127,69,0.12); --blue: #3f6b8f;
+      }
+      @media (prefers-color-scheme: light) {
+        :root:not([data-theme="dark"]) {
+          --bg: #f6f1ea; --bg-2: #efe7db; --panel: #fffdf9; --panel-2: #f1e9dc; --code-bg: #2a2320;
+          --line: #e2d6c6; --line-2: #d2c2ad; --ink: #241c14; --ink-2: #5a4d3f; --ink-3: #8a7a68;
+          --copper: #b8542f; --copper-soft: #c96a3e; --gold: #a9762a; --done: #5c7f45; --done-bg: rgba(92,127,69,0.12); --blue: #3f6b8f;
+        }
+      }
+
+      * { box-sizing: border-box; margin: 0; padding: 0; }
+      html { scroll-behavior: smooth; scroll-padding-top: 80px; }
+      body {
+        font-family: var(--sans); background: var(--bg); color: var(--ink); line-height: 1.6;
+        -webkit-font-smoothing: antialiased;
+        background-image: radial-gradient(1100px 550px at 88% -5%, rgba(224,137,95,0.09), transparent 60%);
+        background-attachment: fixed;
+      }
+      ::selection { background: var(--copper); color: #14100e; }
+
+      .topbar { position: sticky; top: 0; z-index: 50; display: flex; align-items: center; gap: 1rem; padding: 0.7rem clamp(1rem,4vw,2.5rem); background: color-mix(in srgb, var(--bg) 82%, transparent); backdrop-filter: blur(14px); border-bottom: 1px solid var(--line); }
+      .brand { font-family: var(--mono); font-size: 0.82rem; color: var(--ink-2); white-space: nowrap; }
+      .brand b { color: var(--copper); font-weight: 500; }
+      .topbar .spacer { flex: 1; }
+      .btn { font-family: var(--mono); font-size: 0.76rem; color: var(--ink-2); background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 0.4rem 0.6rem; cursor: pointer; transition: all 0.15s ease; text-decoration: none; white-space: nowrap; }
+      .btn:hover { color: var(--ink); border-color: var(--line-2); }
+
+      .shell { max-width: 1000px; margin: 0 auto; padding: 0 clamp(1rem,4vw,2rem) 6rem; }
+
+      .hero { padding: clamp(2.5rem,7vw,4.5rem) 0 1rem; }
+      .eyebrow { font-family: var(--mono); font-size: 0.78rem; letter-spacing: 0.14em; text-transform: uppercase; color: var(--copper); display: flex; align-items: center; gap: 0.6rem; }
+      .eyebrow::before { content: ""; width: 1.8rem; height: 1px; background: var(--copper); }
+      h1 { font-family: var(--serif); font-weight: 600; font-size: clamp(2.2rem,6vw,3.4rem); line-height: 1.05; letter-spacing: -0.015em; margin: 1rem 0 0.5rem; }
+      h1 em { font-style: italic; color: var(--copper); }
+      .lede { font-size: clamp(1.02rem,2.3vw,1.18rem); color: var(--ink-2); max-width: 64ch; margin-top: 0.8rem; }
+      .lede b { color: var(--ink); font-weight: 500; }
+
+      h2 { font-family: var(--serif); font-weight: 600; font-size: clamp(1.5rem,4vw,2rem); letter-spacing: -0.01em; margin: 3rem 0 0.5rem; scroll-margin-top: 80px; }
+      p.body { color: var(--ink-2); margin: 0.7rem 0; }
+      p.body b { color: var(--ink); font-weight: 500; }
+      p.body code, .inline { font-family: var(--mono); font-size: 0.88em; background: var(--panel-2); border: 1px solid var(--line); border-radius: 5px; padding: 0.05rem 0.35rem; color: var(--copper); }
+
+      /* mode toggle */
+      .modebar { display: flex; align-items: center; gap: 0.8rem; flex-wrap: wrap; margin: 1.4rem 0 0.4rem; }
+      .seg { display: inline-flex; background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 0.25rem; gap: 0.25rem; }
+      .seg button { font-family: var(--mono); font-size: 0.82rem; color: var(--ink-2); background: transparent; border: none; border-radius: 7px; padding: 0.45rem 0.9rem; cursor: pointer; transition: all 0.15s ease; }
+      .seg button.on { background: var(--copper); color: #14100e; font-weight: 500; }
+      .seg button:not(.on):hover { color: var(--ink); }
+      .modehint { font-size: 0.88rem; color: var(--ink-3); font-family: var(--mono); }
+
+      /* diagram + info layout */
+      .stage { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr); gap: 1rem; margin-top: 0.8rem; align-items: start; }
+      @media (max-width: 820px) { .stage { grid-template-columns: 1fr; } }
+
+      .diagram { border: 1px solid var(--line); border-radius: var(--radius); background: linear-gradient(180deg, color-mix(in srgb, var(--panel) 70%, transparent), var(--panel)); padding: 0.6rem; overflow: hidden; }
+      .diagram svg { width: 100%; height: auto; display: block; touch-action: pan-y; }
+      .diagram svg[hidden] { display: none; }
+
+      /* svg pieces */
+      .node rect { fill: var(--panel); stroke: var(--line-2); stroke-width: 1.5; transition: stroke 0.2s ease, fill 0.2s ease; }
+      .node { cursor: pointer; }
+      .node .emoji { font-size: 19px; }
+      .node .t { font-family: var(--sans); font-weight: 600; font-size: 12.5px; fill: var(--ink); }
+      .node .s { font-family: var(--mono); font-size: 10px; fill: var(--ink-3); }
+      .node:hover rect { stroke: var(--copper-soft); }
+      .node:focus { outline: none; }
+      .node:focus rect { stroke: var(--copper); }
+      .node.lit rect { stroke: var(--copper); stroke-width: 2.5; fill: color-mix(in srgb, var(--copper) 13%, var(--panel)); }
+      .node.dim { opacity: 0.42; }
+
+      .edge { fill: none; stroke: var(--line-2); stroke-width: 2; transition: stroke 0.2s ease, stroke-width 0.2s ease; }
+      .edge.dash { stroke-dasharray: 5 5; }
+      .edge.lit { stroke: var(--copper); stroke-width: 3; }
+      .elabel { font-family: var(--mono); font-size: 9.5px; fill: var(--ink-3); }
+      .elabel.lit { fill: var(--copper); }
+      .zone { fill: color-mix(in srgb, var(--blue) 7%, transparent); stroke: var(--line-2); stroke-width: 1.3; stroke-dasharray: 4 4; }
+      .zone-t { font-family: var(--mono); font-size: 10px; fill: var(--ink-3); }
+      .arrowhead { fill: var(--line-2); }
+      .pulse { fill: var(--gold); filter: drop-shadow(0 0 5px var(--gold)); }
+
+      /* controls */
+      .controls { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; margin-top: 0.7rem; }
+      .cbtn { font-family: var(--mono); font-size: 0.8rem; color: var(--ink); background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 0.45rem 0.8rem; cursor: pointer; transition: all 0.15s ease; }
+      .cbtn:hover { border-color: var(--copper); color: var(--copper); }
+      .cbtn.primary { background: var(--copper); color: #14100e; border-color: var(--copper); font-weight: 500; }
+      .cbtn:disabled { opacity: 0.4; cursor: default; }
+      .stepnum { font-family: var(--mono); font-size: 0.78rem; color: var(--ink-3); margin-left: auto; }
+      .caption { margin-top: 0.7rem; border-left: 3px solid var(--copper); background: color-mix(in srgb, var(--copper) 8%, var(--panel)); border-radius: 0 10px 10px 0; padding: 0.7rem 0.95rem; font-size: 0.92rem; color: var(--ink-2); min-height: 3.4rem; }
+      .caption b { color: var(--ink); font-weight: 500; }
+      .caption .badge { font-family: var(--mono); font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--copper); display: block; margin-bottom: 0.25rem; }
+
+      /* info panel */
+      .info { border: 1px solid var(--line); border-radius: var(--radius); background: var(--panel); padding: 1.1rem 1.2rem; position: sticky; top: 74px; }
+      .info .hd { font-family: var(--mono); font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--ink-3); margin-bottom: 0.5rem; }
+      .info h3 { font-family: var(--serif); font-weight: 600; font-size: 1.35rem; color: var(--ink); margin-bottom: 0.2rem; display: flex; align-items: center; gap: 0.5rem; }
+      .info .role { font-family: var(--mono); font-size: 0.76rem; color: var(--copper); margin-bottom: 0.7rem; }
+      .info dl { display: grid; grid-template-columns: auto 1fr; gap: 0.35rem 0.7rem; font-size: 0.88rem; }
+      .info dt { color: var(--ink-3); font-family: var(--mono); font-size: 0.74rem; padding-top: 0.15rem; }
+      .info dd { color: var(--ink-2); }
+      .info dd b { color: var(--ink); font-weight: 500; }
+      .info dd code { font-family: var(--mono); font-size: 0.86em; color: var(--copper); }
+      .info .empty { color: var(--ink-3); font-size: 0.9rem; }
+
+      /* legend */
+      .legend { display: flex; flex-wrap: wrap; gap: 0.4rem 1.1rem; margin-top: 0.8rem; font-family: var(--mono); font-size: 0.72rem; color: var(--ink-3); }
+      .legend span { display: inline-flex; align-items: center; gap: 0.4rem; }
+      .legend i { width: 22px; height: 0; border-top: 3px solid; display: inline-block; }
+      .legend i.l1 { border-color: var(--line-2); }
+      .legend i.l2 { border-color: var(--copper); }
+      .legend i.l3 { border-top-style: dashed; border-color: var(--blue); }
+
+      /* glossary */
+      .gloss { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 0.7rem; margin-top: 1rem; }
+      .term { border: 1px solid var(--line); border-radius: 12px; background: var(--panel); padding: 0.8rem 0.95rem; }
+      .term .k { font-family: var(--mono); font-size: 0.86rem; color: var(--copper); font-weight: 500; }
+      .term .full { font-size: 0.76rem; color: var(--ink-3); margin: 0.1rem 0 0.4rem; }
+      .term p { font-size: 0.85rem; color: var(--ink-2); }
+      .term p b { color: var(--ink); font-weight: 500; }
+
+      .note { border-left: 3px solid var(--copper); background: color-mix(in srgb, var(--copper) 8%, var(--panel)); border-radius: 0 10px 10px 0; padding: 0.9rem 1.1rem; margin: 1.4rem 0; }
+      .note .t { font-family: var(--mono); font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--copper); margin-bottom: 0.3rem; }
+      .note p { font-size: 0.9rem; color: var(--ink-2); }
+      .note p b { color: var(--ink); }
+
+      .lnav { display: flex; flex-wrap: wrap; gap: 0.8rem; justify-content: space-between; margin-top: 3.5rem; }
+      .lnav a { flex: 1; min-width: 220px; border: 1px solid var(--line); border-radius: 12px; padding: 1rem 1.2rem; text-decoration: none; background: var(--panel); transition: all 0.15s ease; }
+      .lnav a:hover { border-color: var(--copper); transform: translateY(-2px); }
+      .lnav .dir { font-family: var(--mono); font-size: 0.72rem; color: var(--ink-3); }
+      .lnav .ttl { color: var(--ink); font-weight: 500; margin-top: 0.2rem; }
+
+      footer { margin-top: 3rem; padding-top: 1.5rem; border-top: 1px solid var(--line); font-family: var(--mono); font-size: 0.78rem; color: var(--ink-3); display: flex; flex-wrap: wrap; gap: 0.5rem 1rem; justify-content: space-between; }
+      footer a { color: var(--copper); text-decoration: none; }
+      @media (prefers-reduced-motion: reduce) { * { transition: none !important; scroll-behavior: auto !important; } }
+    </style>
+  </head>
+  <body>
+    <div class="topbar">
+      <span class="brand"><b>◆</b> dev-vault · карта</span>
+      <span class="spacer"></span>
+      <a class="btn" href="reference-docker-compose.html">справочник</a>
+      <a class="btn" href="backend-roadmap.html">план</a>
+      <button class="btn" id="themeBtn" title="Сменить тему">☾</button>
+    </div>
+
+    <div class="shell">
+      <header class="hero">
+        <span class="eyebrow">архитектура · как всё связано</span>
+        <h1>Карта <em>системы</em></h1>
+        <p class="lede">
+          Прежде чем разбираться в строчках, полезно увидеть <b>всю картину сразу</b>: кто с кем
+          разговаривает и зачем. Ниже — живая схема <b>dev-vault</b>. Переключи режим, нажми
+          «проиграть путь запроса» и щёлкни любой блок, чтобы узнать, что это. Сокращения снизу — в
+          глоссарии.
+        </p>
+      </header>
+
+      <div class="modebar">
+        <div class="seg" role="tablist" aria-label="Режим">
+          <button id="mode-dev" class="on" role="tab" aria-selected="true">💻 Локально (dev)</button>
+          <button id="mode-prod" role="tab" aria-selected="false">🌍 На сервере (prod)</button>
+        </div>
+        <span class="modehint" id="modehint">четыре репы рядом, всё на localhost</span>
+      </div>
+
+      <div class="stage">
+        <div>
+          <div class="diagram">
+            <!-- ============ DEV ============ -->
+            <svg id="svg-dev" viewBox="0 0 900 430" role="img" aria-label="Схема локальной среды dev-vault">
+              <defs>
+                <marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+                  <path class="arrowhead" d="M0,0 L10,5 L0,10 z" />
+                </marker>
+              </defs>
+              <!-- edges -->
+              <path id="de1" class="edge" marker-end="url(#ah)" d="M190,110 C 280,110 280,200 372,200" />
+              <path id="de2" class="edge" marker-end="url(#ah)" d="M190,330 C 280,330 280,240 372,240" />
+              <path id="de3" class="edge" marker-end="url(#ah)" d="M532,205 C 620,205 620,130 708,130" />
+              <path id="de4" class="edge" marker-end="url(#ah)" d="M532,235 C 620,235 620,330 708,330" />
+              <text class="elabel" id="de1-l" x="255" y="140">HTTP + CORS</text>
+              <text class="elabel" id="de2-l" x="255" y="300">HTTP + CORS</text>
+              <text class="elabel" id="de3-l" x="600" y="150">SQL :5432</text>
+              <text class="elabel" id="de4-l" x="600" y="315">кэш :6379</text>
+              <!-- nodes -->
+              <g class="node" id="d-client" tabindex="0" role="button" aria-label="Клиент в браузере">
+                <rect x="30" y="80" width="160" height="60" rx="12" />
+                <text class="emoji" x="46" y="115">🌐</text>
+                <text class="t" x="72" y="106">Клиент</text>
+                <text class="s" x="72" y="124">localhost:3000</text>
+              </g>
+              <g class="node" id="d-admin" tabindex="0" role="button" aria-label="Админка в браузере">
+                <rect x="30" y="300" width="160" height="60" rx="12" />
+                <text class="emoji" x="46" y="335">🛠️</text>
+                <text class="t" x="72" y="326">Админка</text>
+                <text class="s" x="72" y="344">localhost:3001</text>
+              </g>
+              <g class="node" id="d-server" tabindex="0" role="button" aria-label="Сервер NestJS">
+                <rect x="372" y="185" width="160" height="70" rx="12" />
+                <text class="emoji" x="390" y="225">⚙️</text>
+                <text class="t" x="418" y="216">NestJS сервер</text>
+                <text class="s" x="418" y="234">API · :3030</text>
+              </g>
+              <g class="node" id="d-postgres" tabindex="0" role="button" aria-label="PostgreSQL">
+                <rect x="708" y="100" width="160" height="60" rx="12" />
+                <text class="emoji" x="724" y="135">🐘</text>
+                <text class="t" x="750" y="126">PostgreSQL</text>
+                <text class="s" x="750" y="144">данные · :5432</text>
+              </g>
+              <g class="node" id="d-redis" tabindex="0" role="button" aria-label="Redis">
+                <rect x="708" y="300" width="160" height="60" rx="12" />
+                <text class="emoji" x="724" y="335">🧱</text>
+                <text class="t" x="750" y="326">Redis</text>
+                <text class="s" x="750" y="344">кэш · :6379</text>
+              </g>
+              <circle class="pulse" id="d-pulse" r="6" cx="0" cy="0" opacity="0" />
+            </svg>
+
+            <!-- ============ PROD ============ -->
+            <svg id="svg-prod" viewBox="0 0 900 430" role="img" aria-label="Схема боевого сервера dev-vault" hidden>
+              <defs>
+                <marker id="ah2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+                  <path class="arrowhead" d="M0,0 L10,5 L0,10 z" />
+                </marker>
+              </defs>
+              <!-- private zone -->
+              <rect class="zone" x="452" y="40" width="432" height="352" rx="14" />
+              <text class="zone-t" x="466" y="60">приватная сеть Docker — снаружи виден только Nginx</text>
+              <!-- edges -->
+              <path id="pe1" class="edge" marker-end="url(#ah2)" d="M182,220 L246,220" />
+              <path id="pe2" class="edge" marker-end="url(#ah2)" d="M412,205 C 442,205 442,120 470,120" />
+              <path id="pe3" class="edge" marker-end="url(#ah2)" d="M412,220 L470,220" />
+              <path id="pe4" class="edge" marker-end="url(#ah2)" d="M412,235 C 442,235 442,320 470,320" />
+              <path id="pe5" class="edge" marker-end="url(#ah2)" d="M630,215 C 672,215 672,150 708,150" />
+              <path id="pe6" class="edge" marker-end="url(#ah2)" d="M630,225 C 672,225 672,285 708,285" />
+              <path id="pe7" class="edge dash" marker-end="url(#ah2)" d="M330,345 L330,252" />
+              <text class="elabel" id="pe1-l" x="196" y="212">TLS :443</text>
+              <text class="elabel" id="pe2-l" x="426" y="150">app.</text>
+              <text class="elabel" id="pe3-l" x="424" y="212">api.</text>
+              <text class="elabel" id="pe4-l" x="426" y="300">admin.</text>
+              <text class="elabel" id="pe7-l" x="338" y="300">cert</text>
+              <!-- nodes -->
+              <g class="node" id="p-user" tabindex="0" role="button" aria-label="Пользователь в браузере">
+                <rect x="22" y="190" width="160" height="60" rx="12" />
+                <text class="emoji" x="38" y="225">🌍</text>
+                <text class="t" x="64" y="216">Пользователь</text>
+                <text class="s" x="64" y="234">https://app.…</text>
+              </g>
+              <g class="node" id="p-nginx" tabindex="0" role="button" aria-label="Nginx — обратный прокси">
+                <rect x="246" y="188" width="168" height="64" rx="12" />
+                <text class="emoji" x="262" y="225">🟩</text>
+                <text class="t" x="288" y="214">Nginx</text>
+                <text class="s" x="288" y="232">вход · :80/:443</text>
+              </g>
+              <g class="node" id="p-client" tabindex="0" role="button" aria-label="Client — статика">
+                <rect x="470" y="90" width="160" height="60" rx="12" />
+                <text class="emoji" x="486" y="125">📦</text>
+                <text class="t" x="512" y="116">client (статика)</text>
+                <text class="s" x="512" y="134">React-бандл</text>
+              </g>
+              <g class="node" id="p-backend" tabindex="0" role="button" aria-label="Backend NestJS">
+                <rect x="470" y="190" width="160" height="60" rx="12" />
+                <text class="emoji" x="486" y="225">⚙️</text>
+                <text class="t" x="512" y="216">backend</text>
+                <text class="s" x="512" y="234">NestJS · :3030</text>
+              </g>
+              <g class="node" id="p-admin" tabindex="0" role="button" aria-label="Admin — статика">
+                <rect x="470" y="290" width="160" height="60" rx="12" />
+                <text class="emoji" x="486" y="325">📦</text>
+                <text class="t" x="512" y="316">admin (статика)</text>
+                <text class="s" x="512" y="334">React-бандл</text>
+              </g>
+              <g class="node" id="p-postgres" tabindex="0" role="button" aria-label="PostgreSQL приватный">
+                <rect x="708" y="120" width="160" height="58" rx="12" />
+                <text class="emoji" x="724" y="154">🐘</text>
+                <text class="t" x="750" y="145">PostgreSQL</text>
+                <text class="s" x="750" y="163">приватно</text>
+              </g>
+              <g class="node" id="p-redis" tabindex="0" role="button" aria-label="Redis приватный">
+                <rect x="708" y="256" width="160" height="58" rx="12" />
+                <text class="emoji" x="724" y="290">🧱</text>
+                <text class="t" x="750" y="281">Redis</text>
+                <text class="s" x="750" y="299">приватно</text>
+              </g>
+              <g class="node" id="p-certbot" tabindex="0" role="button" aria-label="certbot — сертификаты">
+                <rect x="246" y="345" width="168" height="50" rx="12" />
+                <text class="emoji" x="262" y="375">🔒</text>
+                <text class="t" x="288" y="367">certbot</text>
+                <text class="s" x="288" y="384">TLS-сертификат</text>
+              </g>
+              <circle class="pulse" id="p-pulse" r="6" cx="0" cy="0" opacity="0" />
+            </svg>
+
+            <div class="legend">
+              <span><i class="l1"></i> связь / поток данных</span>
+              <span><i class="l2"></i> активный шаг</span>
+              <span><i class="l3"></i> выпуск сертификата</span>
+            </div>
+          </div>
+
+          <div class="controls">
+            <button class="cbtn primary" id="play">▶ Проиграть путь запроса</button>
+            <button class="cbtn" id="prev" disabled>‹ назад</button>
+            <button class="cbtn" id="next">шаг ›</button>
+            <button class="cbtn" id="reset" title="Сбросить">↺</button>
+            <span class="stepnum" id="stepnum">шаг 0</span>
+          </div>
+          <div class="caption" id="caption">
+            <span class="badge">путь запроса</span>
+            Нажми <b>«Проиграть»</b> — и импульс пройдёт весь путь от браузера до базы и обратно.
+            Или щёлкай <b>«шаг ›»</b> вручную. Клик по блоку схемы — описание справа.
+          </div>
+        </div>
+
+        <aside class="info" id="info" aria-live="polite">
+          <div class="hd">блок системы</div>
+          <p class="empty">Щёлкни любой блок на схеме — здесь появится, что это, зачем нужно и где живёт в проекте.</p>
+        </aside>
+      </div>
+
+      <h2>Две картинки одной системы</h2>
+      <p class="body">
+        Код везде один и тот же — меняется только <b>обвязка вокруг</b>. Локально четыре репы лежат
+        рядом, каждый сервис торчит своим портом на <code>localhost</code>, фронты стучатся к бэку
+        напрямую (потому и нужен <b>CORS</b>). На сервере перед всем встаёт <b>Nginx</b>: он —
+        единственная дверь снаружи, раздаёт статику фронтов и проксирует <code>api.</code> на бэкенд,
+        а база и кэш прячутся в <b>приватную сеть</b> без открытых портов. Переключи режим выше и
+        сравни две схемы — это и есть переход «с ноутбука в прод».
+      </p>
+
+      <h2>Глоссарий: что значат сокращения</h2>
+      <p class="body">Те самые слова, которые мелькают в артефактах. Коротко и по делу.</p>
+      <div class="gloss" id="gloss"></div>
+
+      <div class="note">
+        <div class="t">как этим пользоваться</div>
+        <p>
+          Не пытайся запомнить всё сразу. Открывай эту карту рядом с
+          <b><a href="reference-docker-compose.html" style="color:var(--copper)">справочником</a></b> и
+          <b><a href="lesson-01-docker.html" style="color:var(--copper)">уроками</a></b>: увидел
+          незнакомую строку — вернись сюда, найди блок на схеме, вспомни его роль. Через пару заходов
+          картинка склеится в голове сама.
+        </p>
+      </div>
+
+      <div class="lnav">
+        <a href="reference-docker-compose.html">
+          <div class="dir">← справочник</div>
+          <div class="ttl">Docker &amp; Compose построчно</div>
+        </a>
+        <a href="backend-roadmap.html">
+          <div class="dir">план →</div>
+          <div class="ttl">Полный план сборки</div>
+        </a>
+      </div>
+
+      <footer>
+        <span>dev-vault · карта системы · собрано в паре с Claude Code</span>
+        <a href="https://github.com/GrafSoul/claude-artefacts">исходники</a>
+      </footer>
+    </div>
+
+    <script>
+      /* ---------- theme ---------- */
+      const THEME_KEY = "dev-vault-lesson-theme";
+      const tbtn = document.getElementById("themeBtn");
+      function applyTheme(t) { document.documentElement.setAttribute("data-theme", t); tbtn.textContent = t === "dark" ? "☾" : "☀"; }
+      const savedTheme = localStorage.getItem(THEME_KEY);
+      if (savedTheme) applyTheme(savedTheme);
+      else tbtn.textContent = matchMedia("(prefers-color-scheme: light)").matches ? "☀" : "☾";
+      tbtn.addEventListener("click", () => {
+        const cur = document.documentElement.getAttribute("data-theme") || (matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark");
+        const next = cur === "dark" ? "light" : "dark";
+        localStorage.setItem(THEME_KEY, next); applyTheme(next);
+      });
+
+      const reduceMotion = matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+      /* ---------- data ---------- */
+      const NODE_INFO = {
+        "d-client":  { emoji:"🌐", title:"Клиент", role:"React-приложение (dev-vault-client)",
+          rows:[["Что","Основной интерфейс на <b>React</b>, собирается через <b>Vite</b>."],["В dev","Vite-сервер с hot-reload — правишь код, страница обновляется сама."],["Порт","<code>localhost:3000</code>"],["Репа","<code>dev-vault-client</code>"]] },
+        "d-admin":   { emoji:"🛠️", title:"Админка", role:"React-приложение (dev-vault-admin)",
+          rows:[["Что","Отдельное React-приложение для администрирования."],["Почему отдельно","Своя репа, свой деплой, свои права — не мешается с клиентом."],["Порт","<code>localhost:3001</code> (3000 занят клиентом)"],["Репа","<code>dev-vault-admin</code>"]] },
+        "d-server":  { emoji:"⚙️", title:"Сервер", role:"API-бэкенд на NestJS (dev-vault-server)",
+          rows:[["Что","<b>Мозг системы</b>: принимает запросы, проверяет права, ходит в базу."],["Стек","<b>NestJS</b> (поверх Node.js), TypeScript."],["Порт","<code>localhost:3030</code>"],["Репа","<code>dev-vault-server</code>"]] },
+        "d-postgres":{ emoji:"🐘", title:"PostgreSQL", role:"Реляционная база данных",
+          rows:[["Что","<b>Главное хранилище</b>: пользователи, записи — всё, что должно жить долго."],["Тип","Реляционная БД (таблицы + связи)."],["Данные","В томе <code>pgdata</code> — переживают перезапуск."],["Порт","<code>:5432</code> (локально проброшен для GUI)"]] },
+        "d-redis":   { emoji:"🧱", title:"Redis", role:"Хранилище в оперативной памяти",
+          rows:[["Что","Быстрый кэш: сессии, временные данные, очереди."],["Отличие от БД","Живёт в памяти → очень быстро, но не для главных данных."],["Порт","<code>:6379</code>"],["Приём","Часто с <b>TTL</b> — ключ сам протухает через N секунд."]] },
+        "p-user":    { emoji:"🌍", title:"Пользователь", role:"Браузер снаружи",
+          rows:[["Что","Реальный посетитель. Заходит по <b>https://app.домен</b>."],["Как находит","<b>DNS</b> переводит домен в IP сервера; стучится на порт <b>443</b>."],["Видит","Только Nginx — остальное спрятано."]] },
+        "p-nginx":   { emoji:"🟩", title:"Nginx", role:"Обратный прокси + TLS",
+          rows:[["Что","<b>Единственная дверь</b> снаружи. Расшифровывает HTTPS."],["Раздаёт","Статику client и admin по поддоменам."],["Проксирует","<code>api.</code> → внутрь на <code>backend:3030</code>."],["Порты","<code>:80</code> → редирект на <code>:443</code>"]] },
+        "p-client":  { emoji:"📦", title:"client (статика)", role:"Собранный React-бандл",
+          rows:[["Что","В проде это <b>не сервер</b>, а готовые файлы (HTML/JS/CSS)."],["Кто раздаёт","Мини-Nginx внутри контейнера client."],["Адрес API","Зашит в бандл при сборке через <code>VITE_API_URL</code>."],["Поддомен","<code>app.домен</code>"]] },
+        "p-backend": { emoji:"⚙️", title:"backend", role:"API-бэкенд на NestJS",
+          rows:[["Что","Тот же сервер, что и в dev — только прод-сборка."],["Доступ","Снаружи напрямую <b>недоступен</b> — только через Nginx."],["Порт","<code>:3030</code> внутри приватной сети"],["Поддомен","<code>api.домен</code> (через Nginx)"]] },
+        "p-admin":   { emoji:"📦", title:"admin (статика)", role:"Собранный React-бандл админки",
+          rows:[["Что","Готовые файлы админки, как и client."],["Кто раздаёт","Мини-Nginx внутри контейнера admin."],["Поддомен","<code>admin.домен</code>"]] },
+        "p-postgres":{ emoji:"🐘", title:"PostgreSQL", role:"Приватная база данных",
+          rows:[["Что","То же хранилище, что и в dev."],["Отличие","<b>Нет открытых портов</b> — снаружи не достучаться."],["Доступ","Только backend, по имени <code>postgres</code> в сети."]] },
+        "p-redis":   { emoji:"🧱", title:"Redis", role:"Приватный кэш",
+          rows:[["Что","Кэш и сессии."],["Отличие","Тоже <b>без портов наружу</b>."],["Доступ","Только backend, по имени <code>redis</code>."]] },
+        "p-certbot": { emoji:"🔒", title:"certbot", role:"Выпуск и продление TLS",
+          rows:[["Что","Получает бесплатный сертификат от <b>Let's Encrypt</b>."],["Как","Проверка <b>ACME</b>: кладёт файл, УЦ его читает — значит домен твой."],["Ритм","Каждые 12ч пробует продлить; Nginx перечитывает раз в 6ч."],["Первый выпуск","Скриптом <code>init-letsencrypt.sh</code>."]] }
+      };
+
+      const STEPS = {
+        dev: {
+          svg: "svg-dev", pulse: "d-pulse",
+          seq: [
+            { nodes:["d-client"], edge:null, cap:"Открываешь <b>localhost:3000</b> — Vite отдаёт React-приложение прямо в браузер." },
+            { nodes:["d-server"], edge:"de1", cap:"Приложение зовёт API на <b>localhost:3030</b>. Это другой порт → другой <b>origin</b>, поэтому браузер делает <b>CORS</b>-проверку, а сервер отвечает «разрешаю»." },
+            { nodes:["d-postgres"], edge:"de3", cap:"Сервер читает и пишет основные данные в <b>PostgreSQL</b>." },
+            { nodes:["d-redis"], edge:"de4", cap:"Сессии и кэш сервер держит в <b>Redis</b> — в памяти, поэтому быстро." },
+            { nodes:["d-client","d-server"], edge:null, cap:"Ответ возвращается в браузер. <b>Админка</b> на :3001 работает точно так же — своё приложение, тот же сервер." }
+          ]
+        },
+        prod: {
+          svg: "svg-prod", pulse: "p-pulse",
+          seq: [
+            { nodes:["p-user"], edge:null, cap:"Пользователь открывает <b>https://app.домен</b>. <b>DNS</b> ведёт домен на IP сервера, порт <b>443</b>." },
+            { nodes:["p-nginx"], edge:"pe1", cap:"<b>Nginx</b> принимает HTTPS и расшифровывает <b>TLS</b>. Снаружи открыт только он." },
+            { nodes:["p-client"], edge:"pe2", cap:"Для поддомена <b>app.</b> Nginx отдаёт статику client — React-бандл уезжает в браузер." },
+            { nodes:["p-backend"], edge:"pe3", cap:"Бандл в браузере зовёт <b>api.домен</b>. Nginx проксирует запрос внутрь, на <b>backend:3030</b>." },
+            { nodes:["p-postgres"], edge:"pe5", cap:"Backend берёт данные из <b>PostgreSQL</b> — он в приватной сети, снаружи недоступен." },
+            { nodes:["p-redis"], edge:"pe6", cap:"Сессии и кэш — в приватном <b>Redis</b>." },
+            { nodes:["p-certbot","p-nginx"], edge:"pe7", cap:"Сбоку <b>certbot</b> держит TLS-сертификат свежим, а Nginx его читает. Поддомен <b>admin.</b> идёт так же, как app." }
+          ]
+        }
+      };
+
+      const GLOSSARY = [
+        ["HTTPS / TLS","защищённое соединение","<b>TLS</b> шифрует трафик между браузером и сервером; <b>HTTPS</b> — это HTTP поверх TLS. Замочек в адресной строке — про это."],
+        ["CORS","cross-origin resource sharing","Правило браузера: код с одного адреса не может звать другой адрес без разрешения. Сервер явно разрешает нужные <b>origin</b>."],
+        ["origin","источник","Комбинация <b>протокол + домен + порт</b>. <code>localhost:3000</code> и <code>localhost:3030</code> — разные origin, отсюда и CORS."],
+        ["reverse-proxy","обратный прокси","Сервер-привратник (Nginx): принимает все запросы снаружи и раздаёт их нужным сервисам внутри. Наружу торчит один."],
+        ["DNS · A-record","система имён","<b>DNS</b> переводит домен в IP-адрес. <b>A-запись</b> — строчка «этот домен → вот этот IP»."],
+        ["ACME","протокол проверки","Автоматический способ доказать, что домен твой: положить файл, который проверяющий центр прочитает. На нём работает Let's Encrypt."],
+        ["certbot · Let's Encrypt","бесплатные сертификаты","<b>Let's Encrypt</b> — центр, бесплатно выдающий TLS-сертификаты. <b>certbot</b> — программа, которая их получает и продлевает."],
+        ["SAN","subject alternative name","Одно поле сертификата со списком доменов. Один сертификат может покрывать <code>api.</code>, <code>app.</code> и <code>admin.</code> сразу."],
+        ["HSTS","строгий HTTPS","Заголовок, который говорит браузеру: «к этому сайту ходи только по HTTPS». Защита от подмены на HTTP."],
+        ["VITE_API_URL","адрес API для фронта","Переменная, куда фронту стучаться за данными. Vite <b>запекает</b> её в бандл при сборке — в рантайме не поменять."],
+        ["build-arg","аргумент сборки","Значение, передаваемое Docker <b>во время сборки</b> образа (не запуска). Так <code>VITE_API_URL</code> попадает в бандл."],
+        ["приватная сеть","internal network","Внутренняя сеть Docker, где сервисы видят друг друга по имени, но снаружи недоступны. Там прячутся база и кэш."],
+        ["volume · том","постоянное хранилище","Место, где данные переживают пересоздание контейнера. Контейнер можно снести — том с данными останется."],
+        ["образ vs контейнер","image vs container","<b>Образ</b> — рецепт/слепок (что внутри). <b>Контейнер</b> — запущенный экземпляр образа. Один образ → много контейнеров."],
+        ["healthcheck","проверка живости","Команда, которой Docker проверяет, что сервис реально готов (например, база принимает соединения), а не «процесс просто стартовал»."],
+        ["envsubst","подстановка переменных","Утилита, подставляющая <code>${ПЕРЕМЕННАЯ}</code> в шаблон. Nginx-конфиг генерится из шаблона с реальным доменом."],
+        ["TTL","time to live","Срок жизни. У ключа в Redis — сколько секунд он хранится до авто-удаления; у DNS-записи — сколько её кэшируют."],
+        ["hot-reload","живая перезагрузка","Правишь код — приложение обновляется само, без ручной пересборки. Только для разработки."]
+      ];
+
+      /* ---------- render glossary ---------- */
+      const gwrap = document.getElementById("gloss");
+      gwrap.innerHTML = GLOSSARY.map(([k, full, body]) =>
+        `<div class="term"><div class="k">${k}</div><div class="full">${full}</div><p>${body}</p></div>`
+      ).join("");
+
+      /* ---------- info panel ---------- */
+      const infoEl = document.getElementById("info");
+      function showInfo(id) {
+        const d = NODE_INFO[id];
+        if (!d) return;
+        infoEl.innerHTML =
+          `<div class="hd">блок системы</div>` +
+          `<h3><span>${d.emoji}</span> ${d.title}</h3>` +
+          `<div class="role">${d.role}</div>` +
+          `<dl>${d.rows.map(([t, v]) => `<dt>${t}</dt><dd>${v}</dd>`).join("")}</dl>`;
+      }
+
+      /* ---------- diagram controller ---------- */
+      let mode = "dev";
+      let idx = 0;               // 0 = ничего не подсвечено, 1..N = шаги
+      let playing = false;
+      let timer = null;
+
+      const els = {
+        play: document.getElementById("play"),
+        prev: document.getElementById("prev"),
+        next: document.getElementById("next"),
+        reset: document.getElementById("reset"),
+        stepnum: document.getElementById("stepnum"),
+        caption: document.getElementById("caption")
+      };
+
+      function curSvg() { return document.getElementById(STEPS[mode].svg); }
+      function curPulse() { return document.getElementById(STEPS[mode].pulse); }
+
+      function clearHighlights() {
+        const svg = curSvg();
+        svg.querySelectorAll(".node").forEach(n => n.classList.remove("lit", "dim"));
+        svg.querySelectorAll(".edge").forEach(e => e.classList.remove("lit"));
+        svg.querySelectorAll(".elabel").forEach(e => e.classList.remove("lit"));
+        const p = curPulse(); p.setAttribute("opacity", "0");
+      }
+
+      function applyStep(i) {
+        clearHighlights();
+        const svg = curSvg();
+        if (i <= 0) {
+          els.stepnum.textContent = "шаг 0";
+          els.caption.innerHTML = `<span class="badge">путь запроса</span>Нажми <b>«Проиграть»</b> — импульс пройдёт весь путь. Или щёлкай <b>«шаг ›»</b> вручную. Клик по блоку — описание справа.`;
+          syncButtons();
+          return;
+        }
+        const seq = STEPS[mode].seq;
+        const step = seq[i - 1];
+        svg.querySelectorAll(".node").forEach(n => n.classList.add("dim"));
+        step.nodes.forEach(id => {
+          const n = document.getElementById(id);
+          if (n) { n.classList.add("lit"); n.classList.remove("dim"); }
+        });
+        if (step.edge) {
+          const e = document.getElementById(step.edge);
+          const lbl = document.getElementById(step.edge + "-l");
+          if (e) e.classList.add("lit");
+          if (lbl) lbl.classList.add("lit");
+        }
+        if (step.nodes[0] && NODE_INFO[step.nodes[0]]) showInfo(step.nodes[0]);
+        els.stepnum.textContent = `шаг ${i} / ${seq.length}`;
+        els.caption.innerHTML = `<span class="badge">шаг ${i}</span>${step.cap}`;
+        if (step.edge) animatePulse(step.edge);
+        syncButtons();
+      }
+
+      function animatePulse(edgeId) {
+        const path = document.getElementById(edgeId);
+        const pulse = curPulse();
+        if (!path || !pulse) return;
+        if (reduceMotion) { pulse.setAttribute("opacity", "0"); return; }
+        const len = path.getTotalLength();
+        const dur = 750;
+        let start = null;
+        pulse.setAttribute("opacity", "1");
+        function frame(ts) {
+          if (start === null) start = ts;
+          const t = Math.min((ts - start) / dur, 1);
+          const pt = path.getPointAtLength(t * len);
+          pulse.setAttribute("cx", pt.x);
+          pulse.setAttribute("cy", pt.y);
+          if (t < 1) requestAnimationFrame(frame);
+          else setTimeout(() => pulse.setAttribute("opacity", "0"), 200);
+        }
+        requestAnimationFrame(frame);
+      }
+
+      function syncButtons() {
+        const n = STEPS[mode].seq.length;
+        els.prev.disabled = idx <= 0 || playing;
+        els.next.disabled = idx >= n || playing;
+        els.play.disabled = playing;
+        els.play.textContent = playing ? "▶ идёт…" : (idx >= n ? "↻ Ещё раз" : "▶ Проиграть путь запроса");
+      }
+
+      function stopPlay() { playing = false; if (timer) { clearTimeout(timer); timer = null; } syncButtons(); }
+
+      function play() {
+        const n = STEPS[mode].seq.length;
+        idx = 0; applyStep(0);
+        playing = true; syncButtons();
+        const advance = () => {
+          idx += 1;
+          applyStep(idx);
+          if (idx < n) timer = setTimeout(advance, 1650);
+          else { playing = false; syncButtons(); }
+        };
+        timer = setTimeout(advance, 350);
+      }
+
+      els.play.addEventListener("click", play);
+      els.next.addEventListener("click", () => { stopPlay(); if (idx < STEPS[mode].seq.length) { idx += 1; applyStep(idx); } });
+      els.prev.addEventListener("click", () => { stopPlay(); if (idx > 0) { idx -= 1; applyStep(idx); } });
+      els.reset.addEventListener("click", () => { stopPlay(); idx = 0; applyStep(0); });
+
+      /* node clicks */
+      function wireNodes(svgId) {
+        document.getElementById(svgId).querySelectorAll(".node").forEach(n => {
+          n.addEventListener("click", () => showInfo(n.id));
+          n.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); showInfo(n.id); } });
+        });
+      }
+      wireNodes("svg-dev");
+      wireNodes("svg-prod");
+
+      /* mode switch */
+      const mDev = document.getElementById("mode-dev");
+      const mProd = document.getElementById("mode-prod");
+      const modehint = document.getElementById("modehint");
+      function setMode(next) {
+        stopPlay();
+        clearHighlights();
+        mode = next; idx = 0;
+        const dev = next === "dev";
+        // NB: SVGElement doesn't reflect the .hidden property to the attribute,
+        // so toggle the attribute explicitly to trigger the [hidden] CSS rule.
+        document.getElementById("svg-dev").toggleAttribute("hidden", !dev);
+        document.getElementById("svg-prod").toggleAttribute("hidden", dev);
+        mDev.classList.toggle("on", dev); mDev.setAttribute("aria-selected", dev);
+        mProd.classList.toggle("on", !dev); mProd.setAttribute("aria-selected", !dev);
+        modehint.textContent = dev ? "четыре репы рядом, всё на localhost" : "за Nginx, база и кэш — в приватной сети";
+        infoEl.innerHTML = `<div class="hd">блок системы</div><p class="empty">Щёлкни любой блок на схеме — здесь появится, что это, зачем нужно и где живёт в проекте.</p>`;
+        applyStep(0);
+      }
+      mDev.addEventListener("click", () => setMode("dev"));
+      mProd.addEventListener("click", () => setMode("prod"));
+
+      /* init */
+      applyStep(0);
+    </script>
+  </body>
+</html>

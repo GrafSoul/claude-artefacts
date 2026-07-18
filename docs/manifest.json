@@ -43,6 +43,19 @@
       ]
     },
     {
+      "title": "Карта системы",
+      "description": "Интерактивная схема dev-vault: client, admin, сервер, Nginx, PostgreSQL, Redis и certbot на одной картинке. Переключение локально/сервер, пошаговая анимация пути запроса, клик по блоку — что это и зачем, плюс глоссарий сокращений (CORS, TLS, ACME, reverse-proxy и др.).",
+      "path": "system-map.html",
+      "emoji": "🗺️",
+      "date": "2026-07-18",
+      "tags": [
+        "архитектура",
+        "обзор",
+        "интерактив",
+        "dev-vault"
+      ]
+    },
+    {
       "title": "Docker & Compose построчно",
       "description": "Справочник: расшифровка каждой строчки Dockerfile и compose на реальных файлах dev-vault. Слева строка — справа человеческое объяснение: что это, зачем, где подвох.",
       "path": "reference-docker-compose.html",
