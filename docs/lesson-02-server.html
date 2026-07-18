@@ -3,10 +3,10 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Урок 02 · Боевой сервер (Hetzner) · dev-vault</title>
+    <title>Урок 02 · Боевой сервер · dev-vault</title>
     <meta
       name="description"
-      content="Практический урок: выкатываем стек dev-vault на боевой сервер Hetzner — SSH, защита, Docker, безопасный прод-compose (без открытых портов БД), Nginx и HTTPS."
+      content="Практический урок: выкат dev-vault на боевой VPS — выбор железа, SSH и защита, Docker, compose.prod.yml, Nginx + certbot с автопродлением TLS, поддомены api/app/admin, приватные Postgres и Redis."
     />
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🖥️</text></svg>" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -58,14 +58,14 @@
       .btn { font-family: var(--mono); font-size: 0.76rem; color: var(--ink-2); background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 0.4rem 0.6rem; cursor: pointer; transition: all 0.15s ease; text-decoration: none; white-space: nowrap; }
       .btn:hover { color: var(--ink); border-color: var(--line-2); }
 
-      .shell { max-width: 820px; margin: 0 auto; padding: 0 clamp(1rem,4vw,2rem) 6rem; }
+      .shell { max-width: 860px; margin: 0 auto; padding: 0 clamp(1rem,4vw,2rem) 6rem; }
 
       .hero { padding: clamp(2.5rem,7vw,4.5rem) 0 2rem; }
       .eyebrow { font-family: var(--mono); font-size: 0.78rem; letter-spacing: 0.14em; text-transform: uppercase; color: var(--copper); display: flex; align-items: center; gap: 0.6rem; }
       .eyebrow::before { content: ""; width: 1.8rem; height: 1px; background: var(--copper); }
       h1 { font-family: var(--serif); font-weight: 600; font-size: clamp(2.2rem,6vw,3.4rem); line-height: 1.05; letter-spacing: -0.015em; margin: 1rem 0 0.5rem; }
       h1 em { font-style: italic; color: var(--copper); }
-      .lede { font-size: clamp(1.02rem,2.3vw,1.18rem); color: var(--ink-2); max-width: 62ch; margin-top: 0.8rem; }
+      .lede { font-size: clamp(1.02rem,2.3vw,1.18rem); color: var(--ink-2); max-width: 64ch; margin-top: 0.8rem; }
       .lede b { color: var(--ink); font-weight: 500; }
       .meta { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 1.5rem; font-family: var(--mono); font-size: 0.76rem; }
       .chip { border: 1px solid var(--line); background: var(--panel); color: var(--ink-2); border-radius: 99px; padding: 0.25rem 0.7rem; }
@@ -76,7 +76,7 @@
       h3 { font-family: var(--sans); font-weight: 600; font-size: 1.1rem; margin: 1.8rem 0 0.6rem; }
       p.body { color: var(--ink-2); margin: 0.7rem 0; }
       p.body b, li b { color: var(--ink); font-weight: 500; }
-      p.body code, li code, .inline { font-family: var(--mono); font-size: 0.88em; background: var(--panel-2); border: 1px solid var(--line); border-radius: 5px; padding: 0.05rem 0.35rem; color: var(--copper); }
+      p.body code, li code, td code, .inline { font-family: var(--mono); font-size: 0.88em; background: var(--panel-2); border: 1px solid var(--line); border-radius: 5px; padding: 0.05rem 0.35rem; color: var(--copper); }
       ul.body, ol.body { color: var(--ink-2); margin: 0.7rem 0; padding-left: 0; list-style: none; display: flex; flex-direction: column; gap: 0.45rem; }
       ul.body li { position: relative; padding-left: 1.5rem; }
       ul.body li::before { content: "▪"; position: absolute; left: 0.15rem; color: var(--copper); }
@@ -134,7 +134,6 @@
       .faq-a code { font-family: var(--mono); font-size: 0.86em; background: var(--panel-2); border: 1px solid var(--line); border-radius: 5px; padding: 0.05rem 0.35rem; color: var(--copper); }
       .faq-a b { color: var(--ink); }
 
-      /* spec table */
       .tbl-wrap { overflow-x: auto; margin: 1rem 0; border: 1px solid var(--line); border-radius: 12px; }
       .tbl { width: 100%; border-collapse: collapse; font-size: 0.86rem; }
       .tbl th, .tbl td { text-align: left; padding: 0.6rem 0.85rem; border-bottom: 1px solid var(--line); }
@@ -144,6 +143,10 @@
       .tbl tr:last-child td { border-bottom: none; }
       ul.body li b, ol.body li b { color: var(--ink); font-weight: 500; }
       ul.body li code { font-family: var(--mono); font-size: 0.88em; background: var(--panel-2); border: 1px solid var(--line); border-radius: 5px; padding: 0.05rem 0.35rem; color: var(--copper); }
+
+      .tree { font-family: var(--mono); font-size: 0.82rem; color: var(--ink-2); background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 1rem 1.2rem; margin: 1rem 0; white-space: pre; overflow-x: auto; line-height: 1.7; }
+      .tree .add { color: var(--copper); }
+      .tree .cmt { color: var(--ink-3); }
 
       .lnav { display: flex; flex-wrap: wrap; gap: 0.8rem; justify-content: space-between; margin-top: 3.5rem; }
       .lnav a { flex: 1; min-width: 220px; border: 1px solid var(--line); border-radius: 12px; padding: 1rem 1.2rem; text-decoration: none; background: var(--panel); transition: all 0.15s ease; }
@@ -164,6 +167,7 @@
       <span class="brand"><b>◆</b> dev-vault · урок 02</span>
       <span class="spacer"></span>
       <a class="btn" href="lesson-01-docker.html">← урок 01</a>
+      <a class="btn" href="reference-docker-compose.html">🔎 справочник</a>
       <a class="btn" href="backend-roadmap.html">план</a>
       <button class="btn" id="themeBtn" title="Сменить тему">☾</button>
     </div>
@@ -171,123 +175,121 @@
     <div class="shell">
       <header class="hero">
         <span class="eyebrow">этап 02 · боевой сервер</span>
-        <h1>Боевой сервер <em>на Hetzner</em></h1>
+        <h1>Боевой сервер <em>под HTTPS</em></h1>
         <p class="lede">
-          Берём стек из <a href="lesson-01-docker.html" style="color:var(--copper)">Урока 01</a>
-          и поднимаем его на настоящем сервере: доступ по ключу, защита, Docker, <b>безопасный
-          прод-compose</b> (база и кэш закрыты от интернета), Nginx и HTTPS. К концу — сервис
-          открывается по <code>https://твой-домен</code>.
+          Выкатываем четыре репы из <a href="lesson-01-docker.html" style="color:var(--copper)">Урока 01</a>
+          на настоящий VPS. Наружу смотрит только <b>Nginx</b> (80/443), рядом <b>certbot</b> выпускает и
+          автоматически продлевает сертификаты Let's Encrypt. Три поддомена — <code>api</code>,
+          <code>app</code>, <code>admin</code>. <b>Postgres и Redis публичных портов не имеют вообще.</b>
         </p>
         <div class="meta">
           <span class="chip"><b>~90</b> мин</span>
-          <span class="chip">SSH · ufw · Docker · Nginx</span>
-          <span class="chip">шаги плана 2.1–2.5</span>
-          <span class="chip" style="color:var(--ink-3)">нужен VPS (Hetzner) + домен</span>
+          <span class="chip">SSH · ufw · Docker · Nginx · certbot</span>
+          <span class="chip">этап 02 плана</span>
+          <span class="chip" style="color:var(--ink-3)">нужен VPS + домен</span>
         </div>
       </header>
 
-      <h2>Выбор железа на Hetzner <span class="stepbadge">с чего начать</span></h2>
+      <h2>Выбор железа <span class="stepbadge">с чего начать</span></h2>
       <p class="body">
-        Прежде чем что-то настраивать — правильно выбрать сервер. Разберём по порядку: тип, линейку и
-        сколько ресурсов нужно именно нашему стеку.
+        Провайдер не важен — подойдёт любой VPS/облако. Важно, <b>что именно</b> брать под наш стек.
       </p>
 
-      <h3>Cloud, а не Dedicated</h3>
+      <h3>Виртуалка, а не выделенный сервер</h3>
       <p class="body">
-        У Hetzner два мира: <b>Cloud</b> (виртуальные серверы — создаются за минуты, почасовая
-        оплата, легко масштабируются) и <b>Dedicated</b> (физические машины — мощно и дорого, под
-        серьёзную нагрузку). Для старта и учёбы — однозначно <b>Cloud</b>.
+        <b>VPS / облако</b> — создаётся за минуты, почасовая оплата, легко пересоздать и увеличить.
+        <b>Выделенное железо</b> — мощно и дорого, нужно под серьёзную нагрузку. Для старта и учёбы —
+        однозначно виртуалка.
       </p>
 
-      <h3>Какая линейка Cloud</h3>
+      <h3>Общие или выделенные ядра</h3>
       <div class="tbl-wrap"><table class="tbl">
-        <tr><th>Линейка</th><th>Ядра</th><th>Когда брать</th></tr>
-        <tr><td>CX</td><td>Intel, общие</td><td>дешёвый старт на x86 — нам подходит</td></tr>
-        <tr><td>CPX</td><td>AMD, общие</td><td>чуть мощнее, тоже x86</td></tr>
-        <tr><td>CAX</td><td>Ampere, ARM64</td><td>дёшево и экономично, но следи за ARM-совместимостью образов</td></tr>
-        <tr><td>CCX</td><td>выделенные</td><td>прод под стабильной нагрузкой, дороже</td></tr>
+        <tr><th>Вариант</th><th>Суть</th><th>Когда брать</th></tr>
+        <tr><td>shared vCPU</td><td>ядра делятся с соседями</td><td>наш случай: дёшево, для старта хватает</td></tr>
+        <tr><td>dedicated vCPU</td><td>ядра только твои</td><td>стабильная прод-нагрузка, дороже</td></tr>
+        <tr><td>ARM64</td><td>другая архитектура</td><td>дешевле, но следи за совместимостью образов</td></tr>
       </table></div>
       <div class="note">
-        <div class="t">про ARM (CAX) — важный нюанс</div>
+        <div class="t">про ARM — важный нюанс</div>
         <p>
-          CAX дешевле, но это архитектура <b>ARM64</b>. Наши образы (<code>node</code>,
-          <code>postgres</code>, <code>redis</code>, <code>nginx</code>) — мультиарх, под ARM работают.
-          Но если однажды попадётся образ только под x86 — на ARM он не запустится. Для
-          предсказуемости на старте бери <b>CX / CPX (x86)</b>; ARM — когда освоишься.
+          ARM-тарифы дешевле, но это <b>другая архитектура</b>. Наши образы (<code>node</code>,
+          <code>postgres</code>, <code>redis</code>, <code>nginx</code>, <code>certbot</code>) —
+          мультиарх и под ARM работают. Но если попадётся образ только под x86 — на ARM он не
+          запустится. Для предсказуемости на старте бери <b>x86</b>.
         </p>
       </div>
 
       <h3>Сколько ресурсов нужно нашему стеку</h3>
       <p class="body">
-        На сервере крутятся Nest (Node), PostgreSQL, Redis, Nginx и статика клиента. Главный
-        ограничитель — <b>память</b>.
+        На сервере крутятся: Nest, PostgreSQL, Redis, два Nginx со статикой, Nginx-прокси и certbot.
+        Главный ограничитель — <b>память</b>.
       </p>
       <ul class="body">
-        <li><b>RAM</b> — сердце выбора. Postgres + Node + Redis: минимум <b>2 ГБ</b>, комфортно <b>4 ГБ</b>. На 2 ГБ жить можно, но тесно.</li>
+        <li><b>RAM</b> — сердце выбора. Postgres + Node + Redis: минимум <b>2 ГБ</b>, комфортно <b>4 ГБ</b>. На 2 ГБ жить можно, но тесно — особенно при сборке образов прямо на сервере.</li>
         <li><b>vCPU</b> — 2 ядра достаточно для старта.</li>
-        <li><b>Диск (NVMe)</b> — 40 ГБ надолго хватит (образы + база). Следи за ростом базы.</li>
+        <li><b>Диск (SSD/NVMe)</b> — 40 ГБ надолго хватит (образы + база). Следи за ростом базы.</li>
       </ul>
       <div class="note win">
         <div class="t">рекомендация для старта</div>
         <p>
-          <b>CX22</b> или <b>CPX21</b>: 2 vCPU, <b>4 ГБ RAM</b>, ~40 ГБ NVMe. Золотая середина — не
-          тесно и недорого (пара евро в месяц). Совсем мало данных и трафика — можно и 2 ГБ, но с
-          запасом спокойнее.
+          <b>2 vCPU · 4 ГБ RAM · ~40 ГБ NVMe</b>, x86, shared vCPU. Золотая середина — не тесно и
+          недорого (несколько евро в месяц у любого провайдера). Совсем мало данных и трафика —
+          хватит и 2 ГБ, но с запасом спокойнее.
         </p>
       </div>
 
       <h3>Что ещё выбрать при создании</h3>
       <ul class="body">
-        <li><b>Локация</b> — ближе к пользователям (Германия/Финляндия для EU, США, Сингапур). Меньше пинг.</li>
+        <li><b>Локация</b> — ближе к пользователям. Меньше пинг.</li>
         <li><b>ОС — Ubuntu 24.04 LTS</b>: именно на неё рассчитан этот урок.</li>
-        <li><b>SSH-ключ</b> — добавь свой публичный ключ прямо в мастере (не пароль). Дальше вход только по ключу.</li>
-        <li><b>Backups</b> — авто-бэкапы Hetzner (+20% к цене) для прода стоит включить; плюс свой <code>pg_dump</code> (в конце урока).</li>
+        <li><b>SSH-ключ</b> — добавь свой публичный ключ прямо в мастере (не пароль).</li>
+        <li><b>Бэкапы/снапшоты</b> — если провайдер предлагает, для прода стоит включить; плюс свой <code>pg_dump</code> (в конце урока).</li>
       </ul>
 
       <div class="note">
         <div class="t">что нужно до старта</div>
         <p>
           <b>1.</b> Пройден <a href="lesson-01-docker.html" style="color:var(--copper)">Урок 01</a> —
-          стек крутится локально. <b>2.</b> Создан Cloud-сервер по разделу выше (Ubuntu 24.04), есть
-          его IP. <b>3.</b> Есть домен (или поддомен) и доступ к его DNS. <b>4.</b> Твой публичный
-          SSH-ключ добавлен в сервер при создании.
+          четыре репы есть и локально всё поднимается. <b>2.</b> Создан VPS (Ubuntu 24.04), есть его
+          IP. <b>3.</b> Есть <b>реальный домен</b> и доступ к его DNS. <b>4.</b> Твой публичный
+          SSH-ключ добавлен при создании. <b>5.</b> Есть email для Let's Encrypt.
         </p>
       </div>
 
       <h2>Что построим <span class="stepbadge">результат урока</span></h2>
       <p class="body">
-        Тот же стек, но по-боевому. Наружу смотрит только <b>Nginx</b> (порты 80/443). Он проксирует
-        на приложение, а <b>Postgres и Redis не публикуются вообще</b> — живут во внутренней сети
-        Docker и доступны только приложению.
+        Три приложения на трёх поддоменах за одним обратным прокси. Наружу открыты только
+        <b>80/443</b> (Nginx). Приложения, база и кэш живут в приватной сети Docker.
       </p>
       <div class="arch">
-        <div class="flowdiag"><span class="cmt">интернет</span>
-   <span class="hl">│</span> https://api.твой-домен  (443)
+        <div class="flowdiag"><span class="cmt">браузер</span>
+   <span class="hl">│</span> HTTPS (443)
    <span class="hl">▼</span>
-<span class="ok">┌─ сервер (Hetzner) ─── ufw: наружу только 22 / 80 / 443 ──────────┐</span>
-<span class="ok">│</span>                                                                 <span class="ok">│</span>
-<span class="ok">│</span>   Nginx ──proxy──► app :3030 ──► postgres / redis               <span class="ok">│</span>
-<span class="ok">│</span>   <span class="cmt">443/TLS</span>         <span class="cmt">127.0.0.1</span>      <span class="bad">без публикации портов!</span>       <span class="ok">│</span>
-<span class="ok">└─────────────────────────────────────────────────────────────────┘</span></div>
+<span class="ok">┌─ VPS ─── ufw: наружу только 22 / 80 / 443 ──────────────────────────────┐</span>
+<span class="ok">│</span>                                                                        <span class="ok">│</span>
+<span class="ok">│</span>   <span class="hl">nginx</span> <span class="cmt">(единственный публичный)</span>        <span class="hl">certbot</span> <span class="cmt">(продлевает TLS)</span>   <span class="ok">│</span>
+<span class="ok">│</span>     ├── api.ДОМЕН    <span class="hl">──►</span> backend :3030  <span class="cmt">(NestJS)</span>                     <span class="ok">│</span>
+<span class="ok">│</span>     ├── app.ДОМЕН    <span class="hl">──►</span> client  :80    <span class="cmt">(статика в nginx)</span>            <span class="ok">│</span>
+<span class="ok">│</span>     └── admin.ДОМЕН  <span class="hl">──►</span> admin   :80    <span class="cmt">(статика в nginx)</span>            <span class="ok">│</span>
+<span class="ok">│</span>                              <span class="hl">│</span>                                         <span class="ok">│</span>
+<span class="ok">│</span>                    backend <span class="hl">──►</span> postgres · redis                        <span class="ok">│</span>
+<span class="ok">│</span>                              <span class="bad">портов наружу НЕТ</span>                          <span class="ok">│</span>
+<span class="ok">└────────────────────────────────────────────────────────────────────────┘</span></div>
       </div>
       <div class="note danger">
         <div class="t">главное отличие от локалки — безопасность</div>
         <p>
-          Локально мы публиковали порты <code>5432</code> и <code>6379</code> для удобства. На
-          публичном сервере это <b>дыра</b>: база с интернет-доступом и слабым паролем взламывается
-          ботами за часы. В прод-конфиге эти порты <b>не публикуем</b> — приложение всё равно видит
-          их по внутренней сети (<code>postgres:5432</code>). Разберём это в шаге 5.
+          Локально мы публиковали <code>5432</code> и <code>6379</code> для удобства. На публичном
+          сервере это <b>дыра</b>: база с интернет-доступом взламывается ботами за часы. В
+          <code>compose.prod.yml</code> у них <b>вообще нет секции <code>ports</code></b> — backend
+          достаёт их по приватной сети как <code>postgres</code> / <code>redis</code>.
         </p>
       </div>
 
       <h2>Шаг 1 — Доступ по SSH <span class="stepbadge">безопасность</span></h2>
-      <p class="body">
-        Первый вход — под <code>root</code> по ключу. Сразу заводим отдельного пользователя (работать
-        под root — плохая привычка) и переносим ему наш ключ.
-      </p>
       <div class="code term" data-lang="bash">
         <div class="code-head"><span class="code-file">на своей машине</span><span class="code-lang">bash</span><span class="spacer"></span><button class="copy">копировать</button></div>
-        <pre><code># первый вход на сервер (IP выдал Hetzner)
+        <pre><code># первый вход на сервер
 ssh root@ТВОЙ_IP</code></pre>
       </div>
       <div class="code term server" data-lang="bash">
@@ -299,48 +301,35 @@ usermod -aG sudo deploy
 # перенести наш SSH-ключ пользователю deploy
 rsync --archive --chown=deploy:deploy ~/.ssh /home/deploy</code></pre>
       </div>
-      <p class="body">Проверь, что заходишь под новым пользователем (в новом окне терминала, не закрывая root):</p>
-      <div class="code term" data-lang="bash">
-        <div class="code-head"><span class="code-file">на своей машине</span><span class="code-lang">bash</span><span class="spacer"></span><button class="copy">копировать</button></div>
-        <pre><code>ssh deploy@ТВОЙ_IP</code></pre>
-      </div>
-      <p class="body">Работает? Тогда закрываем вход под root и по паролю. На сервере отредактируй SSH-конфиг:</p>
-      <div class="code term server" data-lang="bash">
-        <div class="code-head"><span class="code-file">на сервере (под deploy)</span><span class="code-lang">bash</span><span class="spacer"></span><button class="copy">копировать</button></div>
-        <pre><code>sudo nano /etc/ssh/sshd_config</code></pre>
-      </div>
+      <p class="body">Проверь вход под новым пользователем <b>в новом окне</b>, не закрывая root-сессию, затем закрой root и пароль:</p>
       <div class="code" data-lang="text">
-        <div class="code-head"><span class="code-file">sshd_config — найти и выставить</span><span class="code-lang">config</span><span class="spacer"></span><button class="copy">копировать</button></div>
+        <div class="code-head"><span class="code-file">/etc/ssh/sshd_config — найти и выставить</span><span class="code-lang">config</span><span class="spacer"></span><button class="copy">копировать</button></div>
         <pre><code>PermitRootLogin no
 PasswordAuthentication no</code></pre>
       </div>
       <div class="code term server" data-lang="bash">
         <div class="code-head"><span class="code-file">на сервере</span><span class="code-lang">bash</span><span class="spacer"></span><button class="copy">копировать</button></div>
-        <pre><code># применить изменения
+        <pre><code>sudo nano /etc/ssh/sshd_config     # правим две строки выше
 sudo systemctl restart ssh</code></pre>
       </div>
       <div class="note danger">
         <div class="t">не закрывай текущую сессию, пока не проверил</div>
         <p>
           После рестарта SSH <b>открой новое окно</b> и убедись, что вход под <code>deploy</code> по
-          ключу работает. Только потом закрывай старую сессию. Иначе рискуешь запереть себя снаружи.
+          ключу работает. Только потом закрывай старую сессию — иначе рискуешь запереть себя снаружи.
         </p>
       </div>
 
       <h2>Шаг 2 — Защита сервера <span class="stepbadge">безопасность</span></h2>
-      <p class="body">
-        Три вещи базовой гигиены: firewall (пускать только нужные порты), fail2ban (банить перебор) и
-        авто-обновления безопасности.
-      </p>
       <div class="code term server" data-lang="bash">
         <div class="code-head"><span class="code-file">на сервере (под deploy)</span><span class="code-lang">bash</span><span class="spacer"></span><button class="copy">копировать</button></div>
-        <pre><code># firewall: разрешить только SSH, HTTP и HTTPS
+        <pre><code># firewall: наружу только SSH, HTTP и HTTPS
 sudo ufw allow OpenSSH
 sudo ufw allow 80
 sudo ufw allow 443
 sudo ufw enable
 
-# бан за перебор паролей/ключей
+# бан за перебор
 sudo apt update
 sudo apt install -y fail2ban
 
@@ -348,281 +337,489 @@ sudo apt install -y fail2ban
 sudo apt install -y unattended-upgrades
 sudo dpkg-reconfigure -plow unattended-upgrades</code></pre>
       </div>
-      <div class="note">
-        <div class="t">почему в firewall нет 5432 и 6379</div>
-        <p>
-          Именно поэтому. Наружу открыты только <code>22/80/443</code>. Порты базы и кэша не
-          открываем — и в прод-compose их тоже не публикуем (шаг 5). Два рубежа вместо одного.
-        </p>
-      </div>
       <div class="note danger">
         <div class="t">Docker умеет обходить ufw — знай об этом</div>
         <p>
-          Docker правит <code>iptables</code> напрямую и <b>публикация порта в compose может стать
-          видна из интернета даже при включённом ufw</b>. Поэтому нельзя полагаться только на
-          firewall: главная защита базы — <b>вообще не публиковать её порт</b> в прод-compose.
+          Docker правит <code>iptables</code> напрямую, и <b>опубликованный порт может стать виден из
+          интернета даже при включённом ufw</b>. Поэтому главная защита базы — <b>вообще не
+          публиковать её порт</b>, что мы и делаем. Firewall — второй рубеж, а не единственный.
         </p>
       </div>
 
       <h2>Шаг 3 — Docker на сервере <span class="stepbadge">инфра</span></h2>
-      <p class="body">Ставим Docker Engine и compose-плагин официальным скриптом, добавляем себя в группу docker.</p>
       <div class="code term server" data-lang="bash">
         <div class="code-head"><span class="code-file">на сервере</span><span class="code-lang">bash</span><span class="spacer"></span><button class="copy">копировать</button></div>
-        <pre><code># официальный установщик Docker
-curl -fsSL https://get.docker.com | sh
-
-# запускать docker без sudo (перелогинься после этого)
-sudo usermod -aG docker deploy
-
-# проверка
-docker --version
-docker compose version</code></pre>
-      </div>
-      <div class="check">
-        <svg class="ic" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
-        <div>
-          <div class="t">чек-поинт</div>
-          <p>Заходишь на сервер по ключу под <code>deploy</code>, root и пароль закрыты, ufw включён (22/80/443), <code>docker compose version</code> отвечает. Фундамент готов.</p>
-        </div>
+        <pre><code>curl -fsSL https://get.docker.com | sh
+sudo usermod -aG docker deploy     # перелогинься после этого
+docker --version && docker compose version</code></pre>
       </div>
 
-      <h2>Шаг 4 — Код на сервер <span class="stepbadge">деплой</span></h2>
+      <h2>Шаг 4 — Клонируем четыре репы <span class="stepbadge">деплой</span></h2>
       <p class="body">
-        Забираем репозиторий <code>dev-vault</code> на сервер через git. Пока — вручную; на этапе 03
-        это будет делать GitHub Actions автоматически после коммита.
+        Репы кладём <b>рядом друг с другом</b> — <code>compose.prod.yml</code> собирает образы из
+        соседних папок по путям <code>../dev-vault-server</code> и т.д.
       </p>
       <div class="code term server" data-lang="bash">
-        <div class="code-head"><span class="code-file">на сервере (под deploy)</span><span class="code-lang">bash</span><span class="spacer"></span><button class="copy">копировать</button></div>
-        <pre><code># склонировать проект (для приватной репы понадобится deploy-ключ)
-git clone https://github.com/GrafSoul/dev-vault.git
-cd dev-vault</code></pre>
+        <div class="code-head"><span class="code-file">на сервере</span><span class="code-lang">bash</span><span class="spacer"></span><button class="copy">копировать</button></div>
+        <pre><code>git clone https://github.com/GrafSoul/dev-vault-server.git
+git clone https://github.com/GrafSoul/dev-vault-client.git
+git clone https://github.com/GrafSoul/dev-vault-admin.git
+git clone https://github.com/GrafSoul/dev-vault-infra.git</code></pre>
+      </div>
+      <div class="tree"><span class="cmt"># так это должно выглядеть на сервере</span>
+├── dev-vault-server/
+├── dev-vault-client/
+├── dev-vault-admin/
+└── dev-vault-infra/     <span class="cmt"># отсюда запускаем прод</span>
+    ├── compose.prod.yml
+    ├── init-letsencrypt.sh
+    └── nginx/
+        ├── templates/default.conf.template
+        └── snippets/  proxy.conf · ssl-params.conf</div>
+
+      <h2>Шаг 5 — DNS: три A-записи <span class="stepbadge">домен</span></h2>
+      <p class="body">
+        В панели домена заведи три <b>A-записи</b> на IP сервера. Без них certbot не выпустит
+        сертификат — Let's Encrypt проверяет, что домен реально указывает на этот хост.
+      </p>
+      <div class="tbl-wrap"><table class="tbl">
+        <tr><th>Запись</th><th>Тип</th><th>Значение</th></tr>
+        <tr><td>api</td><td>A</td><td>IP сервера</td></tr>
+        <tr><td>app</td><td>A</td><td>IP сервера</td></tr>
+        <tr><td>admin</td><td>A</td><td>IP сервера</td></tr>
+      </table></div>
+
+      <h2>Шаг 6 — .env инфраструктуры <span class="stepbadge">секреты</span></h2>
+      <p class="body">
+        Весь прод настраивается <b>тремя переменными</b>. Домен задаётся один раз — поддомены и
+        CORS-список выводятся из него автоматически.
+      </p>
+      <div class="code term server" data-lang="bash">
+        <div class="code-head"><span class="code-file">на сервере · dev-vault-infra/</span><span class="code-lang">bash</span><span class="spacer"></span><button class="copy">копировать</button></div>
+        <pre><code>openssl rand -base64 24     # сгенерировать сильный пароль для базы
+cp .env.example .env
+nano .env</code></pre>
+      </div>
+      <div class="code" data-lang="env">
+        <div class="code-head"><span class="code-file">dev-vault-infra/.env.example</span><span class="code-lang">env</span><span class="spacer"></span><button class="copy">копировать</button></div>
+        <pre><code># ---- Deployment (dev-vault-infra) ----
+# Copy to .env and fill in real values. .env is not committed (see .gitignore).
+
+# Base domain. Real DNS A-records must point to this host:
+#   api.YOUR_DOMAIN  app.YOUR_DOMAIN  admin.YOUR_DOMAIN  ->  <server IP>
+DOMAIN=YOUR_DOMAIN
+
+# Email for Let's Encrypt: certificate registration and expiry notices.
+CERTBOT_EMAIL=you@example.com
+
+# PostgreSQL password. The database is private (no public port); the backend
+# reaches it over the internal network. Use a strong value in production.
+POSTGRES_PASSWORD=change-me-in-prod</code></pre>
       </div>
 
-      <h2>Шаг 5 — Безопасный прод-compose <span class="stepbadge">безопасность</span></h2>
+      <h2>Шаг 7 — compose.prod.yml <span class="stepbadge">ядро прода</span></h2>
       <p class="body">
-        Ключевой шаг. Заводим отдельный <code>docker-compose.prod.yml</code> — он отличается от
-        локального тремя вещами: <b>боевой образ</b> (prod-стадия, не dev), <b>restart-политики</b>
-        (переживать перезагрузку и падения) и <b>никаких публичных портов у базы и кэша</b>.
+        Главный файл деплоя: собирает три приложения из соседних реп (стадия <code>prod</code>),
+        поднимает приватные Postgres/Redis и пару <b>nginx + certbot</b>.
       </p>
       <div class="code" data-lang="yaml">
-        <div class="code-head"><span class="code-file">docker-compose.prod.yml</span><span class="code-lang">yaml</span><span class="spacer"></span><button class="copy">копировать</button></div>
+        <div class="code-head"><span class="code-file">dev-vault-infra/compose.prod.yml</span><span class="code-lang">yaml · prod</span><span class="spacer"></span><button class="copy">копировать</button></div>
         <pre><code>services:
-  app:
+  backend:
     build:
-      context: .
-      target: prod            # боевой образ: node dist/main.js (не dev)
-    restart: unless-stopped   # сам поднимется после перезагрузки/падения
-    env_file: .env
-    ports:
-      - "127.0.0.1:3030:3030" # виден ТОЛЬКО серверу (для Nginx), не из интернета
+      context: ../dev-vault-server
+      target: prod
+    environment:
+      NODE_ENV: production
+      PORT: 3030
+      # Browser-facing origins allowed to call the API.
+      CORS_ORIGIN: https://app.${DOMAIN},https://admin.${DOMAIN}
+      # Private, server-to-server connections over the compose network.
+      DATABASE_URL: postgres://devvault:${POSTGRES_PASSWORD}@postgres:5432/devvault
+      REDIS_URL: redis://redis:6379
     depends_on:
       postgres:
         condition: service_healthy
       redis:
         condition: service_started
+    restart: unless-stopped
+
+  client:
+    build:
+      context: ../dev-vault-client
+      target: prod
+      args:
+        # Baked into the static bundle at build time.
+        VITE_API_URL: https://api.${DOMAIN}
+    restart: unless-stopped
+
+  admin:
+    build:
+      context: ../dev-vault-admin
+      target: prod
+      args:
+        VITE_API_URL: https://api.${DOMAIN}
+    restart: unless-stopped
 
   postgres:
-    image: postgres:17-alpine
-    restart: unless-stopped
+    image: postgres:18-alpine
     environment:
       POSTGRES_USER: devvault
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}   # из .env, сильный пароль
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       POSTGRES_DB: devvault
+    # No published ports — reachable only inside the private network.
     volumes:
-      - pgdata:/var/lib/postgresql/data
+      - pgdata:/var/lib/postgresql
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U devvault"]
       interval: 5s
       timeout: 3s
       retries: 5
-    # ← НЕТ секции ports: база не смотрит в интернет
+    restart: unless-stopped
 
   redis:
-    image: redis:7-alpine
-    restart: unless-stopped
+    image: redis:8-alpine
+    # No published ports — reachable only inside the private network.
     volumes:
       - redisdata:/data
-    # ← НЕТ секции ports: Redis только во внутренней сети
+    restart: unless-stopped
+
+  nginx:
+    image: nginx:alpine
+    environment:
+      DOMAIN: ${DOMAIN}
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/templates:/etc/nginx/templates:ro
+      - ./nginx/snippets:/etc/nginx/snippets:ro
+      - certbot_conf:/etc/letsencrypt:ro       # certificates (written by certbot)
+      - certbot_www:/var/www/certbot:ro        # ACME challenge webroot
+    depends_on:
+      - backend
+      - client
+      - admin
+    # Render the config (substitute only ${DOMAIN}, keep nginx's own $vars — we do
+    # envsubst by hand because overriding the command skips the image's auto-render),
+    # then start nginx and reload every 6h so renewed certificates are picked up.
+    command: >
+      /bin/sh -c "envsubst '$${DOMAIN}' < /etc/nginx/templates/default.conf.template > /etc/nginx/conf.d/default.conf;
+      while :; do sleep 6h & wait $${!}; nginx -s reload; done & exec nginx -g 'daemon off;'"
+    restart: unless-stopped
+
+  certbot:
+    image: certbot/certbot
+    volumes:
+      - certbot_conf:/etc/letsencrypt
+      - certbot_www:/var/www/certbot
+    # Attempt renewal twice a day; certbot only acts when a cert is near expiry.
+    entrypoint: >
+      /bin/sh -c "trap exit TERM; while :; do certbot renew --webroot -w /var/www/certbot; sleep 12h & wait $${!}; done"
+    restart: unless-stopped
 
 volumes:
   pgdata:
-  redisdata:</code></pre>
+  redisdata:
+  certbot_conf:
+  certbot_www:</code></pre>
       </div>
       <div class="note win">
-        <div class="t">сравни с локальным compose</div>
+        <div class="t">что делает этот файл прод-конфигом</div>
         <p>
-          Три отличия: <b>target: prod</b> (собранный dist вместо dev-watch), <b>restart:
-          unless-stopped</b> у всех, и <b>у postgres/redis убрана секция <code>ports</code></b>.
-          У <code>app</code> порт привязан к <code>127.0.0.1</code> — снаружи не достучаться, только
-          Nginx на самом сервере. Приложение по-прежнему ходит к базе по <code>postgres:5432</code>
-          внутри сети Docker.
+          <b>1.</b> <code>target: prod</code> — боевая стадия multi-stage Dockerfile (собранный
+          <code>dist</code> под non-root; фронты — статика в nginx). <b>2.</b>
+          <code>restart: unless-stopped</code> у всех — переживают перезагрузку и падения.
+          <b>3.</b> У postgres/redis <b>нет</b> <code>ports</code>. <b>4.</b> Публикует 80/443
+          только <code>nginx</code>. <b>5.</b> <code>certbot</code> крутится рядом и продлевает
+          сертификаты.
         </p>
-      </div>
-
-      <h2>Шаг 6 — Прод-.env с сильными паролями <span class="stepbadge">безопасность</span></h2>
-      <p class="body">
-        На сервере создаём <code>.env</code> из шаблона и вписываем <b>настоящие</b> пароли —
-        не <code>devvault</code> из локалки. Сгенерируй случайный:
-      </p>
-      <div class="code term server" data-lang="bash">
-        <div class="code-head"><span class="code-file">на сервере · dev-vault/</span><span class="code-lang">bash</span><span class="spacer"></span><button class="copy">копировать</button></div>
-        <pre><code># сгенерировать сильный пароль
-openssl rand -base64 24
-
-# создать рабочий .env из шаблона и отредактировать
-cp .env.example .env
-nano .env</code></pre>
-      </div>
-      <div class="code" data-lang="env">
-        <div class="code-head"><span class="code-file">.env (на сервере)</span><span class="code-lang">env</span><span class="spacer"></span><button class="copy">копировать</button></div>
-        <pre><code>NODE_ENV=production
-PORT=3030
-
-# сильный пароль, сгенерированный openssl (одинаковый в обеих строках)
-POSTGRES_PASSWORD=ВСТАВЬ_СГЕНЕРИРОВАННЫЙ_ПАРОЛЬ
-DATABASE_URL=postgresql://devvault:ВСТАВЬ_СГЕНЕРИРОВАННЫЙ_ПАРОЛЬ@postgres:5432/devvault
-REDIS_URL=redis://redis:6379</code></pre>
       </div>
       <div class="note">
-        <div class="t">почему пароль в двух местах</div>
+        <div class="t">две хитрости в этих командах</div>
         <p>
-          <code>POSTGRES_PASSWORD</code> задаёт пароль базе, а <code>DATABASE_URL</code> — как
-          приложение к ней подключается. Значения должны совпадать. <code>.env</code> в
-          <code>.gitignore</code>, поэтому реальные пароли в git не попадают — только шаблон.
+          <b>nginx:</b> <code>envsubst '$${DOMAIN}'</code> подставляет <b>только</b>
+          <code>${DOMAIN}</code> и не трогает собственные переменные nginx (<code>$host</code>,
+          <code>$scheme</code>) — иначе конфиг сломается. Цикл <code>sleep 6h; nginx -s reload</code>
+          нужен, чтобы подхватить <b>обновлённый</b> сертификат без перезапуска.
+          <b>certbot:</b> цикл <code>renew</code> раз в 12 часов — сам certbot ничего не делает, пока
+          сертификат не близок к истечению.
         </p>
       </div>
 
-      <h2>Шаг 7 — Запуск на сервере <span class="stepbadge">деплой</span></h2>
-      <p class="body">Поднимаем стек прод-конфигом в фоне (<code>-d</code>):</p>
-      <div class="code term server" data-lang="bash">
-        <div class="code-head"><span class="code-file">на сервере · dev-vault/</span><span class="code-lang">bash</span><span class="spacer"></span><button class="copy">копировать</button></div>
-        <pre><code># собрать боевой образ и поднять стек в фоне
-docker compose -f docker-compose.prod.yml up -d --build
-
-# проверить статусы
-docker compose -f docker-compose.prod.yml ps
-
-# проверить, что приложение отвечает локально на сервере
-curl http://127.0.0.1:3030</code></pre>
-      </div>
+      <h2>Шаг 8 — Конфиг Nginx <span class="stepbadge">маршруты + TLS</span></h2>
       <p class="body">
-        <code>curl</code> вернул <code>Hello World!</code> — приложение живо, но пока доступно только
-        внутри сервера. Осталось открыть его миру через Nginx.
+        Шаблон рендерится при старте контейнера. Один блок <code>:80</code> — для ACME-проверки и
+        редиректа на HTTPS; три блока <code>:443</code> — по одному на поддомен.
       </p>
-
-      <h2>Шаг 8 — Nginx и HTTPS <span class="stepbadge">инфра</span></h2>
-      <p class="body">
-        Nginx примет трафик из интернета на 80/443 и проксирует на приложение. Сертификат HTTPS
-        бесплатно выдаст Let's Encrypt через certbot. Сначала — направь домен на сервер: в DNS
-        добавь <b>A-запись</b> <code>api.твой-домен → IP сервера</code>.
-      </p>
-      <div class="code term server" data-lang="bash">
-        <div class="code-head"><span class="code-file">на сервере</span><span class="code-lang">bash</span><span class="spacer"></span><button class="copy">копировать</button></div>
-        <pre><code>sudo apt install -y nginx
-sudo nano /etc/nginx/sites-available/dev-vault</code></pre>
-      </div>
       <div class="code" data-lang="nginx">
-        <div class="code-head"><span class="code-file">/etc/nginx/sites-available/dev-vault</span><span class="code-lang">nginx</span><span class="spacer"></span><button class="copy">копировать</button></div>
-        <pre><code>server {
-    server_name api.твой-домен;
+        <div class="code-head"><span class="code-file">dev-vault-infra/nginx/templates/default.conf.template</span><span class="code-lang">nginx</span><span class="spacer"></span><button class="copy">копировать</button></div>
+        <pre><code># Maps the Upgrade header to the Connection value: "upgrade" for WebSockets,
+# "close" otherwise. Referenced by snippets/proxy.conf.
+map $http_upgrade $connection_upgrade {
+    default upgrade;
+    ''      close;
+}
+
+# ---- HTTP (:80): ACME challenge + redirect to HTTPS ----
+server {
+    listen 80;
+    listen [::]:80;
+    server_name api.${DOMAIN} app.${DOMAIN} admin.${DOMAIN};
+
+    location /.well-known/acme-challenge/ {
+        root /var/www/certbot;          # certbot writes challenge files here
+    }
 
     location / {
-        proxy_pass http://127.0.0.1:3030;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
+        return 301 https://$host$request_uri;
+    }
+}
+
+# ---- HTTPS: api.${DOMAIN} -> backend ----
+server {
+    listen 443 ssl;
+    listen [::]:443 ssl;
+    http2 on;
+    server_name api.${DOMAIN};
+
+    ssl_certificate     /etc/letsencrypt/live/api.${DOMAIN}/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/api.${DOMAIN}/privkey.pem;
+    include /etc/nginx/snippets/ssl-params.conf;
+
+    location / {
+        include /etc/nginx/snippets/proxy.conf;
+        proxy_pass http://backend:3030;
+    }
+}
+
+# ---- HTTPS: app.${DOMAIN} -> client ----
+server {
+    listen 443 ssl;
+    listen [::]:443 ssl;
+    http2 on;
+    server_name app.${DOMAIN};
+
+    ssl_certificate     /etc/letsencrypt/live/api.${DOMAIN}/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/api.${DOMAIN}/privkey.pem;
+    include /etc/nginx/snippets/ssl-params.conf;
+
+    location / {
+        include /etc/nginx/snippets/proxy.conf;
+        proxy_pass http://client:80;
+    }
+}
+
+# ---- HTTPS: admin.${DOMAIN} -> admin ----
+server {
+    listen 443 ssl;
+    listen [::]:443 ssl;
+    http2 on;
+    server_name admin.${DOMAIN};
+
+    ssl_certificate     /etc/letsencrypt/live/api.${DOMAIN}/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/api.${DOMAIN}/privkey.pem;
+    include /etc/nginx/snippets/ssl-params.conf;
+
+    location / {
+        include /etc/nginx/snippets/proxy.conf;
+        proxy_pass http://admin:80;
     }
 }</code></pre>
       </div>
-      <div class="code term server" data-lang="bash">
-        <div class="code-head"><span class="code-file">на сервере</span><span class="code-lang">bash</span><span class="spacer"></span><button class="copy">копировать</button></div>
-        <pre><code># включить сайт и проверить конфиг
-sudo ln -s /etc/nginx/sites-available/dev-vault /etc/nginx/sites-enabled/
-sudo nginx -t
-sudo systemctl reload nginx
+      <div class="note">
+        <div class="t">почему все три блока смотрят в live/api.ДОМЕН</div>
+        <p>
+          certbot выпускает <b>один сертификат сразу на три поддомена</b> (SAN). Он лежит в папке по
+          имени <b>первого</b> домена — <code>api.ДОМЕН</code>. Поэтому все server-блоки ссылаются
+          на один и тот же файл. Это нормально и экономит выпуски.
+        </p>
+      </div>
+      <p class="body">Общие куски вынесены в snippets — чтобы не дублировать в каждом блоке:</p>
+      <div class="code" data-lang="nginx">
+        <div class="code-head"><span class="code-file">dev-vault-infra/nginx/snippets/proxy.conf</span><span class="code-lang">nginx</span><span class="spacer"></span><button class="copy">копировать</button></div>
+        <pre><code># Common reverse-proxy headers. Included inside every proxied location.
+# Passes the real client identity upstream and is ready for WebSocket upgrades.
 
-# выпустить HTTPS-сертификат (certbot сам пропишет 443 и редирект)
-sudo apt install -y certbot python3-certbot-nginx
-sudo certbot --nginx -d api.твой-домен</code></pre>
+proxy_http_version 1.1;
+proxy_set_header Host              $host;
+proxy_set_header X-Real-IP         $remote_addr;
+proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
+proxy_set_header X-Forwarded-Proto $scheme;
+proxy_set_header Upgrade           $http_upgrade;
+proxy_set_header Connection        $connection_upgrade;</code></pre>
+      </div>
+      <div class="code" data-lang="nginx">
+        <div class="code-head"><span class="code-file">dev-vault-infra/nginx/snippets/ssl-params.conf</span><span class="code-lang">nginx</span><span class="spacer"></span><button class="copy">копировать</button></div>
+        <pre><code># TLS hardening — Mozilla "Intermediate" profile (2024/2025).
+# Included by every HTTPS server block. Certificate paths stay in the server
+# block itself (they are domain-specific); everything reusable lives here.
+
+ssl_protocols TLSv1.2 TLSv1.3;
+ssl_prefer_server_ciphers off;
+ssl_ciphers ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305;
+
+ssl_session_timeout 1d;
+ssl_session_cache shared:SSL:10m;
+ssl_session_tickets off;
+
+# No ssl_dhparam: only ECDHE ciphers are enabled, so DH parameters are unused.
+# No OCSP stapling: Let's Encrypt is retiring OCSP in 2025.
+
+# Security headers (sent on HTTPS responses).
+add_header Strict-Transport-Security "max-age=63072000" always;
+add_header X-Content-Type-Options "nosniff" always;
+add_header X-Frame-Options "SAMEORIGIN" always;
+add_header Referrer-Policy "strict-origin-when-cross-origin" always;</code></pre>
+      </div>
+
+      <h2>Шаг 9 — Первый выпуск сертификата <span class="stepbadge">курица и яйцо</span></h2>
+      <p class="body">
+        Тут есть классическая ловушка: <b>nginx не стартует без сертификата</b> (в конфиге прописан
+        путь к нему), а <b>сертификат не выпустить без работающего nginx</b> (Let's Encrypt должен
+        забрать ACME-проверку по HTTP). Скрипт <code>init-letsencrypt.sh</code> разрывает этот круг.
+      </p>
+      <div class="code" data-lang="bash">
+        <div class="code-head"><span class="code-file">dev-vault-infra/init-letsencrypt.sh</span><span class="code-lang">sh · запускается один раз</span><span class="spacer"></span><button class="copy">копировать</button></div>
+        <pre><code>#!/bin/sh
+# One-time TLS bootstrap for the dev-vault stack (Nginx + certbot / Let's Encrypt).
+#
+# Solves the chicken-and-egg problem: nginx won't start without a certificate,
+# but the certificate can't be issued without nginx answering the ACME challenge.
+# Steps: dummy self-signed cert -> start nginx -> replace with a real cert -> reload.
+#
+# Run ONCE on the server, after `cp .env.example .env` (set DOMAIN + CERTBOT_EMAIL)
+# and after DNS A-records api/app/admin point to this host:
+#   chmod +x init-letsencrypt.sh && ./init-letsencrypt.sh
+#
+# Tip: set STAGING=1 the first time to use Let's Encrypt's staging CA and avoid
+# hitting rate limits while you debug, then re-run without it for a trusted cert.</code></pre>
+      </div>
+      <p class="body">Что он делает по шагам:</p>
+      <ol class="body">
+        <li><b>Фиктивный сертификат</b> — самоподписанный, чтобы nginx смог стартовать.</li>
+        <li><b>Поднимает nginx</b> — теперь он отвечает на <code>/.well-known/acme-challenge/</code>.</li>
+        <li><b>Удаляет фиктивный</b> — освобождает путь под настоящий.</li>
+        <li><b>Запрашивает настоящий</b> у Let's Encrypt (webroot) сразу на три поддомена.</li>
+        <li><b>Перезагружает nginx</b> — уже с боевым сертификатом.</li>
+      </ol>
+      <div class="code term server" data-lang="bash">
+        <div class="code-head"><span class="code-file">на сервере · dev-vault-infra/</span><span class="code-lang">bash</span><span class="spacer"></span><button class="copy">копировать</button></div>
+        <pre><code># первый прогон — лучше на тестовом CA, чтобы не спалить лимиты
+chmod +x init-letsencrypt.sh
+STAGING=1 ./init-letsencrypt.sh
+
+# убедился, что всё проходит — теперь по-настоящему
+./init-letsencrypt.sh</code></pre>
+      </div>
+      <div class="note danger">
+        <div class="t">про лимиты Let's Encrypt — не игнорируй STAGING</div>
+        <p>
+          У Let's Encrypt <b>жёсткие лимиты</b> на количество выпусков для домена в неделю. Если
+          отлаживаешь и повторяешь выпуск — легко упереться и остаться без сертификата на несколько
+          дней. <code>STAGING=1</code> использует тестовый центр (сертификат будет «недоверенным», но
+          весь путь проверяется). Убедился, что работает — прогоняй без него.
+        </p>
+      </div>
+
+      <h2>Шаг 10 — Запуск <span class="stepbadge">поехали</span></h2>
+      <div class="code term server" data-lang="bash">
+        <div class="code-head"><span class="code-file">на сервере · dev-vault-infra/</span><span class="code-lang">bash</span><span class="spacer"></span><button class="copy">копировать</button></div>
+        <pre><code># собрать образы всех трёх приложений и поднять стек в фоне
+docker compose -f compose.prod.yml up -d --build
+
+# статусы
+docker compose -f compose.prod.yml ps
+
+# логи
+docker compose -f compose.prod.yml logs -f nginx
+docker compose -f compose.prod.yml logs -f certbot</code></pre>
       </div>
       <div class="check">
         <svg class="ic" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
         <div>
           <div class="t">проверь себя — сервис в бою</div>
-          <p>Открой <code>https://api.твой-домен</code> в браузере — видишь <code>Hello World!</code> по HTTPS. База и Redis наружу закрыты, стек переживает <code>sudo reboot</code> (проверь!). Этап 01 полностью выполнен — и локально, и на сервере.</p>
+          <p>Открываются по HTTPS с зелёным замком: <code>https://app.ДОМЕН</code> (клиент), <code>https://admin.ДОМЕН</code> (админка), <code>https://api.ДОМЕН</code> (API). <code>http://</code> редиректит на <code>https://</code>. Запросы фронтов к API проходят без ошибок CORS. После <code>sudo reboot</code> стек поднимается сам. Этап 02 выполнен.</p>
         </div>
       </div>
 
-      <h2>Обновление и полезные команды</h2>
+      <h2>Обновление и бэкапы</h2>
       <div class="code term server" data-lang="bash">
-        <div class="code-head"><span class="code-file">на сервере · dev-vault/</span><span class="code-lang">bash</span><span class="spacer"></span><button class="copy">копировать</button></div>
-        <pre><code># выкатить новую версию после изменений в репе
-git pull
-docker compose -f docker-compose.prod.yml up -d --build
-
-# логи приложения
-docker compose -f docker-compose.prod.yml logs -f app
-
-# перезапустить стек
-docker compose -f docker-compose.prod.yml restart
+        <div class="code-head"><span class="code-file">на сервере · dev-vault-infra/</span><span class="code-lang">bash</span><span class="spacer"></span><button class="copy">копировать</button></div>
+        <pre><code># выкатить новую версию (в нужной репе git pull, затем отсюда)
+docker compose -f compose.prod.yml up -d --build
 
 # бэкап базы в файл
-docker compose -f docker-compose.prod.yml exec postgres \
+docker compose -f compose.prod.yml exec postgres \
   pg_dump -U devvault devvault > backup_$(date +%F).sql</code></pre>
       </div>
-      <div class="note">
-        <div class="t">этот ручной деплой — временный</div>
+      <div class="note danger">
+        <div class="t">сменил домен — пересобери фронты</div>
         <p>
-          Сейчас обновление = <code>git pull</code> + <code>up -d --build</code> руками. На
-          <b>этапе 03 (CI/CD)</b> это возьмёт на себя GitHub Actions: после коммита в <code>main</code>
-          он сам соберёт образ и выполнит деплой на сервер. Ты понял верно — «после коммита автоматом
-          заливает». Но сначала полезно один раз сделать руками, чтобы понимать, что автоматизируем.
+          <code>VITE_API_URL</code> <b>запечён в бандл</b> при сборке. Поменял <code>DOMAIN</code> в
+          <code>.env</code> — обязательно <code>up -d --build</code>, иначе фронты продолжат стучаться
+          на старый адрес API. И сертификат тоже придётся выпустить заново.
+        </p>
+      </div>
+      <div class="note">
+        <div class="t">этот деплой — ещё не финал</div>
+        <p>
+          Сейчас образы <b>собираются на сервере</b>: это ест его CPU/RAM и требует исходников на
+          хосте. Профессиональный следующий шаг — собирать образы в <b>CI (GitHub Actions)</b>, пушить
+          в реестр (GHCR) и на сервере делать только <code>pull</code>. Это <b>этап 03</b>: после
+          коммита в <code>main</code> деплой едет сам.
         </p>
       </div>
 
       <h2>Частые вопросы</h2>
       <div class="faq">
         <details class="faq-item">
-          <summary>Почему нельзя оставить порты Postgres/Redis открытыми, как локально?</summary>
+          <summary>Почему поддомены, а не один домен с путями <code>/api</code>, <code>/admin</code>?</summary>
           <div class="faq-a">
-            <p>Локально <code>localhost</code> доступен только тебе. На сервере публикация порта открывает базу <b>всему интернету</b>. Боты постоянно сканируют 5432/6379 и подбирают пароли — открытая база со слабым паролем живёт часы.</p>
-            <p>Решение простое: приложение ходит к базе по <b>внутренней сети Docker</b> (<code>postgres:5432</code>), а наружу порт не публикуется. Никто извне до базы не дотянется.</p>
+            <p>Потому что приложения <b>независимы</b>: свои репы, свои деплои, свои жизненные циклы. Поддомены отражают это честно — каждое живёт по своему адресу.</p>
+            <p>Плата — cross-origin, то есть <b>CORS</b>. Он и так нужен локально (разные порты), так что механизм один и тот же в dev и в prod.</p>
           </div>
         </details>
         <details class="faq-item">
-          <summary>Зачем отдельный docker-compose.prod.yml, а не тот же файл?</summary>
+          <summary>Зачем нужен <code>init-letsencrypt.sh</code>, разве certbot не сам всё делает?</summary>
           <div class="faq-a">
-            <p>У прода другие требования: боевой образ вместо dev-watch, restart-политики, закрытые порты БД, сильные пароли. Держать это отдельным файлом — честно и наглядно: видно, чем прод отличается от локалки.</p>
-            <p>Позже, когда почувствуешь Compose увереннее, общие части можно вынести и не дублировать (через override-файлы). Пока нагляднее — отдельным файлом.</p>
+            <p>Проблема курицы и яйца: в конфиге nginx прописаны пути к сертификату — без файла он <b>не стартует</b>. А certbot не может выпустить сертификат, пока nginx не отвечает на ACME-проверку по HTTP.</p>
+            <p>Скрипт разрывает круг: кладёт самоподписанную «пустышку» → поднимает nginx → удаляет пустышку → запрашивает настоящий → перезагружает nginx. Дальше сервис <code>certbot</code> продлевает сам, скрипт больше не нужен.</p>
           </div>
         </details>
         <details class="faq-item">
-          <summary>А если у меня нет домена?</summary>
+          <summary>Почему <code>envsubst</code> с кавычками — <code>'$${DOMAIN}'</code>?</summary>
           <div class="faq-a">
-            <p>Для теста можно обращаться по <code>http://IP_сервера</code> (без HTTPS) — но только временно: без домена не выпустить нормальный сертификат, а гонять прод по HTTP небезопасно.</p>
-            <p>Домены стоят копейки. Для боевого сервиса он нужен — и ради HTTPS, и ради адекватного адреса. Certbot без домена работать не будет.</p>
+            <p>Так <code>envsubst</code> подставляет <b>только</b> <code>${DOMAIN}</code>. Без этого он съел бы и собственные переменные nginx (<code>$host</code>, <code>$scheme</code>, <code>$remote_addr</code>) — конфиг сломался бы.</p>
+            <p>А <code>$$</code> нужно, чтобы <b>Compose</b> не подставил переменную сам: так до шелла в контейнере доедет обычный <code>$</code>.</p>
           </div>
         </details>
         <details class="faq-item">
-          <summary>Что делает <code>restart: unless-stopped</code>?</summary>
+          <summary>Зачем nginx перезагружается каждые 6 часов?</summary>
           <div class="faq-a">
-            <p>Docker сам перезапустит контейнер, если он упал или если сервер перезагрузился — но <b>не</b> будет поднимать его, если ты остановил вручную (<code>docker compose stop</code>).</p>
-            <p>Это базовая надёжность: после <code>reboot</code> сервера сервис поднимется сам, без твоего участия.</p>
+            <p>Когда certbot продлевает сертификат, файл на диске меняется — но nginx держит старый в памяти. <code>nginx -s reload</code> заставляет его перечитать файлы, без разрыва соединений.</p>
+            <p>Раз в 6 часов — с запасом: сертификат живёт 90 дней, certbot обновляет заранее.</p>
           </div>
         </details>
         <details class="faq-item">
-          <summary>Где физически данные и переживут ли они пересоздание контейнера?</summary>
+          <summary>Почему <code>VITE_API_URL</code> передаётся через <code>args</code>, а не <code>environment</code>?</summary>
           <div class="faq-a">
-            <p>В томах Docker (<code>pgdata</code>, <code>redisdata</code>) на диске сервера — как и локально. Пересборка и перезапуск контейнеров данные не трогают.</p>
-            <p>Но том живёт на одном диске сервера, поэтому делай <b>бэкапы</b> (команда <code>pg_dump</code> выше) и храни их отдельно — на случай смерти сервера.</p>
+            <p>Vite <b>запекает</b> <code>VITE_</code>-переменные в бандл при сборке. В браузер уезжает готовый JS — рантайм-переменную ему подсунуть некуда.</p>
+            <p>Поэтому адрес API идёт в <b>сборку образа</b> (<code>build.args</code>). У backend наоборот — <code>environment</code>, потому что Node читает env в рантайме.</p>
           </div>
         </details>
         <details class="faq-item">
-          <summary>Nginx лучше пакетом на хосте или контейнером?</summary>
+          <summary>Почему у postgres и redis совсем нет <code>ports</code>?</summary>
           <div class="faq-a">
-            <p>Оба варианта рабочие. Здесь мы поставили Nginx <b>пакетом на хост</b> — так проще всего дружит с certbot (он сам правит конфиг и продлевает сертификат).</p>
-            <p>Контейнерный Nginx тоже возможен и удобен, когда фронт и бэк оборачиваешь в один стек — но настройка HTTPS там чуть сложнее. Для старта хостовый Nginx — меньше боли.</p>
+            <p>Снаружи к ним никто обращаться не должен. Backend достаёт их <b>по приватной сети Docker</b> — по именам <code>postgres</code> и <code>redis</code>. Публиковать порт = открыть базу интернету.</p>
+            <p>Нужно подключиться psql'ем к прод-базе? Через SSH-туннель, а не открывая порт миру.</p>
+          </div>
+        </details>
+        <details class="faq-item">
+          <summary>Почему dev и prod — разные файлы, а не оверрайды?</summary>
+          <div class="faq-a">
+            <p><code>compose.dev.yml</code> просто включает compose'ы приложений (порты наружу, hot-reload), а <code>compose.prod.yml</code> — самостоятельный боевой файл (nginx, certbot, закрытые БД, build-args). Их <b>не запускают вместе</b>.</p>
+            <p>Общее у dev и prod — <code>Dockerfile</code> каждого приложения: одна multi-stage сборка, просто разные стадии.</p>
           </div>
         </details>
       </div>
@@ -630,9 +827,10 @@ docker compose -f docker-compose.prod.yml exec postgres \
       <div class="note win">
         <div class="t">что у тебя теперь есть</div>
         <p>
-          Полный боевой комплект: стек <b>dev-vault + Postgres + Redis</b> работает <b>локально</b>
-          (урок 01) и <b>на сервере</b> по HTTPS, с закрытой от интернета базой, автозапуском и
-          бэкапами. Осталось автоматизировать выкат — это <b>этап 03 (CI/CD)</b>.
+          Боевой стек на одном сервере: три приложения на HTTPS-поддоменах за Nginx, сертификаты
+          выпускаются и продлеваются сами, база и кэш закрыты от интернета, TLS настроен по
+          Mozilla Intermediate, автозапуск после перезагрузки, бэкапы. Осталось автоматизировать
+          выкат — <b>этап 03 (CI/CD)</b>.
         </p>
       </div>
 

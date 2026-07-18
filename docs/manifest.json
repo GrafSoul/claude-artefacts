@@ -4,35 +4,56 @@
   "artefacts": [
     {
       "title": "Бэкенд с нуля до прода",
-      "description": "Практический план сборки в реальном порядке: Docker → сервер → CI/CD → NestJS → PostgreSQL → приложение → Redis → надёжность → масштаб. 42 шага-действия с трекингом прогресса и ссылками на доки.",
+      "description": "Практический план сборки в реальном порядке: Docker → сервер → CI/CD → NestJS → PostgreSQL → приложение → Redis → надёжность → масштаб. 45 шагов-действий с трекингом прогресса и ссылками на доки.",
       "path": "backend-roadmap.html",
       "emoji": "🛠️",
       "date": "2026-07-15",
-      "tags": ["backend", "nestjs", "devops", "план"]
+      "tags": [
+        "backend",
+        "nestjs",
+        "devops",
+        "план"
+      ]
     },
     {
       "title": "Урок 01 · Локальная среда в Docker",
-      "description": "Практикум по этапу 01: весь стек dev-vault (сервер Nest + клиент React + PostgreSQL + Redis) в Docker, одной командой из корня через compose include. Точные рабочие файлы обеих реп, hot-reload, CORS, шпаргалка — с копируемыми блоками.",
+      "description": "Практикум по этапу 01: четыре независимые репы dev-vault (server, client, admin, infra) в Docker. Multi-stage Dockerfile каждого приложения, VITE_API_URL как build-arg, два режима запуска (без Docker и одной командой), hot-reload, cross-origin + CORS.",
       "path": "lesson-01-docker.html",
       "emoji": "🐳",
       "date": "2026-07-15",
-      "tags": ["docker", "nestjs", "урок", "dev-vault"]
+      "tags": [
+        "docker",
+        "nestjs",
+        "урок",
+        "dev-vault"
+      ]
     },
     {
-      "title": "Урок 02 · Боевой сервер (Hetzner)",
-      "description": "Практикум по этапу 02: выкатываем стек на боевой сервер — SSH и защита, Docker, безопасный прод-compose (база закрыта от интернета), запуск, Nginx и HTTPS. Продолжение Урока 01.",
+      "title": "Урок 02 · Боевой сервер под HTTPS",
+      "description": "Практикум по этапу 02: выкат dev-vault на VPS — выбор железа, SSH и защита, Docker, compose.prod.yml с приватными Postgres и Redis, Nginx-прокси на поддомены api/app/admin, certbot с первым выпуском (init-letsencrypt) и автопродлением TLS.",
       "path": "lesson-02-server.html",
       "emoji": "🖥️",
       "date": "2026-07-16",
-      "tags": ["devops", "server", "nginx", "урок", "dev-vault"]
+      "tags": [
+        "devops",
+        "server",
+        "nginx",
+        "урок",
+        "dev-vault"
+      ]
     },
     {
       "title": "Docker & Compose построчно",
-      "description": "Справочник-спутник к Уроку 01: расшифровка каждой строчки Dockerfile и docker-compose.yml на реальных файлах dev-vault. Слева строка — справа человеческое объяснение: что это, зачем, где подвох.",
+      "description": "Справочник: расшифровка каждой строчки Dockerfile и compose на реальных файлах dev-vault. Слева строка — справа человеческое объяснение: что это, зачем, где подвох.",
       "path": "reference-docker-compose.html",
       "emoji": "🔎",
       "date": "2026-07-16",
-      "tags": ["docker", "compose", "справочник", "dev-vault"]
+      "tags": [
+        "docker",
+        "compose",
+        "справочник",
+        "dev-vault"
+      ]
     }
   ]
 }
