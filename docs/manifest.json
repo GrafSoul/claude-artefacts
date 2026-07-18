@@ -56,6 +56,19 @@
       ]
     },
     {
+      "title": "Nginx — привратник системы",
+      "description": "Что такое reverse-proxy на примере dev-vault: forward vs reverse, роутинг по поддоменам api/app/admin с интерактивной схемой, TLS-терминация, построчный разбор реального конфига (map, server :80/:443, proxy_pass), два уровня Nginx, snippets и FAQ.",
+      "path": "nginx-reverse-proxy.html",
+      "emoji": "🔀",
+      "date": "2026-07-18",
+      "tags": [
+        "nginx",
+        "reverse-proxy",
+        "концепция",
+        "dev-vault"
+      ]
+    },
+    {
       "title": "Docker & Compose построчно",
       "description": "Справочник: расшифровка каждой строчки Dockerfile и compose на реальных файлах dev-vault. Слева строка — справа человеческое объяснение: что это, зачем, где подвох.",
       "path": "reference-docker-compose.html",
