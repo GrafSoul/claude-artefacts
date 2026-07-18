@@ -175,14 +175,44 @@
       footer { margin-top: 3rem; padding-top: 1.5rem; border-top: 1px solid var(--line); font-family: var(--mono); font-size: 0.78rem; color: var(--ink-3); display: flex; flex-wrap: wrap; gap: 0.5rem 1rem; justify-content: space-between; }
       footer a { color: var(--copper); text-decoration: none; }
       @media (prefers-reduced-motion: reduce) { *, .ttlbar > i { transition: none !important; scroll-behavior: auto !important; animation: none !important; } }
+    
+      /* unified nav dropdown */
+      .brand { text-decoration: none; }
+      .navdd { position: relative; display: inline-flex; }
+      .nav-toggle { cursor: pointer; }
+      .nav-menu { position: absolute; top: calc(100% + 8px); left: 0; z-index: 60; display: none; min-width: 266px; max-width: calc(100vw - 2rem); max-height: 74vh; overflow: auto; background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 0.5rem; box-shadow: 0 16px 44px rgba(0,0,0,0.38); }
+      .nav-menu.open { display: block; }
+      .nav-grp { font-family: var(--mono); font-size: 0.66rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--ink-3); margin: 0.6rem 0.5rem 0.2rem; }
+      .nav-grp:first-child { margin-top: 0.2rem; }
+      .nav-item { display: flex; align-items: center; gap: 0.55rem; padding: 0.42rem 0.55rem; border-radius: 9px; text-decoration: none; color: var(--ink-2); font-size: 0.85rem; white-space: nowrap; transition: background 0.12s ease, color 0.12s ease; }
+      .nav-item:hover { background: var(--panel-2); color: var(--ink); }
+      .nav-item.cur { color: var(--copper); background: color-mix(in srgb, var(--copper) 10%, transparent); }
+      .nav-em { width: 1.25rem; text-align: center; flex: none; }
     </style>
   </head>
   <body>
     <div class="topbar">
-      <span class="brand"><b>◆</b> dev-vault · концепции</span>
+      <a class="brand" href="index.html"><b>◆</b> dev-vault</a>
+      <div class="navdd">
+        <button class="btn nav-toggle" aria-expanded="false" aria-haspopup="true">☰ материалы</button>
+        <div class="nav-menu" role="menu">
+            <div class="nav-grp">Обзор</div>
+            <a class="nav-item" href="system-map.html"><span class="nav-em">🗺️</span>Карта системы</a>
+            <div class="nav-grp">План</div>
+            <a class="nav-item" href="backend-roadmap.html"><span class="nav-em">🛠️</span>Бэкенд с нуля до прода</a>
+            <div class="nav-grp">Уроки</div>
+            <a class="nav-item" href="lesson-01-docker.html"><span class="nav-em">🐳</span>Урок 01 · Локальная среда</a>
+            <a class="nav-item" href="lesson-02-server.html"><span class="nav-em">🖥️</span>Урок 02 · Боевой сервер</a>
+            <div class="nav-grp">Концепты</div>
+            <a class="nav-item" href="docker-concepts.html"><span class="nav-em">🐳</span>Docker · ментальная модель</a>
+            <a class="nav-item" href="nginx-reverse-proxy.html"><span class="nav-em">🔀</span>Nginx · reverse-proxy</a>
+            <a class="nav-item cur" aria-current="page" href="redis-explained.html"><span class="nav-em">🧱</span>Redis · быстрая память</a>
+            <a class="nav-item" href="postgresql-explained.html"><span class="nav-em">🐘</span>PostgreSQL · источник правды</a>
+            <div class="nav-grp">Справка</div>
+            <a class="nav-item" href="reference-docker-compose.html"><span class="nav-em">🔎</span>Docker & Compose построчно</a>
+        </div>
+      </div>
       <span class="spacer"></span>
-      <a class="btn" href="nginx-reverse-proxy.html">← nginx</a>
-      <a class="btn" href="system-map.html">карта</a>
       <button class="btn" id="themeBtn" title="Сменить тему">☾</button>
     </div>
 
@@ -473,6 +503,15 @@
       /* init */
       render();
       log(`<span class="dim">// нажимай команды слева</span>`);
+    </script>
+      <script>
+      (function () {
+        var t = document.querySelector(".nav-toggle"), m = document.querySelector(".nav-menu");
+        if (!t || !m) return;
+        t.addEventListener("click", function (e) { e.stopPropagation(); var o = m.classList.toggle("open"); t.setAttribute("aria-expanded", o); });
+        document.addEventListener("click", function (e) { if (!m.contains(e.target) && e.target !== t) { m.classList.remove("open"); t.setAttribute("aria-expanded", "false"); } });
+        document.addEventListener("keydown", function (e) { if (e.key === "Escape") { m.classList.remove("open"); t.setAttribute("aria-expanded", "false"); } });
+      })();
     </script>
   </body>
 </html>

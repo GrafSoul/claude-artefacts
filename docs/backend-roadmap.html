@@ -148,6 +148,10 @@
       .phase-lesson { display: inline-block; font-family: var(--mono); font-size: 0.68rem; font-weight: 400; color: var(--copper); border: 1px solid color-mix(in srgb, var(--copper) 45%, transparent); border-radius: 99px; padding: 0.1rem 0.55rem; text-decoration: none; white-space: nowrap; vertical-align: middle; margin-left: 0.55rem; transition: all 0.15s ease; }
       .phase-lesson:hover { background: var(--copper); color: #14100e; border-color: var(--copper); }
       .phase-sub { color: var(--ink-2); font-size: 0.98rem; margin-top: 0.25rem; max-width: 64ch; }
+      .phase-refs { margin-top: 0.55rem; display: flex; flex-wrap: wrap; gap: 0.4rem; align-items: center; }
+      .phase-refs .rl { font-family: var(--mono); font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--ink-3); }
+      .phase-refs a { font-family: var(--mono); font-size: 0.73rem; color: var(--ink-2); text-decoration: none; border: 1px solid var(--line); border-radius: 7px; padding: 0.15rem 0.5rem; transition: all 0.15s ease; }
+      .phase-refs a:hover { color: var(--copper); border-color: var(--copper); }
       .phase-ring { display: flex; flex-direction: column; align-items: flex-end; gap: 0.3rem; font-family: var(--mono); }
       .phase-ring .frac { font-size: 0.82rem; color: var(--ink-2); }
       .phase-ring .frac b { color: var(--ink); font-weight: 500; }
@@ -208,11 +212,44 @@
       @media (prefers-reduced-motion: reduce) { * { transition: none !important; scroll-behavior: auto !important; } }
       .phase { opacity: 0; transform: translateY(12px); animation: rise 0.6s cubic-bezier(0.22, 1, 0.36, 1) forwards; }
       @keyframes rise { to { opacity: 1; transform: none; } }
+    
+      /* unified nav dropdown */
+      .brand { text-decoration: none; }
+      .navdd { position: relative; display: inline-flex; }
+      .nav-toggle { cursor: pointer; }
+      .nav-menu { position: absolute; top: calc(100% + 8px); left: 0; z-index: 60; display: none; min-width: 266px; max-width: calc(100vw - 2rem); max-height: 74vh; overflow: auto; background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 0.5rem; box-shadow: 0 16px 44px rgba(0,0,0,0.38); }
+      .nav-menu.open { display: block; }
+      .nav-grp { font-family: var(--mono); font-size: 0.66rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--ink-3); margin: 0.6rem 0.5rem 0.2rem; }
+      .nav-grp:first-child { margin-top: 0.2rem; }
+      .nav-item { display: flex; align-items: center; gap: 0.55rem; padding: 0.42rem 0.55rem; border-radius: 9px; text-decoration: none; color: var(--ink-2); font-size: 0.85rem; white-space: nowrap; transition: background 0.12s ease, color 0.12s ease; }
+      .nav-item:hover { background: var(--panel-2); color: var(--ink); }
+      .nav-item.cur { color: var(--copper); background: color-mix(in srgb, var(--copper) 10%, transparent); }
+      .nav-em { width: 1.25rem; text-align: center; flex: none; }
     </style>
   </head>
   <body>
     <div class="topbar">
-      <span class="brand"><b>◆</b> Сборка бэкенда</span>
+      <a class="brand" href="index.html"><b>◆</b> dev-vault</a>
+      <div class="navdd">
+        <button class="btn nav-toggle" aria-expanded="false" aria-haspopup="true">☰ материалы</button>
+        <div class="nav-menu" role="menu">
+            <div class="nav-grp">Обзор</div>
+            <a class="nav-item" href="system-map.html"><span class="nav-em">🗺️</span>Карта системы</a>
+            <div class="nav-grp">План</div>
+            <a class="nav-item cur" aria-current="page" href="backend-roadmap.html"><span class="nav-em">🛠️</span>Бэкенд с нуля до прода</a>
+            <div class="nav-grp">Уроки</div>
+            <a class="nav-item" href="lesson-01-docker.html"><span class="nav-em">🐳</span>Урок 01 · Локальная среда</a>
+            <a class="nav-item" href="lesson-02-server.html"><span class="nav-em">🖥️</span>Урок 02 · Боевой сервер</a>
+            <div class="nav-grp">Концепты</div>
+            <a class="nav-item" href="docker-concepts.html"><span class="nav-em">🐳</span>Docker · ментальная модель</a>
+            <a class="nav-item" href="nginx-reverse-proxy.html"><span class="nav-em">🔀</span>Nginx · reverse-proxy</a>
+            <a class="nav-item" href="redis-explained.html"><span class="nav-em">🧱</span>Redis · быстрая память</a>
+            <a class="nav-item" href="postgresql-explained.html"><span class="nav-em">🐘</span>PostgreSQL · источник правды</a>
+            <div class="nav-grp">Справка</div>
+            <a class="nav-item" href="reference-docker-compose.html"><span class="nav-em">🔎</span>Docker & Compose построчно</a>
+        </div>
+      </div>
+      <span class="spacer"></span>
       <div class="bar-progress" aria-hidden="true"><i id="topFill"></i></div>
       <span class="pct" id="topPct">0%</span>
       <button class="btn" id="expandAll">развернуть всё</button>
@@ -289,6 +326,11 @@
           title: "Локальная среда в Docker",
           lesson: "lesson-01-docker.html",
           sub: "Четыре независимых репы: server, client, admin и infra. У каждого приложения свой multi-stage Dockerfile и compose; infra поднимает всё одной командой. Фронты зовут API по HTTP — разные origin, отсюда CORS.",
+          refs: [
+            { href: "docker-concepts.html", label: "🐳 Docker: модель" },
+            { href: "reference-docker-compose.html", label: "🔎 compose построчно" },
+            { href: "system-map.html", label: "🗺️ карта системы" },
+          ],
           steps: [
             {
               code: "1.1", tool: "Docker", name: "Сервер: multi-stage Dockerfile",
@@ -327,6 +369,10 @@
           title: "Боевой сервер (VPS)",
           lesson: "lesson-02-server.html",
           sub: "Выкатываем четыре репы на VPS: доступ и защита, Docker, compose.prod.yml с приватными базой и кэшем, Nginx-прокси на три поддомена и certbot с автопродлением TLS.",
+          refs: [
+            { href: "nginx-reverse-proxy.html", label: "🔀 Nginx: reverse-proxy" },
+            { href: "system-map.html", label: "🗺️ карта (prod)" },
+          ],
           steps: [
             {
               code: "2.1", tool: "SSH", name: "VPS и вход по ключу",
@@ -450,6 +496,9 @@
           id: "p5",
           title: "PostgreSQL + Prisma",
           sub: "Подключаем данные. Postgres уже поднят в compose — соединяем, описываем схему, ставим миграции в конвейер и разбираемся с производительностью.",
+          refs: [
+            { href: "postgresql-explained.html", label: "🐘 PostgreSQL: как устроен" },
+          ],
           steps: [
             {
               code: "5.1", tool: "Postgres", name: "Postgres в стеке и подключение",
@@ -530,6 +579,9 @@
           id: "p7",
           title: "Redis: скорость и фон",
           sub: "Redis уже в стеке — включаем то, ради чего он там: кэш, защита от перебора, фоновые задачи, при необходимости realtime.",
+          refs: [
+            { href: "redis-explained.html", label: "🧱 Redis: как устроен" },
+          ],
           steps: [
             {
               code: "7.1", tool: "Redis", name: "Кэширование",
@@ -652,6 +704,7 @@
               <div>
                 <div class="phase-title">${p.lesson ? `<a class="ptitle-link" href="${esc(p.lesson)}">${esc(p.title)}</a>` : esc(p.title)}${p.lesson ? ` <a class="phase-lesson" href="${esc(p.lesson)}">📖 урок →</a>` : ""}</div>
                 <p class="phase-sub">${esc(p.sub)}</p>
+                ${p.refs ? `<div class="phase-refs"><span class="rl">узнать больше</span>${p.refs.map((r) => `<a href="${esc(r.href)}">${r.label}</a>`).join("")}</div>` : ""}
               </div>
               <div class="phase-ring" data-ring="${p.id}">
                 <span class="frac"><b class="frac-n">0</b>/${p.steps.length}</span>
@@ -779,6 +832,15 @@
       searchEl.addEventListener("keydown", (e) => { if (e.key === "Escape") { searchEl.value = ""; searchEl.dispatchEvent(new Event("input")); } });
 
       render();
+    </script>
+      <script>
+      (function () {
+        var t = document.querySelector(".nav-toggle"), m = document.querySelector(".nav-menu");
+        if (!t || !m) return;
+        t.addEventListener("click", function (e) { e.stopPropagation(); var o = m.classList.toggle("open"); t.setAttribute("aria-expanded", o); });
+        document.addEventListener("click", function (e) { if (!m.contains(e.target) && e.target !== t) { m.classList.remove("open"); t.setAttribute("aria-expanded", "false"); } });
+        document.addEventListener("keydown", function (e) { if (e.key === "Escape") { m.classList.remove("open"); t.setAttribute("aria-expanded", "false"); } });
+      })();
     </script>
   </body>
 </html>
