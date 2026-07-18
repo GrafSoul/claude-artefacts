@@ -1,0 +1,457 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Docker · ментальная модель · dev-vault</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🐳</text></svg>" />
+    <meta
+      name="description"
+      content="Docker как ментальная модель, без синтаксиса: образ vs контейнер, слои и кэш, тома, сети. Интерактив: docker run плодит контейнеры, а изменение файлов показывает, какие слои пересобираются."
+    />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --bg: #14100e; --bg-2: #1b1613; --panel: #201a16; --panel-2: #261f1a; --code-bg: #17120f;
+        --line: #382e27; --line-2: #4a3d34; --ink: #f3ece4; --ink-2: #c3b6a8; --ink-3: #8b7d70;
+        --copper: #e0895f; --copper-soft: #d97757; --gold: #e6b86a; --done: #7fa66a;
+        --done-bg: rgba(127, 166, 106, 0.14); --blue: #7fa8c9;
+        --radius: 16px; --serif: "Fraunces", Georgia, serif;
+        --sans: "IBM Plex Sans", -apple-system, BlinkMacSystemFont, sans-serif;
+        --mono: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+      }
+      :root[data-theme="light"] {
+        --bg: #f6f1ea; --bg-2: #efe7db; --panel: #fffdf9; --panel-2: #f1e9dc; --code-bg: #2a2320;
+        --line: #e2d6c6; --line-2: #d2c2ad; --ink: #241c14; --ink-2: #5a4d3f; --ink-3: #8a7a68;
+        --copper: #b8542f; --copper-soft: #c96a3e; --gold: #a9762a; --done: #5c7f45; --done-bg: rgba(92,127,69,0.12); --blue: #3f6b8f;
+      }
+      @media (prefers-color-scheme: light) {
+        :root:not([data-theme="dark"]) {
+          --bg: #f6f1ea; --bg-2: #efe7db; --panel: #fffdf9; --panel-2: #f1e9dc; --code-bg: #2a2320;
+          --line: #e2d6c6; --line-2: #d2c2ad; --ink: #241c14; --ink-2: #5a4d3f; --ink-3: #8a7a68;
+          --copper: #b8542f; --copper-soft: #c96a3e; --gold: #a9762a; --done: #5c7f45; --done-bg: rgba(92,127,69,0.12); --blue: #3f6b8f;
+        }
+      }
+
+      * { box-sizing: border-box; margin: 0; padding: 0; }
+      html { scroll-behavior: smooth; scroll-padding-top: 80px; }
+      body {
+        font-family: var(--sans); background: var(--bg); color: var(--ink); line-height: 1.6;
+        -webkit-font-smoothing: antialiased;
+        background-image: radial-gradient(1100px 550px at 88% -5%, rgba(224,137,95,0.09), transparent 60%);
+        background-attachment: fixed;
+      }
+      ::selection { background: var(--copper); color: #14100e; }
+
+      .topbar { position: sticky; top: 0; z-index: 50; display: flex; align-items: center; gap: 1rem; padding: 0.7rem clamp(1rem,4vw,2.5rem); background: color-mix(in srgb, var(--bg) 82%, transparent); backdrop-filter: blur(14px); border-bottom: 1px solid var(--line); }
+      .brand { font-family: var(--mono); font-size: 0.82rem; color: var(--ink-2); white-space: nowrap; }
+      .brand b { color: var(--copper); font-weight: 500; }
+      .topbar .spacer { flex: 1; }
+      .btn { font-family: var(--mono); font-size: 0.76rem; color: var(--ink-2); background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 0.4rem 0.6rem; cursor: pointer; transition: all 0.15s ease; text-decoration: none; white-space: nowrap; }
+      .btn:hover { color: var(--ink); border-color: var(--line-2); }
+
+      .shell { max-width: 900px; margin: 0 auto; padding: 0 clamp(1rem,4vw,2rem) 6rem; }
+
+      .hero { padding: clamp(2.5rem,7vw,4.5rem) 0 1rem; }
+      .eyebrow { font-family: var(--mono); font-size: 0.78rem; letter-spacing: 0.14em; text-transform: uppercase; color: var(--copper); display: flex; align-items: center; gap: 0.6rem; }
+      .eyebrow::before { content: ""; width: 1.8rem; height: 1px; background: var(--copper); }
+      h1 { font-family: var(--serif); font-weight: 600; font-size: clamp(2.2rem,6vw,3.4rem); line-height: 1.05; letter-spacing: -0.015em; margin: 1rem 0 0.5rem; }
+      h1 em { font-style: italic; color: var(--copper); }
+      .lede { font-size: clamp(1.02rem,2.3vw,1.18rem); color: var(--ink-2); max-width: 64ch; margin-top: 0.8rem; }
+      .lede b { color: var(--ink); font-weight: 500; }
+      .meta { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 1.5rem; font-family: var(--mono); font-size: 0.76rem; }
+      .chip { border: 1px solid var(--line); background: var(--panel); color: var(--ink-2); border-radius: 99px; padding: 0.25rem 0.7rem; }
+
+      h2 { font-family: var(--serif); font-weight: 600; font-size: clamp(1.5rem,4vw,2rem); letter-spacing: -0.01em; margin: 3rem 0 0.5rem; scroll-margin-top: 80px; }
+      h3 { font-family: var(--mono); font-weight: 500; font-size: 0.9rem; color: var(--copper); margin: 1.8rem 0 0.6rem; text-transform: uppercase; letter-spacing: 0.04em; }
+      p.body { color: var(--ink-2); margin: 0.7rem 0; }
+      p.body b { color: var(--ink); font-weight: 500; }
+      p.body code, .inline { font-family: var(--mono); font-size: 0.88em; background: var(--panel-2); border: 1px solid var(--line); border-radius: 5px; padding: 0.05rem 0.35rem; color: var(--copper); }
+
+      .cards { display: grid; grid-template-columns: 1fr 1fr; gap: 0.9rem; margin: 1.2rem 0; }
+      @media (max-width: 640px) { .cards { grid-template-columns: 1fr; } }
+      .card { border: 1px solid var(--line); border-radius: 12px; background: var(--panel); padding: 1rem 1.1rem; }
+      .card .h { font-family: var(--mono); font-size: 0.78rem; color: var(--copper); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.4rem; display: flex; align-items: center; gap: 0.4rem; }
+      .card .big { font-family: var(--serif); font-size: 1.15rem; color: var(--ink); margin-bottom: 0.4rem; }
+      .card p { font-size: 0.9rem; color: var(--ink-2); }
+      .card p b { color: var(--ink); font-weight: 500; }
+
+      /* generic playground shell */
+      .play { border: 1px solid var(--line); border-radius: var(--radius); background: linear-gradient(180deg, color-mix(in srgb, var(--panel) 70%, transparent), var(--panel)); padding: 0.9rem; margin: 1.1rem 0; }
+      .playbtns { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-bottom: 0.85rem; }
+      .playbtns button { font-family: var(--mono); font-size: 0.78rem; color: var(--ink); background: var(--code-bg); border: 1px solid var(--line); border-radius: 8px; padding: 0.45rem 0.75rem; cursor: pointer; transition: all 0.15s ease; }
+      :root[data-theme="light"] .playbtns button, :root:not([data-theme="dark"]) .playbtns button { background: #221c19; }
+      .playbtns button:hover { border-color: var(--copper); color: var(--copper); }
+      .playbtns button.on { border-color: var(--copper); background: color-mix(in srgb, var(--copper) 14%, var(--code-bg)); color: var(--copper); }
+      .playbtns button.ghost { margin-left: auto; color: var(--ink-3); }
+      .playcap { margin-top: 0.7rem; font-size: 0.9rem; color: var(--ink-2); border-left: 3px solid var(--copper); background: color-mix(in srgb, var(--copper) 8%, var(--panel)); border-radius: 0 10px 10px 0; padding: 0.6rem 0.9rem; }
+      .playcap b { color: var(--ink); font-weight: 500; }
+      .playcap code { font-family: var(--mono); font-size: 0.86em; color: var(--copper); }
+
+      /* image vs containers */
+      .imgbox { border: 1.5px solid var(--copper); border-radius: 10px; background: color-mix(in srgb, var(--copper) 10%, var(--panel)); padding: 0.6rem 0.8rem; margin-bottom: 0.7rem; display: flex; align-items: center; gap: 0.7rem; }
+      .imgbox .ic { font-size: 1.5rem; }
+      .imgbox .tt { font-family: var(--mono); font-size: 0.82rem; color: var(--ink); }
+      .imgbox .tt small { display: block; color: var(--ink-3); font-size: 0.72rem; }
+      .conts { display: flex; flex-wrap: wrap; gap: 0.55rem; min-height: 62px; }
+      .cont { border: 1px solid var(--line-2); border-radius: 9px; background: var(--code-bg); padding: 0.5rem 0.6rem; min-width: 130px; animation: pop 0.18s ease; }
+      :root[data-theme="light"] .cont, :root:not([data-theme="dark"]) .cont { background: #221c19; }
+      @keyframes pop { from { transform: scale(0.92); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+      .cont .cid { font-family: var(--mono); font-size: 0.76rem; color: var(--gold); }
+      .cont .cst { font-family: var(--mono); font-size: 0.68rem; margin: 0.15rem 0 0.35rem; }
+      .cont .cst.running { color: var(--done); }
+      .cont .cst.stopped { color: var(--ink-3); }
+      .cont .cbtns { display: flex; gap: 0.3rem; }
+      .cont .cbtns button { font-family: var(--mono); font-size: 0.66rem; color: var(--ink-2); background: transparent; border: 1px solid var(--line); border-radius: 6px; padding: 0.15rem 0.4rem; cursor: pointer; }
+      .cont .cbtns button:hover { border-color: var(--copper); color: var(--copper); }
+      .conts .empty { color: var(--ink-3); font-size: 0.85rem; margin: auto 0; font-family: var(--mono); }
+
+      /* layers */
+      .layers { display: flex; flex-direction: column-reverse; gap: 4px; }
+      .layer { font-family: var(--mono); font-size: 0.78rem; border: 1px solid var(--line); border-left: 4px solid var(--line-2); border-radius: 7px; background: var(--code-bg); padding: 0.45rem 0.7rem; display: flex; justify-content: space-between; align-items: center; gap: 0.6rem; transition: all 0.2s ease; }
+      :root[data-theme="light"] .layer, :root:not([data-theme="dark"]) .layer { background: #221c19; color: var(--ink); }
+      .layer .lc { color: var(--ink); overflow-wrap: anywhere; }
+      .layer .lc .kw { color: var(--copper); }
+      .layer .tag { font-family: var(--mono); font-size: 0.66rem; padding: 0.1rem 0.45rem; border-radius: 99px; white-space: nowrap; }
+      .layer.cached { border-left-color: var(--done); }
+      .layer.cached .tag { color: var(--done); background: var(--done-bg); }
+      .layer.rebuild { border-left-color: var(--copper); background: color-mix(in srgb, var(--copper) 12%, var(--code-bg)); }
+      .layer.rebuild .tag { color: var(--copper); background: color-mix(in srgb, var(--copper) 18%, transparent); }
+
+      .note { border-left: 3px solid var(--copper); background: color-mix(in srgb, var(--copper) 8%, var(--panel)); border-radius: 0 10px 10px 0; padding: 0.9rem 1.1rem; margin: 1.4rem 0; }
+      .note .t { font-family: var(--mono); font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--copper); margin-bottom: 0.3rem; }
+      .note p { font-size: 0.9rem; color: var(--ink-2); }
+      .note p b { color: var(--ink); }
+      .note p code { font-family: var(--mono); font-size: 0.86em; background: var(--panel-2); border: 1px solid var(--line); border-radius: 5px; padding: 0.05rem 0.35rem; color: var(--copper); }
+      .note.blue { border-left-color: var(--blue); background: color-mix(in srgb, var(--blue) 9%, var(--panel)); }
+      .note.blue .t { color: var(--blue); }
+
+      /* glossary */
+      .gloss { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 0.7rem; margin-top: 1rem; }
+      .term { border: 1px solid var(--line); border-radius: 12px; background: var(--panel); padding: 0.8rem 0.95rem; }
+      .term .k { font-family: var(--mono); font-size: 0.86rem; color: var(--copper); font-weight: 500; }
+      .term p { font-size: 0.85rem; color: var(--ink-2); margin-top: 0.25rem; }
+      .term p b { color: var(--ink); font-weight: 500; }
+
+      .toc { display: flex; flex-wrap: wrap; gap: 0.5rem; margin: 1.5rem 0 0.5rem; }
+      .toc a { font-family: var(--mono); font-size: 0.76rem; color: var(--ink-2); text-decoration: none; border: 1px solid var(--line); border-radius: 8px; padding: 0.35rem 0.7rem; transition: all 0.15s ease; }
+      .toc a:hover { color: var(--copper); border-color: var(--copper); }
+
+      .faq { border: 1px solid var(--line); border-radius: 12px; background: var(--panel); margin: 0.7rem 0; overflow: hidden; }
+      .faq summary { cursor: pointer; padding: 0.85rem 1rem; font-weight: 500; color: var(--ink); list-style: none; display: flex; align-items: center; gap: 0.6rem; font-size: 0.95rem; }
+      .faq summary::-webkit-details-marker { display: none; }
+      .faq summary::before { content: "＋"; font-family: var(--mono); color: var(--copper); font-size: 1rem; }
+      .faq[open] summary::before { content: "－"; }
+      .faq summary:hover { color: var(--copper); }
+      .faq .a { padding: 0 1rem 0.95rem 2.2rem; color: var(--ink-2); font-size: 0.9rem; }
+      .faq .a code { font-family: var(--mono); font-size: 0.86em; background: var(--panel-2); border: 1px solid var(--line); border-radius: 5px; padding: 0.05rem 0.35rem; color: var(--copper); }
+      .faq .a b { color: var(--ink); font-weight: 500; }
+
+      .lnav { display: flex; flex-wrap: wrap; gap: 0.8rem; justify-content: space-between; margin-top: 3.5rem; }
+      .lnav a { flex: 1; min-width: 220px; border: 1px solid var(--line); border-radius: 12px; padding: 1rem 1.2rem; text-decoration: none; background: var(--panel); transition: all 0.15s ease; }
+      .lnav a:hover { border-color: var(--copper); transform: translateY(-2px); }
+      .lnav .dir { font-family: var(--mono); font-size: 0.72rem; color: var(--ink-3); }
+      .lnav .ttl { color: var(--ink); font-weight: 500; margin-top: 0.2rem; }
+
+      footer { margin-top: 3rem; padding-top: 1.5rem; border-top: 1px solid var(--line); font-family: var(--mono); font-size: 0.78rem; color: var(--ink-3); display: flex; flex-wrap: wrap; gap: 0.5rem 1rem; justify-content: space-between; }
+      footer a { color: var(--copper); text-decoration: none; }
+      @media (prefers-reduced-motion: reduce) { * { transition: none !important; scroll-behavior: auto !important; animation: none !important; } }
+    </style>
+  </head>
+  <body>
+    <div class="topbar">
+      <span class="brand"><b>◆</b> dev-vault · концепции</span>
+      <span class="spacer"></span>
+      <a class="btn" href="postgresql-explained.html">← postgres</a>
+      <a class="btn" href="reference-docker-compose.html">справочник</a>
+      <button class="btn" id="themeBtn" title="Сменить тему">☾</button>
+    </div>
+
+    <div class="shell">
+      <header class="hero">
+        <span class="eyebrow">инфраструктура · контейнеры</span>
+        <h1>Docker — <em>ментальная модель</em></h1>
+        <p class="lede">
+          Не про синтаксис — про <b>картинку в голове</b>. Что такое образ и чем он отличается от
+          контейнера, почему сборка бьётся на <b>слои</b> и когда они берутся из кэша, зачем <b>тома</b>
+          и <b>сети</b>. Пощупай интерактив. А построчный разбор Dockerfile и compose — рядом, в
+          <a href="reference-docker-compose.html" style="color:var(--copper)">справочнике</a>.
+        </p>
+        <div class="meta">
+          <span class="chip">образ vs контейнер</span>
+          <span class="chip">слои и кэш</span>
+          <span class="chip">тома</span>
+          <span class="chip">сети</span>
+        </div>
+        <div class="toc">
+          <a href="#why">Зачем Docker</a>
+          <a href="#img">Образ vs контейнер</a>
+          <a href="#layers">Слои и кэш</a>
+          <a href="#volumes">Тома</a>
+          <a href="#net">Сети</a>
+          <a href="#gloss">Словарь</a>
+          <a href="#faq">Частые вопросы</a>
+        </div>
+      </header>
+
+      <h2 id="why">Зачем вообще Docker</h2>
+      <p class="body">
+        Классическая боль: «<b>у меня работает</b>, а на сервере — нет». Причина — разное окружение:
+        версии Node, библиотеки, настройки ОС. Docker упаковывает приложение <b>вместе со всем его
+        окружением</b> в изолированную коробку — <b>контейнер</b>. Эта коробка одинаково запускается
+        на твоём ноутбуке, у коллеги и на боевом сервере.
+      </p>
+      <div class="cards">
+        <div class="card">
+          <div class="h">📦 что внутри коробки</div>
+          <p>Приложение + нужная версия Node + все зависимости + минимальный Linux. Всё, что нужно для запуска, — с собой.</p>
+        </div>
+        <div class="card">
+          <div class="h">🧩 чем не виртуалка</div>
+          <p>Контейнер <b>лёгкий</b>: он делит ядро ОС хоста, а не тащит целую операционку. Стартует за секунды, весит мегабайты, а не гигабайты.</p>
+        </div>
+      </div>
+
+      <h2 id="img">Образ vs контейнер — главная развилка</h2>
+      <p class="body">
+        Эти два слова путают чаще всего. <b>Образ</b> — это <b>слепок</b>, рецепт: неизменный шаблон
+        приложения. <b>Контейнер</b> — <b>запущенный экземпляр</b> образа, живой процесс. Из одного
+        образа можно запустить сколько угодно контейнеров. Нажми <code>docker run</code> и посмотри.
+      </p>
+      <div class="play">
+        <div class="playbtns">
+          <button id="btn-run">▶ docker run</button>
+          <button id="btn-rmall" class="ghost">docker rm — все</button>
+        </div>
+        <div class="imgbox">
+          <span class="ic">📀</span>
+          <span class="tt">myapp:latest <small>образ — неизменный слепок, один на всех</small></span>
+        </div>
+        <div class="conts" id="conts"></div>
+        <div class="playcap" id="img-cap"></div>
+      </div>
+      <div class="note blue">
+        <div class="t">аналогия</div>
+        <p><b>Образ — это класс, контейнер — объект.</b> Или: образ — рецепт торта, контейнеры — испечённые по нему торты. Рецепт один, тортов много, и каждый живёт своей жизнью.</p>
+      </div>
+
+      <h2 id="layers">Слои и кэш — почему порядок важен</h2>
+      <p class="body">
+        Образ собирается по Dockerfile <b>сверху вниз</b>, и каждая инструкция создаёт <b>слой</b>.
+        Docker кэширует слои: если инструкция и всё до неё не менялись — слой берётся из кэша
+        мгновенно. Как только что-то изменилось — этот слой <b>и все ниже</b> пересобираются заново.
+      </p>
+      <p class="body">Нажми, <b>что ты изменил</b>, и посмотри, какие слои уцелеют в кэше, а какие пойдут на пересборку.</p>
+      <div class="play">
+        <div class="playbtns">
+          <button data-at="99" class="on">ничего не менял</button>
+          <button data-at="4">изменил код (src)</button>
+          <button data-at="2">изменил package.json</button>
+          <button data-at="1">изменил WORKDIR</button>
+        </div>
+        <div class="layers" id="layers-stack"></div>
+        <div class="playcap" id="lay-cap"></div>
+      </div>
+      <div class="note">
+        <div class="t">вот зачем это знать</div>
+        <p>
+          Поэтому в Dockerfile <code>COPY package*.json</code> и <code>RUN npm ci</code> идут
+          <b>раньше</b>, чем <code>COPY . .</code>. Правки кода (частые) не сбрасывают кэш установки
+          зависимостей (медленной) — она пересобирается, только когда реально поменялся
+          <code>package.json</code>. Порядок инструкций = скорость сборки.
+        </p>
+      </div>
+
+      <h2 id="volumes">Тома — данные живут отдельно</h2>
+      <p class="body">
+        Контейнер <b>эфемерный</b>: удалил и пересоздал — внутри всё как в свежем образе, изменения
+        пропали. Это хорошо для приложения (всегда чистый старт), но <b>плохо для данных</b> базы. Решение —
+        <b>том</b>: хранилище, которое живёт <b>вне</b> контейнера и переживает его пересоздание.
+      </p>
+      <div class="cards">
+        <div class="card">
+          <div class="h">🗄️ именованный том</div>
+          <p><code>pgdata</code>, <code>redisdata</code> — Docker хранит их сам, отдельно от контейнера. Снёс контейнер базы — данные в томе остались.</p>
+        </div>
+        <div class="card">
+          <div class="h">🔗 bind-mount</div>
+          <p>Папка с хоста, «проброшенная» внутрь (<code>.:/app</code>). Основа hot-reload: правишь код на машине — контейнер сразу видит.</p>
+        </div>
+      </div>
+      <div class="note">
+        <div class="t">запомни различие</div>
+        <p><b>Контейнер — эфемерный, том — постоянный.</b> Всё, что нельзя потерять, должно лежать в томе, а не «внутри контейнера». Именно поэтому у базы и кэша есть <code>volumes</code>.</p>
+      </div>
+
+      <h2 id="net">Сети — как контейнеры находят друг друга</h2>
+      <p class="body">
+        Compose кладёт все сервисы в <b>общую приватную сеть</b>, где они видят друг друга <b>по
+        имени сервиса</b>. Поэтому backend подключается к базе по адресу <code>postgres</code>, а не
+        <code>localhost</code> или IP — Docker сам разрешает имя в нужный контейнер.
+      </p>
+      <div class="cards">
+        <div class="card">
+          <div class="h">📛 имя = адрес</div>
+          <p><code>postgres</code>, <code>redis</code>, <code>backend</code> — это и имена сервисов, и хосты внутри сети. IP знать не нужно.</p>
+        </div>
+        <div class="card">
+          <div class="h">🚪 изоляция</div>
+          <p>Снаружи виден только тот, кто <b>сам</b> опубликовал порт (<code>ports</code>). База без <code>ports</code> доступна лишь внутри сети — как в проде.</p>
+        </div>
+      </div>
+      <div class="note blue">
+        <div class="t">это ты уже видел</div>
+        <p>Ровно эта сеть нарисована на <a href="system-map.html" style="color:var(--blue)">карте системы</a>: в проде наружу торчит только Nginx, а <code>postgres</code>/<code>redis</code> живут в приватной сети по именам.</p>
+      </div>
+
+      <h2 id="gloss">Словарь Docker</h2>
+      <p class="body">Шесть слов, на которых держится всё остальное. Синтаксис каждого — в <a href="reference-docker-compose.html" style="color:var(--copper)">справочнике</a>.</p>
+      <div class="gloss">
+        <div class="term"><div class="k">Dockerfile</div><p><b>Рецепт образа.</b> Список инструкций: из чего собрать, что скопировать, чем запускать.</p></div>
+        <div class="term"><div class="k">образ (image)</div><p><b>Слепок</b> по рецепту. Неизменный шаблон, из которого запускают контейнеры.</p></div>
+        <div class="term"><div class="k">контейнер</div><p><b>Запущенный экземпляр</b> образа — живой изолированный процесс с приложением.</p></div>
+        <div class="term"><div class="k">слой (layer)</div><p>Результат одной инструкции Dockerfile. Кэшируется, чтобы не пересобирать неизменное.</p></div>
+        <div class="term"><div class="k">том (volume)</div><p><b>Постоянное хранилище</b> вне контейнера. Данные переживают его пересоздание.</p></div>
+        <div class="term"><div class="k">compose</div><p><b>Оркестровка:</b> как запускать сервисы вместе — порты, тома, сеть, связи — одним файлом.</p></div>
+      </div>
+      <div class="note">
+        <div class="t">две роли одной фразой</div>
+        <p><b>Dockerfile</b> отвечает «<b>как собрать образ</b>», <b>compose</b> — «<b>как запускать это вместе</b>». Одно — рецепт, другое — оркестровка.</p>
+      </div>
+
+      <h2 id="faq">Частые вопросы</h2>
+      <details class="faq">
+        <summary>Docker — это виртуальная машина?</summary>
+        <div class="a">Нет. Виртуалка эмулирует <b>целый компьютер</b> с отдельной ОС — это тяжело. Контейнер делит <b>ядро</b> ОС хоста и изолирует только приложение. Поэтому он стартует за секунды и весит мегабайты, а не гигабайты. Одинаковость окружения даёт, а накладных расходов виртуалки — нет.</div>
+      </details>
+      <details class="faq">
+        <summary>В чём разница между <code>image</code> и <code>build</code> в compose?</summary>
+        <div class="a"><code>image</code> — взять <b>готовый</b> образ из реестра (Docker Hub), например <code>postgres:18-alpine</code>. <code>build</code> — <b>собрать свой</b> образ из Dockerfile. Готовое (база, кэш) тянут через <code>image</code>, своё приложение — собирают через <code>build</code>.</div>
+      </details>
+      <details class="faq">
+        <summary>Почему сборка иногда мгновенная, а иногда долгая?</summary>
+        <div class="a">Из-за <b>кэша слоёв</b>. Если поменялся только код — пересобираются лишь нижние слои (копирование кода и сборка), а установка зависимостей берётся из кэша. Если тронул <code>package.json</code> — пересобирается и установка, отсюда долго. Поиграй в блоке «Слои и кэш» выше — там это видно.</div>
+      </details>
+      <details class="faq">
+        <summary>Если удалить контейнер, потеряю данные?</summary>
+        <div class="a">Данные <b>внутри</b> контейнера — да. Данные в <b>томе</b> — нет. Поэтому у базы есть <code>volumes: pgdata:/var/lib/postgresql</code>: контейнер можно сносить и пересоздавать, а том с данными остаётся. Пропадёт всё только если удалить сам том.</div>
+      </details>
+      <details class="faq">
+        <summary>Что такое multi-stage build?</summary>
+        <div class="a">Это когда в одном Dockerfile <b>несколько стадий</b> сборки (<code>FROM … AS имя</code>), а в финальный образ попадает только нужное. Например: собрали приложение в «тяжёлой» стадии со всеми инструментами, а в прод-образ скопировали лишь готовый результат — образ получается маленьким и без лишнего. Построчный пример — в <a href="reference-docker-compose.html" style="color:var(--copper)">справочнике</a>.</div>
+      </details>
+
+      <div class="note">
+        <div class="t">итог одной строкой</div>
+        <p><b>Образ — рецепт, контейнер — блюдо, слои — кэш сборки, том — где данные, сеть — как все находят друг друга.</b> Эти пять картинок держат весь Docker.</p>
+      </div>
+
+      <div class="lnav">
+        <a href="postgresql-explained.html">
+          <div class="dir">← postgres</div>
+          <div class="ttl">PostgreSQL — источник правды</div>
+        </a>
+        <a href="reference-docker-compose.html">
+          <div class="dir">справочник →</div>
+          <div class="ttl">Docker &amp; Compose построчно</div>
+        </a>
+      </div>
+
+      <footer>
+        <span>dev-vault · концепции · собрано в паре с Claude Code</span>
+        <a href="https://github.com/GrafSoul/claude-artefacts">исходники</a>
+      </footer>
+    </div>
+
+    <script>
+      /* theme */
+      const THEME_KEY = "dev-vault-lesson-theme";
+      const tbtn = document.getElementById("themeBtn");
+      function applyTheme(t) { document.documentElement.setAttribute("data-theme", t); tbtn.textContent = t === "dark" ? "☾" : "☀"; }
+      const savedTheme = localStorage.getItem(THEME_KEY);
+      if (savedTheme) applyTheme(savedTheme);
+      else tbtn.textContent = matchMedia("(prefers-color-scheme: light)").matches ? "☀" : "☾";
+      tbtn.addEventListener("click", () => {
+        const cur = document.documentElement.getAttribute("data-theme") || (matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark");
+        const next = cur === "dark" ? "light" : "dark";
+        localStorage.setItem(THEME_KEY, next); applyTheme(next);
+      });
+
+      /* image vs containers */
+      const conts = document.getElementById("conts");
+      const imgCap = document.getElementById("img-cap");
+      let contList = [];
+      let contSeq = 0;
+
+      function renderConts() {
+        if (contList.length === 0) {
+          conts.innerHTML = `<span class="empty">контейнеров нет — нажми docker run</span>`;
+        } else {
+          conts.innerHTML = contList.map(c =>
+            `<div class="cont"><div class="cid">${c.id}</div><div class="cst ${c.status}">● ${c.status === "running" ? "running" : "stopped"}</div>` +
+            `<div class="cbtns"><button data-act="toggle" data-id="${c.id}">${c.status === "running" ? "stop" : "start"}</button><button data-act="rm" data-id="${c.id}">rm</button></div></div>`
+          ).join("");
+        }
+        const running = contList.filter(c => c.status === "running").length;
+        imgCap.innerHTML = contList.length === 0
+          ? `Образ <b>myapp:latest</b> лежит готовый. Контейнеров пока нет — образ можно хранить и не запускать.`
+          : `Из <b>одного</b> образа запущено <b>${contList.length}</b> контейнер(ов) (${running} running). Образ не изменился — контейнеры независимы, каждый со своим состоянием.`;
+      }
+      document.getElementById("btn-run").addEventListener("click", () => {
+        contSeq += 1;
+        const id = "a" + (0x1b3d + contSeq * 0x2f7).toString(16).slice(0, 4);
+        contList.push({ id, status: "running" });
+        renderConts();
+      });
+      document.getElementById("btn-rmall").addEventListener("click", () => { contList = []; renderConts(); });
+      conts.addEventListener("click", (e) => {
+        const btn = e.target.closest("button"); if (!btn) return;
+        const c = contList.find(x => x.id === btn.dataset.id); if (!c) return;
+        if (btn.dataset.act === "toggle") c.status = c.status === "running" ? "stopped" : "running";
+        else contList = contList.filter(x => x.id !== btn.dataset.id);
+        renderConts();
+      });
+      renderConts();
+
+      /* layers & cache */
+      const LAYERS = [
+        { code: '<span class="kw">FROM</span> node:24-alpine', note: "базовый образ" },
+        { code: '<span class="kw">WORKDIR</span> /app', note: "рабочая папка" },
+        { code: '<span class="kw">COPY</span> package*.json ./', note: "только манифесты" },
+        { code: '<span class="kw">RUN</span> npm ci', note: "установка зависимостей" },
+        { code: '<span class="kw">COPY</span> . .', note: "весь код" },
+        { code: '<span class="kw">RUN</span> npm run build', note: "сборка" }
+      ];
+      const layersEl = document.getElementById("layers-stack");
+      const layCap = document.getElementById("lay-cap");
+
+      function renderLayers(changeAt) {
+        layersEl.innerHTML = LAYERS.map((l, i) => {
+          const state = i < changeAt ? "cached" : "rebuild";
+          const tag = state === "cached" ? "из кэша" : "пересборка";
+          return `<div class="layer ${state}"><span class="lc">${l.code}</span><span class="tag">${tag}</span></div>`;
+        }).join("");
+        const rebuilt = LAYERS.length - Math.min(changeAt, LAYERS.length);
+        if (changeAt >= LAYERS.length) {
+          layCap.innerHTML = `<b>Ничего не менялось</b> — все ${LAYERS.length} слоёв берутся из кэша. Пересборка почти мгновенная.`;
+        } else {
+          layCap.innerHTML = `Изменение на слое ${changeAt + 1} → слои <b>1–${changeAt}</b> из кэша, а <b>${rebuilt}</b> нижних пересобираются. Всё, что <b>выше</b> изменения, кэш сохраняет.`;
+        }
+      }
+      const layBtns = [...document.querySelectorAll('[data-at]')];
+      layBtns.forEach(b => b.addEventListener("click", () => {
+        layBtns.forEach(x => x.classList.remove("on"));
+        b.classList.add("on");
+        renderLayers(parseInt(b.dataset.at, 10));
+      }));
+
+      /* init */
+      renderLayers(99);
+    </script>
+  </body>
+</html>
