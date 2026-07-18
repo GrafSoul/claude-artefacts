@@ -1,0 +1,478 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Redis · быстрая память · dev-vault</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🧱</text></svg>" />
+    <meta
+      name="description"
+      content="Что такое Redis простыми словами: хранилище ключ-значение в оперативной памяти, чем отличается от PostgreSQL, зачем кэш, сессии, очереди и TTL — с интерактивным плейграундом и разбором конфигурации dev-vault."
+    />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --bg: #14100e; --bg-2: #1b1613; --panel: #201a16; --panel-2: #261f1a; --code-bg: #17120f;
+        --line: #382e27; --line-2: #4a3d34; --ink: #f3ece4; --ink-2: #c3b6a8; --ink-3: #8b7d70;
+        --copper: #e0895f; --copper-soft: #d97757; --gold: #e6b86a; --done: #7fa66a;
+        --done-bg: rgba(127, 166, 106, 0.14); --blue: #7fa8c9;
+        --radius: 16px; --serif: "Fraunces", Georgia, serif;
+        --sans: "IBM Plex Sans", -apple-system, BlinkMacSystemFont, sans-serif;
+        --mono: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+      }
+      :root[data-theme="light"] {
+        --bg: #f6f1ea; --bg-2: #efe7db; --panel: #fffdf9; --panel-2: #f1e9dc; --code-bg: #2a2320;
+        --line: #e2d6c6; --line-2: #d2c2ad; --ink: #241c14; --ink-2: #5a4d3f; --ink-3: #8a7a68;
+        --copper: #b8542f; --copper-soft: #c96a3e; --gold: #a9762a; --done: #5c7f45; --done-bg: rgba(92,127,69,0.12); --blue: #3f6b8f;
+      }
+      @media (prefers-color-scheme: light) {
+        :root:not([data-theme="dark"]) {
+          --bg: #f6f1ea; --bg-2: #efe7db; --panel: #fffdf9; --panel-2: #f1e9dc; --code-bg: #2a2320;
+          --line: #e2d6c6; --line-2: #d2c2ad; --ink: #241c14; --ink-2: #5a4d3f; --ink-3: #8a7a68;
+          --copper: #b8542f; --copper-soft: #c96a3e; --gold: #a9762a; --done: #5c7f45; --done-bg: rgba(92,127,69,0.12); --blue: #3f6b8f;
+        }
+      }
+
+      * { box-sizing: border-box; margin: 0; padding: 0; }
+      html { scroll-behavior: smooth; scroll-padding-top: 80px; }
+      body {
+        font-family: var(--sans); background: var(--bg); color: var(--ink); line-height: 1.6;
+        -webkit-font-smoothing: antialiased;
+        background-image: radial-gradient(1100px 550px at 88% -5%, rgba(224,137,95,0.09), transparent 60%);
+        background-attachment: fixed;
+      }
+      ::selection { background: var(--copper); color: #14100e; }
+
+      .topbar { position: sticky; top: 0; z-index: 50; display: flex; align-items: center; gap: 1rem; padding: 0.7rem clamp(1rem,4vw,2.5rem); background: color-mix(in srgb, var(--bg) 82%, transparent); backdrop-filter: blur(14px); border-bottom: 1px solid var(--line); }
+      .brand { font-family: var(--mono); font-size: 0.82rem; color: var(--ink-2); white-space: nowrap; }
+      .brand b { color: var(--copper); font-weight: 500; }
+      .topbar .spacer { flex: 1; }
+      .btn { font-family: var(--mono); font-size: 0.76rem; color: var(--ink-2); background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 0.4rem 0.6rem; cursor: pointer; transition: all 0.15s ease; text-decoration: none; white-space: nowrap; }
+      .btn:hover { color: var(--ink); border-color: var(--line-2); }
+
+      .shell { max-width: 900px; margin: 0 auto; padding: 0 clamp(1rem,4vw,2rem) 6rem; }
+
+      .hero { padding: clamp(2.5rem,7vw,4.5rem) 0 1rem; }
+      .eyebrow { font-family: var(--mono); font-size: 0.78rem; letter-spacing: 0.14em; text-transform: uppercase; color: var(--copper); display: flex; align-items: center; gap: 0.6rem; }
+      .eyebrow::before { content: ""; width: 1.8rem; height: 1px; background: var(--copper); }
+      h1 { font-family: var(--serif); font-weight: 600; font-size: clamp(2.2rem,6vw,3.4rem); line-height: 1.05; letter-spacing: -0.015em; margin: 1rem 0 0.5rem; }
+      h1 em { font-style: italic; color: var(--copper); }
+      .lede { font-size: clamp(1.02rem,2.3vw,1.18rem); color: var(--ink-2); max-width: 64ch; margin-top: 0.8rem; }
+      .lede b { color: var(--ink); font-weight: 500; }
+      .meta { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 1.5rem; font-family: var(--mono); font-size: 0.76rem; }
+      .chip { border: 1px solid var(--line); background: var(--panel); color: var(--ink-2); border-radius: 99px; padding: 0.25rem 0.7rem; }
+
+      h2 { font-family: var(--serif); font-weight: 600; font-size: clamp(1.5rem,4vw,2rem); letter-spacing: -0.01em; margin: 3rem 0 0.5rem; scroll-margin-top: 80px; }
+      h3 { font-family: var(--mono); font-weight: 500; font-size: 0.9rem; color: var(--copper); margin: 1.8rem 0 0.6rem; text-transform: uppercase; letter-spacing: 0.04em; }
+      p.body { color: var(--ink-2); margin: 0.7rem 0; }
+      p.body b { color: var(--ink); font-weight: 500; }
+      p.body code, .inline { font-family: var(--mono); font-size: 0.88em; background: var(--panel-2); border: 1px solid var(--line); border-radius: 5px; padding: 0.05rem 0.35rem; color: var(--copper); }
+
+      .cards { display: grid; grid-template-columns: 1fr 1fr; gap: 0.9rem; margin: 1.2rem 0; }
+      @media (max-width: 640px) { .cards { grid-template-columns: 1fr; } }
+      .cards.three { grid-template-columns: repeat(3, 1fr); }
+      @media (max-width: 720px) { .cards.three { grid-template-columns: 1fr; } }
+      .card { border: 1px solid var(--line); border-radius: 12px; background: var(--panel); padding: 1rem 1.1rem; }
+      .card .h { font-family: var(--mono); font-size: 0.78rem; color: var(--copper); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.4rem; display: flex; align-items: center; gap: 0.4rem; }
+      .card .big { font-family: var(--serif); font-size: 1.15rem; color: var(--ink); margin-bottom: 0.4rem; }
+      .card p { font-size: 0.9rem; color: var(--ink-2); }
+      .card p b { color: var(--ink); font-weight: 500; }
+
+      /* comparison table */
+      .cmp { width: 100%; border-collapse: collapse; margin: 1rem 0; font-size: 0.9rem; border: 1px solid var(--line); border-radius: 12px; overflow: hidden; }
+      .cmp th, .cmp td { text-align: left; padding: 0.6rem 0.85rem; border-top: 1px solid var(--line); vertical-align: top; }
+      .cmp thead th { background: color-mix(in srgb, var(--panel) 60%, black); font-family: var(--mono); font-size: 0.78rem; color: var(--ink-2); border-top: none; }
+      .cmp thead th:first-child { color: var(--ink-3); }
+      .cmp thead th.rds { color: var(--copper); }
+      .cmp thead th.pg { color: var(--blue); }
+      .cmp td:first-child { font-family: var(--mono); font-size: 0.78rem; color: var(--ink-3); white-space: nowrap; }
+      .cmp td { color: var(--ink-2); }
+      .cmp td b { color: var(--ink); font-weight: 500; }
+      .cmp tr td { background: var(--panel); }
+      .cmp-wrap { overflow-x: auto; }
+
+      /* redis playground */
+      .play { border: 1px solid var(--line); border-radius: var(--radius); background: linear-gradient(180deg, color-mix(in srgb, var(--panel) 70%, transparent), var(--panel)); padding: 0.9rem; margin: 1.1rem 0; }
+      .playbtns { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-bottom: 0.8rem; }
+      .playbtns button { font-family: var(--mono); font-size: 0.78rem; color: var(--ink); background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 0.4rem 0.7rem; cursor: pointer; transition: all 0.15s ease; }
+      .playbtns button:hover { border-color: var(--copper); color: var(--copper); }
+      .playbtns button.flush { margin-left: auto; color: var(--ink-3); }
+      .playgrid { display: grid; grid-template-columns: 1fr 0.85fr; gap: 0.8rem; }
+      @media (max-width: 640px) { .playgrid { grid-template-columns: 1fr; } }
+      .store { border: 1px dashed var(--line-2); border-radius: 10px; padding: 0.7rem; min-height: 160px; display: flex; flex-direction: column; gap: 0.5rem; }
+      .store .stitle { font-family: var(--mono); font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--ink-3); }
+      .store .empty { color: var(--ink-3); font-size: 0.85rem; margin: auto; }
+      .keycard { border: 1px solid var(--line); border-radius: 9px; background: var(--code-bg); padding: 0.5rem 0.65rem; animation: pop 0.2s ease; }
+      :root[data-theme="light"] .keycard, :root:not([data-theme="dark"]) .keycard { background: #221c19; }
+      @keyframes pop { from { transform: scale(0.94); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+      .keycard .kname { font-family: var(--mono); font-size: 0.82rem; color: var(--gold); }
+      .keycard .kval { font-family: var(--mono); font-size: 0.74rem; color: var(--ink-2); overflow-wrap: anywhere; }
+      .keycard .ttlrow { display: flex; align-items: center; gap: 0.5rem; margin-top: 0.35rem; }
+      .keycard .ttlnum { font-family: var(--mono); font-size: 0.68rem; color: var(--copper); white-space: nowrap; }
+      .keycard .ttlnum.persist { color: var(--done); }
+      .ttlbar { flex: 1; height: 4px; border-radius: 3px; background: var(--line); overflow: hidden; }
+      .ttlbar > i { display: block; height: 100%; background: var(--copper); transition: width 1s linear; }
+      .log { border: 1px solid var(--line); border-radius: 10px; background: var(--code-bg); padding: 0.6rem 0.7rem; font-family: var(--mono); font-size: 0.74rem; line-height: 1.7; overflow-y: auto; max-height: 200px; }
+      :root[data-theme="light"] .log, :root:not([data-theme="dark"]) .log { background: #221c19; }
+      .log .l { color: var(--ink-2); }
+      .log .l .hit { color: var(--done); }
+      .log .l .miss { color: var(--copper); }
+      .log .l .exp { color: var(--gold); }
+      .log .l .dim { color: var(--ink-3); }
+
+      /* annotated code */
+      .ann { border: 1px solid var(--line); border-radius: 12px; overflow: hidden; margin: 0.9rem 0; background: var(--panel); }
+      .ann-file { font-family: var(--mono); font-size: 0.76rem; color: var(--ink-2); padding: 0.5rem 0.9rem; background: color-mix(in srgb, var(--panel) 60%, black); border-bottom: 1px solid var(--line); }
+      .ann-file b { color: var(--copper); font-weight: 500; }
+      .ann-row { display: grid; grid-template-columns: minmax(0, 0.95fr) minmax(0, 1.05fr); border-top: 1px solid var(--line); }
+      .ann-row:first-of-type { border-top: none; }
+      .ann-code { font-family: var(--mono); font-size: 0.8rem; line-height: 1.55; color: var(--ink); background: var(--code-bg); padding: 0.7rem 0.9rem; white-space: pre-wrap; overflow-wrap: anywhere; }
+      :root[data-theme="light"] .ann-code, :root:not([data-theme="dark"]) .ann-code { color: #f3ece4; }
+      .ann-exp { padding: 0.7rem 0.9rem; font-size: 0.87rem; color: var(--ink-2); border-left: 1px solid var(--line); }
+      .ann-exp k { font-family: var(--mono); font-size: 0.9em; color: var(--copper); font-style: normal; }
+      .ann-exp b { color: var(--ink); font-weight: 500; }
+      .ann-row.head .ann-code, .ann-row.head .ann-exp { background: color-mix(in srgb, var(--copper) 8%, var(--panel)); }
+      .ann-row.head .ann-exp { color: var(--ink); font-weight: 500; }
+      @media (max-width: 640px) {
+        .ann-row { grid-template-columns: 1fr; }
+        .ann-code { border-bottom: 1px solid var(--line); }
+        .ann-exp { border-left: none; }
+      }
+
+      .note { border-left: 3px solid var(--copper); background: color-mix(in srgb, var(--copper) 8%, var(--panel)); border-radius: 0 10px 10px 0; padding: 0.9rem 1.1rem; margin: 1.4rem 0; }
+      .note .t { font-family: var(--mono); font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--copper); margin-bottom: 0.3rem; }
+      .note p { font-size: 0.9rem; color: var(--ink-2); }
+      .note p b { color: var(--ink); }
+      .note p code { font-family: var(--mono); font-size: 0.86em; background: var(--panel-2); border: 1px solid var(--line); border-radius: 5px; padding: 0.05rem 0.35rem; color: var(--copper); }
+      .note.blue { border-left-color: var(--blue); background: color-mix(in srgb, var(--blue) 9%, var(--panel)); }
+      .note.blue .t { color: var(--blue); }
+
+      .toc { display: flex; flex-wrap: wrap; gap: 0.5rem; margin: 1.5rem 0 0.5rem; }
+      .toc a { font-family: var(--mono); font-size: 0.76rem; color: var(--ink-2); text-decoration: none; border: 1px solid var(--line); border-radius: 8px; padding: 0.35rem 0.7rem; transition: all 0.15s ease; }
+      .toc a:hover { color: var(--copper); border-color: var(--copper); }
+
+      .faq { border: 1px solid var(--line); border-radius: 12px; background: var(--panel); margin: 0.7rem 0; overflow: hidden; }
+      .faq summary { cursor: pointer; padding: 0.85rem 1rem; font-weight: 500; color: var(--ink); list-style: none; display: flex; align-items: center; gap: 0.6rem; font-size: 0.95rem; }
+      .faq summary::-webkit-details-marker { display: none; }
+      .faq summary::before { content: "＋"; font-family: var(--mono); color: var(--copper); font-size: 1rem; }
+      .faq[open] summary::before { content: "－"; }
+      .faq summary:hover { color: var(--copper); }
+      .faq .a { padding: 0 1rem 0.95rem 2.2rem; color: var(--ink-2); font-size: 0.9rem; }
+      .faq .a code { font-family: var(--mono); font-size: 0.86em; background: var(--panel-2); border: 1px solid var(--line); border-radius: 5px; padding: 0.05rem 0.35rem; color: var(--copper); }
+      .faq .a b { color: var(--ink); font-weight: 500; }
+
+      .lnav { display: flex; flex-wrap: wrap; gap: 0.8rem; justify-content: space-between; margin-top: 3.5rem; }
+      .lnav a { flex: 1; min-width: 220px; border: 1px solid var(--line); border-radius: 12px; padding: 1rem 1.2rem; text-decoration: none; background: var(--panel); transition: all 0.15s ease; }
+      .lnav a:hover { border-color: var(--copper); transform: translateY(-2px); }
+      .lnav .dir { font-family: var(--mono); font-size: 0.72rem; color: var(--ink-3); }
+      .lnav .ttl { color: var(--ink); font-weight: 500; margin-top: 0.2rem; }
+
+      footer { margin-top: 3rem; padding-top: 1.5rem; border-top: 1px solid var(--line); font-family: var(--mono); font-size: 0.78rem; color: var(--ink-3); display: flex; flex-wrap: wrap; gap: 0.5rem 1rem; justify-content: space-between; }
+      footer a { color: var(--copper); text-decoration: none; }
+      @media (prefers-reduced-motion: reduce) { *, .ttlbar > i { transition: none !important; scroll-behavior: auto !important; animation: none !important; } }
+    </style>
+  </head>
+  <body>
+    <div class="topbar">
+      <span class="brand"><b>◆</b> dev-vault · концепции</span>
+      <span class="spacer"></span>
+      <a class="btn" href="nginx-reverse-proxy.html">← nginx</a>
+      <a class="btn" href="system-map.html">карта</a>
+      <button class="btn" id="themeBtn" title="Сменить тему">☾</button>
+    </div>
+
+    <div class="shell">
+      <header class="hero">
+        <span class="eyebrow">данные · быстрая память</span>
+        <h1>Redis — <em>быстрая память</em> системы</h1>
+        <p class="lede">
+          PostgreSQL — надёжный склад, где данные лежат долго. <b>Redis</b> — блокнот под рукой:
+          хранит <b>в оперативной памяти</b>, отвечает за микросекунды, но по своей природе временный.
+          Его берут для кэша, сессий, счётчиков и очередей. Ниже — как он устроен, поиграй с ключами
+          и посмотри, как они <b>протухают</b> по таймеру.
+        </p>
+        <div class="meta">
+          <span class="chip">ключ-значение</span>
+          <span class="chip">в памяти (RAM)</span>
+          <span class="chip">TTL</span>
+          <span class="chip">кэш · сессии · очереди</span>
+        </div>
+        <div class="toc">
+          <a href="#what">Что это</a>
+          <a href="#play">Плейграунд TTL</a>
+          <a href="#vs">Redis vs PostgreSQL</a>
+          <a href="#why">Зачем в вебе</a>
+          <a href="#project">В dev-vault</a>
+          <a href="#persist">А данные не пропадут?</a>
+          <a href="#faq">Частые вопросы</a>
+        </div>
+      </header>
+
+      <h2 id="what">Что это простыми словами</h2>
+      <p class="body">
+        Redis хранит данные как <b>ключ → значение</b>: по имени ключа мгновенно достаёшь то, что под
+        ним лежит. Как большой <code>Map</code> в коде, только общий для всех процессов и живущий
+        отдельным сервисом. Главная суперсила и главное ограничение — одно и то же: он держит всё
+        <b>в оперативной памяти</b>.
+      </p>
+      <div class="cards">
+        <div class="card">
+          <div class="h">⚡ почему быстрый</div>
+          <div class="big">данные в RAM</div>
+          <p>Не нужно идти на диск — ответ приходит за <b>микросекунды</b>. Идеально для того, что читается очень часто.</p>
+        </div>
+        <div class="card">
+          <div class="h">⏳ почему временный</div>
+          <div class="big">память не резиновая</div>
+          <p>RAM меньше и дороже диска. Поэтому в Redis кладут то, что <b>не жалко потерять</b> или что легко пересоздать — часто с <b>TTL</b> (сроком жизни).</p>
+        </div>
+      </div>
+
+      <h2 id="play">Плейграунд: ключи и TTL</h2>
+      <p class="body">
+        Нажимай команды и смотри на хранилище. Ключ с <b>TTL</b> (<code>EX</code> — expire) сам
+        исчезнет, когда таймер дойдёт до нуля. <code>GET</code> покажет <b>HIT</b> (ключ есть) или
+        <b>MISS</b> (нет или уже протух). Это и есть повседневная работа с Redis.
+      </p>
+      <div class="play">
+        <div class="playbtns">
+          <button data-cmd="set-session">SET session:42 · EX 15</button>
+          <button data-cmd="set-cache">SET cache:user:7 · EX 8</button>
+          <button data-cmd="set-config">SET config · persist</button>
+          <button data-cmd="get-session">GET session:42</button>
+          <button data-cmd="flush" class="flush">FLUSHALL</button>
+        </div>
+        <div class="playgrid">
+          <div class="store" id="store"></div>
+          <div class="log" id="log"></div>
+        </div>
+      </div>
+      <p class="body" style="font-size:0.88rem;color:var(--ink-3)">
+        <b style="color:var(--ink-2)">Замечаешь?</b> <code>cache:user:7</code> протухает первым (TTL 8),
+        <code>session:42</code> — следом (TTL 15), а <code>config</code> без TTL живёт, пока его не
+        удалят. GET по протухшему ключу — MISS: приложение поймёт, что нужно сходить в базу и
+        пересоздать кэш.
+      </p>
+
+      <h2 id="vs">Redis vs PostgreSQL — не соперники, а пара</h2>
+      <p class="body">
+        Их часто ставят вместе именно потому, что они про <b>разное</b>. Postgres — источник правды,
+        Redis — быстрый слой перед ним.
+      </p>
+      <div class="cmp-wrap">
+        <table class="cmp">
+          <thead>
+            <tr><th>аспект</th><th class="rds">🧱 Redis</th><th class="pg">🐘 PostgreSQL</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>где хранит</td><td><b>В оперативной памяти</b></td><td><b>На диске</b></td></tr>
+            <tr><td>модель</td><td>Ключ → значение (+ списки, множества, счётчики)</td><td>Таблицы, строки, связи (SQL)</td></tr>
+            <tr><td>скорость</td><td>Микросекунды</td><td>Миллисекунды</td></tr>
+            <tr><td>запросы</td><td>По ключу, простые операции</td><td>Сложные: <code>JOIN</code>, фильтры, агрегации</td></tr>
+            <tr><td>надёжность</td><td>Может потерять при сбое (по настройке)</td><td><b>Источник правды</b>, данные надёжны</td></tr>
+            <tr><td>объём</td><td>Ограничен размером RAM</td><td>Большой, ограничен диском</td></tr>
+            <tr><td>роль</td><td>Кэш, сессии, счётчики, очереди</td><td>Пользователи, записи — всё главное</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="note blue">
+        <div class="t">правило большого пальца</div>
+        <p>Если данные <b>нельзя потерять</b> — это PostgreSQL. Если это <b>ускорение или временное состояние</b>, что можно пересоздать — это Redis.</p>
+      </div>
+
+      <h2 id="why">Зачем Redis в веб-приложении</h2>
+      <div class="cards three">
+        <div class="card">
+          <div class="h">🚀 кэш</div>
+          <p>Тяжёлый запрос посчитали один раз — результат положили в Redis на N секунд. Следующие запросы берут готовое, не мучая базу.</p>
+        </div>
+        <div class="card">
+          <div class="h">🔑 сессии</div>
+          <p>«Кто сейчас залогинен» читается на <b>каждом</b> запросе — держать это в памяти быстрее, чем в базе. Ключ — по токену сессии.</p>
+        </div>
+        <div class="card">
+          <div class="h">⏱ rate-limit</div>
+          <p>Счётчик запросов на IP с TTL: «не больше 100 в минуту». Redis умеет атомарно increment и сам сбрасывает счётчик по истечении.</p>
+        </div>
+        <div class="card">
+          <div class="h">📮 очереди</div>
+          <p>Фоновые задачи (отправка письма, обработка файла) складывают в очередь на Redis — воркеры разбирают их отдельно. Так делает BullMQ.</p>
+        </div>
+        <div class="card">
+          <div class="h">📢 pub/sub</div>
+          <p>Один процесс публикует событие, другие — подписаны и получают его. Простой способ связать несколько инстансов приложения.</p>
+        </div>
+        <div class="card">
+          <div class="h">🔒 блокировки</div>
+          <p>Распределённый замок: «эту задачу уже кто-то делает». Гарантирует, что операция не выполнится дважды параллельно.</p>
+        </div>
+      </div>
+
+      <h2 id="project">Redis в dev-vault прямо сейчас</h2>
+      <p class="body">
+        Честно, без прикрас: контейнер Redis <b>уже поднят и подключён к сети</b>, а адрес прописан в
+        <code>.env</code>. Использование <b>в коде</b> сервера (кэш, сессии, очереди) — следующий шаг
+        по <a href="backend-roadmap.html" style="color:var(--copper)">плану</a>. Инфраструктура готова
+        и ждёт.
+      </p>
+      <div class="ann">
+        <div class="ann-file"><b>dev-vault-server/docker-compose.yml</b> · сервис redis</div>
+        <div class="ann-row head"><div class="ann-code">  redis:
+    image: redis:8-alpine</div><div class="ann-exp"><b>Готовый образ</b> Redis 8 (alpine — минимальный). Ничего не собираем, просто тянем из Docker Hub.</div></div>
+        <div class="ann-row"><div class="ann-code">    ports:
+      - "6379:6379"</div><div class="ann-exp">Стандартный порт Redis. Локально проброшен на хост — удобно заглянуть через GUI. <b>В проде порт не открывают</b> — Redis остаётся в приватной сети.</div></div>
+        <div class="ann-row"><div class="ann-code">    volumes:
+      - redisdata:/data</div><div class="ann-exp">Именованный том. Redis умеет сбрасывать снимок памяти на диск в <k>/data</k> — том нужен, чтобы этот снимок пережил перезапуск контейнера.</div></div>
+      </div>
+      <div class="ann">
+        <div class="ann-file"><b>dev-vault-server/.env</b> · адрес для приложения</div>
+        <div class="ann-row"><div class="ann-code">REDIS_URL=redis://redis:6379</div><div class="ann-exp"><k>redis://</k> — схема (протокол Redis). Второе <k>redis</k> — <b>имя сервиса</b> из compose (хост в приватной сети, не <k>localhost</k>). <k>6379</k> — порт. По этому адресу приложение подключится, когда мы добавим клиент в код.</div></div>
+      </div>
+
+      <h2 id="persist">«В памяти» — значит данные пропадут?</h2>
+      <p class="body">
+        Резонный страх. Ответ: Redis умеет <b>сохранять на диск</b>, но это его <b>подстраховка</b>, а
+        не главное назначение.
+      </p>
+      <div class="cards">
+        <div class="card">
+          <div class="h">RDB · снимок</div>
+          <p>Периодически сбрасывает <b>снимок</b> всей памяти в файл. Быстро, но между снимками часть данных можно потерять при сбое.</p>
+        </div>
+        <div class="card">
+          <div class="h">AOF · журнал</div>
+          <p>Пишет <b>каждую операцию</b> в журнал. Надёжнее, восстановление точнее, но чуть медленнее и файл больше.</p>
+        </div>
+      </div>
+      <p class="body">
+        Том <code>redisdata:/data</code> как раз хранит эти файлы. Но философия остаётся: в Redis не
+        кладут то, что <b>обязано</b> жить вечно — для этого есть PostgreSQL. Redis переживёт
+        перезапуск, но <b>источником правды</b> его не делают.
+      </p>
+
+      <h2 id="faq">Частые вопросы</h2>
+      <details class="faq">
+        <summary>Redis заменяет базу данных?</summary>
+        <div class="a">Нет. Он <b>дополняет</b> её. Главные данные — в PostgreSQL, а Redis ускоряет доступ к тому, что читается часто, и хранит временное состояние (сессии, счётчики). Убери Redis — приложение станет медленнее, но данные не потеряются. Убери Postgres — потеряешь всё.</div>
+      </details>
+      <details class="faq">
+        <summary>Почему бы не хранить вообще всё в Redis, раз он быстрый?</summary>
+        <div class="a">Три причины: <b>память дорогая и ограниченная</b> (весь набор данных в RAM не влезет и будет дорого); <b>нет сложных запросов</b> (JOIN, фильтры, аналитика — это к SQL); <b>меньше гарантий надёжности</b>. Redis блистает на узкой задаче «быстро отдать по ключу», а не как универсальное хранилище.</div>
+      </details>
+      <details class="faq">
+        <summary>Что такое TTL и EX?</summary>
+        <div class="a"><b>TTL</b> (time to live) — сколько ключу осталось жить. <code>EX 15</code> при записи значит «удали через 15 секунд». Это идеально для кэша и сессий: данные сами убираются, не надо чистить вручную. В плейграунде выше это и видно — полоска у ключа убывает до нуля.</div>
+      </details>
+      <details class="faq">
+        <summary>Почему в адресе <code>redis://redis:6379</code> слово redis дважды?</summary>
+        <div class="a">Первое — <b>схема</b> (протокол), как <code>https://</code> у сайтов. Второе — <b>имя хоста</b>, а хост тут — это имя сервиса <code>redis</code> из docker-compose. Внутри сети Docker сервисы находят друг друга по имени, поэтому не <code>localhost</code>, а <code>redis</code>. <code>6379</code> — порт.</div>
+      </details>
+      <details class="faq">
+        <summary>Redis виден из интернета?</summary>
+        <div class="a">В проде — нет. Там у сервиса нет секции <code>ports</code>, он живёт в приватной сети Docker, и достучаться до него может только backend по имени <code>redis</code>. Открытый наружу Redis без пароля — классическая дыра, поэтому его прячут. Локально порт проброшен только для удобства разработки.</div>
+      </details>
+
+      <div class="note">
+        <div class="t">итог одной строкой</div>
+        <p><b>PostgreSQL — память надолго, Redis — память под рукой.</b> Первый хранит правду, второй ускоряет к ней доступ и держит временное. Вместе — быстрый и надёжный бэкенд.</p>
+      </div>
+
+      <div class="lnav">
+        <a href="nginx-reverse-proxy.html">
+          <div class="dir">← nginx</div>
+          <div class="ttl">Nginx — привратник системы</div>
+        </a>
+        <a href="system-map.html">
+          <div class="dir">карта →</div>
+          <div class="ttl">Карта системы</div>
+        </a>
+      </div>
+
+      <footer>
+        <span>dev-vault · концепции · собрано в паре с Claude Code</span>
+        <a href="https://github.com/GrafSoul/claude-artefacts">исходники</a>
+      </footer>
+    </div>
+
+    <script>
+      /* theme */
+      const THEME_KEY = "dev-vault-lesson-theme";
+      const tbtn = document.getElementById("themeBtn");
+      function applyTheme(t) { document.documentElement.setAttribute("data-theme", t); tbtn.textContent = t === "dark" ? "☾" : "☀"; }
+      const savedTheme = localStorage.getItem(THEME_KEY);
+      if (savedTheme) applyTheme(savedTheme);
+      else tbtn.textContent = matchMedia("(prefers-color-scheme: light)").matches ? "☀" : "☾";
+      tbtn.addEventListener("click", () => {
+        const cur = document.documentElement.getAttribute("data-theme") || (matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark");
+        const next = cur === "dark" ? "light" : "dark";
+        localStorage.setItem(THEME_KEY, next); applyTheme(next);
+      });
+
+      /* redis playground */
+      const store = document.getElementById("store");
+      const logEl = document.getElementById("log");
+      const keys = new Map(); // name -> { val, ttl (null=persist), max }
+      const logs = [];
+
+      function log(html) {
+        logs.unshift(html);
+        if (logs.length > 8) logs.pop();
+        logEl.innerHTML = logs.map(l => `<div class="l">${l}</div>`).join("");
+      }
+
+      function render() {
+        if (keys.size === 0) {
+          store.innerHTML = `<div class="stitle">хранилище</div><div class="empty">пусто — нажми SET</div>`;
+          return;
+        }
+        let html = `<div class="stitle">хранилище · ${keys.size} ключ(а)</div>`;
+        keys.forEach((v, name) => {
+          const ttlrow = v.ttl === null
+            ? `<span class="ttlnum persist">∞ без TTL</span>`
+            : `<span class="ttlnum">TTL ${v.ttl}s</span><span class="ttlbar"><i style="width:${Math.max(0, (v.ttl / v.max) * 100)}%"></i></span>`;
+          html += `<div class="keycard"><div class="kname">${name}</div><div class="kval">${v.val}</div><div class="ttlrow">${ttlrow}</div></div>`;
+        });
+        store.innerHTML = html;
+      }
+
+      // tick every second: decrement TTLs, expire at 0
+      setInterval(() => {
+        let changed = false;
+        keys.forEach((v, name) => {
+          if (v.ttl === null) return;
+          v.ttl -= 1;
+          changed = true;
+          if (v.ttl <= 0) {
+            keys.delete(name);
+            log(`<span class="exp">⏱ ${name}</span> <span class="dim">протух — TTL истёк, удалён</span>`);
+          }
+        });
+        if (changed) render();
+      }, 1000);
+
+      const CMDS = {
+        "set-session": () => { keys.set("session:42", { val: '{ userId: 42, role: "user" }', ttl: 15, max: 15 }); log(`<span class="dim">SET</span> session:42 <span class="hit">→ OK</span> <span class="dim">(EX 15)</span>`); },
+        "set-cache":   () => { keys.set("cache:user:7", { val: '{ name: "Дмитрий" }', ttl: 8, max: 8 }); log(`<span class="dim">SET</span> cache:user:7 <span class="hit">→ OK</span> <span class="dim">(EX 8)</span>`); },
+        "set-config":  () => { keys.set("config", { val: '{ theme: "dark" }', ttl: null, max: null }); log(`<span class="dim">SET</span> config <span class="hit">→ OK</span> <span class="dim">(без TTL)</span>`); },
+        "get-session": () => {
+          if (keys.has("session:42")) log(`<span class="dim">GET</span> session:42 <span class="hit">→ HIT</span> <span class="dim">${keys.get("session:42").val}</span>`);
+          else log(`<span class="dim">GET</span> session:42 <span class="miss">→ (nil) MISS</span> <span class="dim">— нет или протух</span>`);
+        },
+        "flush": () => { keys.clear(); log(`<span class="dim">FLUSHALL →</span> <span class="miss">очищено</span>`); }
+      };
+
+      document.querySelectorAll(".playbtns button").forEach(b => {
+        b.addEventListener("click", () => { CMDS[b.dataset.cmd](); render(); });
+      });
+
+      /* init */
+      render();
+      log(`<span class="dim">// нажимай команды слева</span>`);
+    </script>
+  </body>
+</html>
