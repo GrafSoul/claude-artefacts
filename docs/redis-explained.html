@@ -3,11 +3,11 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Redis · быстрая память · dev-vault</title>
+    <title>Redis · быстрая память · netroom</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🧱</text></svg>" />
     <meta
       name="description"
-      content="Что такое Redis простыми словами: хранилище ключ-значение в оперативной памяти, чем отличается от PostgreSQL, зачем кэш, сессии, очереди и TTL — с интерактивным плейграундом и разбором конфигурации dev-vault."
+      content="Что такое Redis простыми словами: хранилище ключ-значение в оперативной памяти, чем отличается от PostgreSQL, зачем кэш, сессии, очереди и TTL — с интерактивным плейграундом и разбором конфигурации netroom."
     />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -192,7 +192,7 @@
   </head>
   <body>
     <div class="topbar">
-      <a class="brand" href="index.html"><b>◆</b> dev-vault</a>
+      <a class="brand" href="index.html"><b>◆</b> netroom</a>
       <div class="navdd">
         <button class="btn nav-toggle" aria-expanded="false" aria-haspopup="true">☰ материалы</button>
         <div class="nav-menu" role="menu">
@@ -237,7 +237,7 @@
           <a href="#play">Плейграунд TTL</a>
           <a href="#vs">Redis vs PostgreSQL</a>
           <a href="#why">Зачем в вебе</a>
-          <a href="#project">В dev-vault</a>
+          <a href="#project">В netroom</a>
           <a href="#persist">А данные не пропадут?</a>
           <a href="#faq">Частые вопросы</a>
         </div>
@@ -343,7 +343,7 @@
         </div>
       </div>
 
-      <h2 id="project">Redis в dev-vault прямо сейчас</h2>
+      <h2 id="project">Redis в netroom прямо сейчас</h2>
       <p class="body">
         Честно, без прикрас: контейнер Redis <b>уже поднят и подключён к сети</b>, а адрес прописан в
         <code>.env</code>. Использование <b>в коде</b> сервера (кэш, сессии, очереди) — следующий шаг
@@ -351,7 +351,7 @@
         и ждёт.
       </p>
       <div class="ann">
-        <div class="ann-file"><b>dev-vault-server/docker-compose.yml</b> · сервис redis</div>
+        <div class="ann-file"><b>netroom-server/docker-compose.yml</b> · сервис redis</div>
         <div class="ann-row head"><div class="ann-code">  redis:
     image: redis:8-alpine</div><div class="ann-exp"><b>Готовый образ</b> Redis 8 (alpine — минимальный). Ничего не собираем, просто тянем из Docker Hub.</div></div>
         <div class="ann-row"><div class="ann-code">    ports:
@@ -360,7 +360,7 @@
       - redisdata:/data</div><div class="ann-exp">Именованный том. Redis умеет сбрасывать снимок памяти на диск в <k>/data</k> — том нужен, чтобы этот снимок пережил перезапуск контейнера.</div></div>
       </div>
       <div class="ann">
-        <div class="ann-file"><b>dev-vault-server/.env</b> · адрес для приложения</div>
+        <div class="ann-file"><b>netroom-server/.env</b> · адрес для приложения</div>
         <div class="ann-row"><div class="ann-code">REDIS_URL=redis://redis:6379</div><div class="ann-exp"><k>redis://</k> — схема (протокол Redis). Второе <k>redis</k> — <b>имя сервиса</b> из compose (хост в приватной сети, не <k>localhost</k>). <k>6379</k> — порт. По этому адресу приложение подключится, когда мы добавим клиент в код.</div></div>
       </div>
 
@@ -424,14 +424,14 @@
       </div>
 
       <footer>
-        <span>dev-vault · концепции · собрано в паре с Claude Code</span>
+        <span>netroom · концепции · собрано в паре с Claude Code</span>
         <a href="https://github.com/GrafSoul/claude-artefacts">исходники</a>
       </footer>
     </div>
 
     <script>
       /* theme */
-      const THEME_KEY = "dev-vault-lesson-theme";
+      const THEME_KEY = "netroom-lesson-theme";
       const tbtn = document.getElementById("themeBtn");
       function applyTheme(t) { document.documentElement.setAttribute("data-theme", t); tbtn.textContent = t === "dark" ? "☾" : "☀"; }
       const savedTheme = localStorage.getItem(THEME_KEY);

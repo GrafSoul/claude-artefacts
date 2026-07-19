@@ -3,11 +3,11 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>PostgreSQL · источник правды · dev-vault</title>
+    <title>PostgreSQL · источник правды · netroom</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🐘</text></svg>" />
     <meta
       name="description"
-      content="Что такое PostgreSQL и реляционная база простыми словами: таблицы, строки, связи, внешние ключи, SQL, миграции, ACID — с интерактивным SQL-плейграундом и разбором конфигурации dev-vault."
+      content="Что такое PostgreSQL и реляционная база простыми словами: таблицы, строки, связи, внешние ключи, SQL, миграции, ACID — с интерактивным SQL-плейграундом и разбором конфигурации netroom."
     />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -175,7 +175,7 @@
   </head>
   <body>
     <div class="topbar">
-      <a class="brand" href="index.html"><b>◆</b> dev-vault</a>
+      <a class="brand" href="index.html"><b>◆</b> netroom</a>
       <div class="navdd">
         <button class="btn nav-toggle" aria-expanded="false" aria-haspopup="true">☰ материалы</button>
         <div class="nav-menu" role="menu">
@@ -220,7 +220,7 @@
           <a href="#play">SQL-плейграунд</a>
           <a href="#relations">Связи таблиц</a>
           <a href="#migrations">Миграции</a>
-          <a href="#project">В dev-vault</a>
+          <a href="#project">В netroom</a>
           <a href="#acid">Надёжность (ACID)</a>
           <a href="#faq">Частые вопросы</a>
         </div>
@@ -277,7 +277,7 @@
               <thead><tr><th>id</th><th>user_id</th><th>title</th></tr></thead>
               <tbody>
                 <tr data-nid="101" data-uid="1"><td>101</td><td class="fk">1</td><td>Пароли от бэткомпьютера</td></tr>
-                <tr data-nid="102" data-uid="2"><td>102</td><td class="fk">2</td><td>Идеи для dev-vault</td></tr>
+                <tr data-nid="102" data-uid="2"><td>102</td><td class="fk">2</td><td>Идеи для netroom</td></tr>
                 <tr data-nid="103" data-uid="2"><td>103</td><td class="fk">2</td><td>Купить кофе</td></tr>
                 <tr data-nid="104" data-uid="3"><td>104</td><td class="fk">3</td><td>Статья про Redis</td></tr>
               </tbody>
@@ -331,19 +331,19 @@
         <p>
           Обычно миграции пишет <b>ORM</b> — библиотека-посредник между кодом и базой (Prisma,
           TypeORM, Drizzle). Ты описываешь модель в коде, ORM генерирует SQL-миграцию и умеет
-          «накатить» её командой. В dev-vault ORM <b>ещё не выбран</b> — это ближайший шаг по
+          «накатить» её командой. В netroom ORM <b>ещё не выбран</b> — это ближайший шаг по
           <a href="backend-roadmap.html" style="color:var(--copper)">плану</a>.
         </p>
       </div>
 
-      <h2 id="project">PostgreSQL в dev-vault прямо сейчас</h2>
+      <h2 id="project">PostgreSQL в netroom прямо сейчас</h2>
       <p class="body">
         Как и с Redis — честно: контейнер базы <b>поднят</b>, адрес прописан в <code>.env</code>, том
         для данных подключён. <b>Таблиц, схемы и ORM в коде пока нет</b> — они появятся, когда дойдём
         до моделей. Инфраструктура готова.
       </p>
       <div class="ann">
-        <div class="ann-file"><b>dev-vault-server/docker-compose.yml</b> · сервис postgres</div>
+        <div class="ann-file"><b>netroom-server/docker-compose.yml</b> · сервис postgres</div>
         <div class="ann-row head"><div class="ann-code">  postgres:
     image: postgres:18-alpine</div><div class="ann-exp"><b>Готовый образ</b> PostgreSQL 18. При первом старте сам создаёт пользователя, пароль и базу из переменных окружения.</div></div>
         <div class="ann-row"><div class="ann-code">    ports:
@@ -351,12 +351,12 @@
         <div class="ann-row"><div class="ann-code">    volumes:
       - pgdata:/var/lib/postgresql</div><div class="ann-exp"><b>Том с данными.</b> Сюда Postgres пишет всё содержимое базы — том нужен, чтобы данные пережили пересоздание контейнера. В Postgres 18 путь — <k>/var/lib/postgresql</k> (в 17 был с <k>/data</k>).</div></div>
         <div class="ann-row"><div class="ann-code">    healthcheck:
-      test: pg_isready -U devvault</div><div class="ann-exp"><k>pg_isready</k> спрашивает базу: «готова принимать соединения?». Backend ждёт этого <b>healthy</b>-статуса, прежде чем стартовать — иначе упадёт на первом же запросе.</div></div>
+      test: pg_isready -U netroom</div><div class="ann-exp"><k>pg_isready</k> спрашивает базу: «готова принимать соединения?». Backend ждёт этого <b>healthy</b>-статуса, прежде чем стартовать — иначе упадёт на первом же запросе.</div></div>
       </div>
       <div class="ann">
-        <div class="ann-file"><b>dev-vault-server/.env</b> · строка подключения</div>
+        <div class="ann-file"><b>netroom-server/.env</b> · строка подключения</div>
         <div class="ann-row"><div class="ann-code">DATABASE_URL=
-  postgres://devvault:devvault@postgres:5432/devvault</div><div class="ann-exp">Всё подключение в одной строке: <k>postgres://</k> — протокол; <k>devvault:devvault</k> — пользователь и пароль; <k>postgres</k> — хост (имя сервиса в сети, не <k>localhost</k>); <k>5432</k> — порт; последний <k>devvault</k> — имя базы. В проде пароль подставляется из секрета.</div></div>
+  postgres://netroom:netroom@postgres:5432/netroom</div><div class="ann-exp">Всё подключение в одной строке: <k>postgres://</k> — протокол; <k>netroom:netroom</k> — пользователь и пароль; <k>postgres</k> — хост (имя сервиса в сети, не <k>localhost</k>); <k>5432</k> — порт; последний <k>netroom</k> — имя базы. В проде пароль подставляется из секрета.</div></div>
       </div>
 
       <h2 id="acid">Надёжность: почему ей доверяют данные</h2>
@@ -382,11 +382,11 @@
       <h2 id="faq">Частые вопросы</h2>
       <details class="faq">
         <summary>Чем PostgreSQL отличается от MySQL?</summary>
-        <div class="a">Оба — зрелые реляционные базы с SQL. Postgres традиционно богаче на возможности (продвинутые типы вроде <code>JSONB</code>, строгое следование стандарту, расширения), MySQL исторически проще и чуть быстрее на простых сценариях. Для нового проекта Postgres — безопасный выбор по умолчанию, что и сделано в dev-vault.</div>
+        <div class="a">Оба — зрелые реляционные базы с SQL. Postgres традиционно богаче на возможности (продвинутые типы вроде <code>JSONB</code>, строгое следование стандарту, расширения), MySQL исторически проще и чуть быстрее на простых сценариях. Для нового проекта Postgres — безопасный выбор по умолчанию, что и сделано в netroom.</div>
       </details>
       <details class="faq">
         <summary>Что такое ORM и обязателен ли он?</summary>
-        <div class="a"><b>ORM</b> (Object-Relational Mapping) — библиотека, позволяющая работать с таблицами через объекты в коде, а не писать SQL руками. Она же обычно ведёт миграции. Не обязателен — можно и чистым SQL — но на практике ORM (Prisma, TypeORM, Drizzle) экономит время и уменьшает ошибки. В dev-vault выбор ORM — ближайший шаг.</div>
+        <div class="a"><b>ORM</b> (Object-Relational Mapping) — библиотека, позволяющая работать с таблицами через объекты в коде, а не писать SQL руками. Она же обычно ведёт миграции. Не обязателен — можно и чистым SQL — но на практике ORM (Prisma, TypeORM, Drizzle) экономит время и уменьшает ошибки. В netroom выбор ORM — ближайший шаг.</div>
       </details>
       <details class="faq">
         <summary>Что значит <code>alpine</code> в <code>postgres:18-alpine</code>?</summary>
@@ -418,14 +418,14 @@
       </div>
 
       <footer>
-        <span>dev-vault · концепции · собрано в паре с Claude Code</span>
+        <span>netroom · концепции · собрано в паре с Claude Code</span>
         <a href="https://github.com/GrafSoul/claude-artefacts">исходники</a>
       </footer>
     </div>
 
     <script>
       /* theme */
-      const THEME_KEY = "dev-vault-lesson-theme";
+      const THEME_KEY = "netroom-lesson-theme";
       const tbtn = document.getElementById("themeBtn");
       function applyTheme(t) { document.documentElement.setAttribute("data-theme", t); tbtn.textContent = t === "dark" ? "☾" : "☀"; }
       const savedTheme = localStorage.getItem(THEME_KEY);
@@ -471,7 +471,7 @@
           clearHits();
           usersRows().forEach(r => r.classList.add(r.dataset.uid === "2" ? "hit" : "dim"));
           notesRows().forEach(r => r.classList.add(r.dataset.uid === "2" ? "hit" : "dim"));
-          renderResult("результат", ["id", "user_id", "title"], [["102","2","Идеи для dev-vault"],["103","2","Купить кофе"]]);
+          renderResult("результат", ["id", "user_id", "title"], [["102","2","Идеи для netroom"],["103","2","Купить кофе"]]);
           qexpl.innerHTML = `<b>Фильтр по внешнему ключу.</b> <code>WHERE user_id = 2</code> — все заметки Дмитрия. Видно, как <code>user_id</code> связывает строки с таблицей users.`;
         },
         "join": () => {
@@ -480,7 +480,7 @@
           notesRows().forEach(r => r.classList.add("hit"));
           renderResult("результат", ["name", "title"], [
             ["Брюс","Пароли от бэткомпьютера"],
-            ["Дмитрий","Идеи для dev-vault"],
+            ["Дмитрий","Идеи для netroom"],
             ["Дмитрий","Купить кофе"],
             ["Кларк","Статья про Redis"]
           ]);

@@ -3,10 +3,10 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Урок 02 · Боевой сервер · dev-vault</title>
+    <title>Урок 02 · Боевой сервер · netroom</title>
     <meta
       name="description"
-      content="Практический урок: выкат dev-vault на боевой VPS — выбор железа, SSH и защита, Docker, compose.prod.yml, Nginx + certbot с автопродлением TLS, поддомены api/app/admin, приватные Postgres и Redis."
+      content="Практический урок: выкат netroom на боевой VPS — выбор железа, SSH и защита, Docker, compose.prod.yml, Nginx + certbot с автопродлением TLS, поддомены api/app/admin, приватные Postgres и Redis."
     />
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🖥️</text></svg>" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -177,7 +177,7 @@
   </head>
   <body>
     <div class="topbar">
-      <a class="brand" href="index.html"><b>◆</b> dev-vault</a>
+      <a class="brand" href="index.html"><b>◆</b> netroom</a>
       <div class="navdd">
         <button class="btn nav-toggle" aria-expanded="false" aria-haspopup="true">☰ материалы</button>
         <div class="nav-menu" role="menu">
@@ -386,20 +386,20 @@ docker --version && docker compose version</code></pre>
       <h2>Шаг 4 — Клонируем четыре репы <span class="stepbadge">деплой</span></h2>
       <p class="body">
         Репы кладём <b>рядом друг с другом</b> — <code>compose.prod.yml</code> собирает образы из
-        соседних папок по путям <code>../dev-vault-server</code> и т.д.
+        соседних папок по путям <code>../netroom-server</code> и т.д.
       </p>
       <div class="code term server" data-lang="bash">
         <div class="code-head"><span class="code-file">на сервере</span><span class="code-lang">bash</span><span class="spacer"></span><button class="copy">копировать</button></div>
-        <pre><code>git clone https://github.com/GrafSoul/dev-vault-server.git
-git clone https://github.com/GrafSoul/dev-vault-client.git
-git clone https://github.com/GrafSoul/dev-vault-admin.git
-git clone https://github.com/GrafSoul/dev-vault-infra.git</code></pre>
+        <pre><code>git clone https://github.com/GrafSoul/netroom-server.git
+git clone https://github.com/GrafSoul/netroom-client.git
+git clone https://github.com/GrafSoul/netroom-admin.git
+git clone https://github.com/GrafSoul/netroom-infra.git</code></pre>
       </div>
       <div class="tree"><span class="cmt"># так это должно выглядеть на сервере</span>
-├── dev-vault-server/
-├── dev-vault-client/
-├── dev-vault-admin/
-└── dev-vault-infra/     <span class="cmt"># отсюда запускаем прод</span>
+├── netroom-server/
+├── netroom-client/
+├── netroom-admin/
+└── netroom-infra/     <span class="cmt"># отсюда запускаем прод</span>
     ├── compose.prod.yml
     ├── init-letsencrypt.sh
     └── nginx/
@@ -424,14 +424,14 @@ git clone https://github.com/GrafSoul/dev-vault-infra.git</code></pre>
         CORS-список выводятся из него автоматически.
       </p>
       <div class="code term server" data-lang="bash">
-        <div class="code-head"><span class="code-file">на сервере · dev-vault-infra/</span><span class="code-lang">bash</span><span class="spacer"></span><button class="copy">копировать</button></div>
+        <div class="code-head"><span class="code-file">на сервере · netroom-infra/</span><span class="code-lang">bash</span><span class="spacer"></span><button class="copy">копировать</button></div>
         <pre><code>openssl rand -base64 24     # сгенерировать сильный пароль для базы
 cp .env.example .env
 nano .env</code></pre>
       </div>
       <div class="code" data-lang="env">
-        <div class="code-head"><span class="code-file">dev-vault-infra/.env.example</span><span class="code-lang">env</span><span class="spacer"></span><button class="copy">копировать</button></div>
-        <pre><code># ---- Deployment (dev-vault-infra) ----
+        <div class="code-head"><span class="code-file">netroom-infra/.env.example</span><span class="code-lang">env</span><span class="spacer"></span><button class="copy">копировать</button></div>
+        <pre><code># ---- Deployment (netroom-infra) ----
 # Copy to .env and fill in real values. .env is not committed (see .gitignore).
 
 # Base domain. Real DNS A-records must point to this host:
@@ -452,11 +452,11 @@ POSTGRES_PASSWORD=change-me-in-prod</code></pre>
         поднимает приватные Postgres/Redis и пару <b>nginx + certbot</b>.
       </p>
       <div class="code" data-lang="yaml">
-        <div class="code-head"><span class="code-file">dev-vault-infra/compose.prod.yml</span><span class="code-lang">yaml · prod</span><span class="spacer"></span><button class="copy">копировать</button></div>
+        <div class="code-head"><span class="code-file">netroom-infra/compose.prod.yml</span><span class="code-lang">yaml · prod</span><span class="spacer"></span><button class="copy">копировать</button></div>
         <pre><code>services:
   backend:
     build:
-      context: ../dev-vault-server
+      context: ../netroom-server
       target: prod
     environment:
       NODE_ENV: production
@@ -464,7 +464,7 @@ POSTGRES_PASSWORD=change-me-in-prod</code></pre>
       # Browser-facing origins allowed to call the API.
       CORS_ORIGIN: https://app.${DOMAIN},https://admin.${DOMAIN}
       # Private, server-to-server connections over the compose network.
-      DATABASE_URL: postgres://devvault:${POSTGRES_PASSWORD}@postgres:5432/devvault
+      DATABASE_URL: postgres://netroom:${POSTGRES_PASSWORD}@postgres:5432/netroom
       REDIS_URL: redis://redis:6379
     depends_on:
       postgres:
@@ -475,7 +475,7 @@ POSTGRES_PASSWORD=change-me-in-prod</code></pre>
 
   client:
     build:
-      context: ../dev-vault-client
+      context: ../netroom-client
       target: prod
       args:
         # Baked into the static bundle at build time.
@@ -484,7 +484,7 @@ POSTGRES_PASSWORD=change-me-in-prod</code></pre>
 
   admin:
     build:
-      context: ../dev-vault-admin
+      context: ../netroom-admin
       target: prod
       args:
         VITE_API_URL: https://api.${DOMAIN}
@@ -493,14 +493,14 @@ POSTGRES_PASSWORD=change-me-in-prod</code></pre>
   postgres:
     image: postgres:18-alpine
     environment:
-      POSTGRES_USER: devvault
+      POSTGRES_USER: netroom
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-      POSTGRES_DB: devvault
+      POSTGRES_DB: netroom
     # No published ports — reachable only inside the private network.
     volumes:
       - pgdata:/var/lib/postgresql
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U devvault"]
+      test: ["CMD-SHELL", "pg_isready -U netroom"]
       interval: 5s
       timeout: 3s
       retries: 5
@@ -590,7 +590,7 @@ volumes:
         </p>
       </div>
       <div class="code" data-lang="nginx">
-        <div class="code-head"><span class="code-file">dev-vault-infra/nginx/templates/default.conf.template</span><span class="code-lang">nginx</span><span class="spacer"></span><button class="copy">копировать</button></div>
+        <div class="code-head"><span class="code-file">netroom-infra/nginx/templates/default.conf.template</span><span class="code-lang">nginx</span><span class="spacer"></span><button class="copy">копировать</button></div>
         <pre><code># Maps the Upgrade header to the Connection value: "upgrade" for WebSockets,
 # "close" otherwise. Referenced by snippets/proxy.conf.
 map $http_upgrade $connection_upgrade {
@@ -674,7 +674,7 @@ server {
       </div>
       <p class="body">Общие куски вынесены в snippets — чтобы не дублировать в каждом блоке:</p>
       <div class="code" data-lang="nginx">
-        <div class="code-head"><span class="code-file">dev-vault-infra/nginx/snippets/proxy.conf</span><span class="code-lang">nginx</span><span class="spacer"></span><button class="copy">копировать</button></div>
+        <div class="code-head"><span class="code-file">netroom-infra/nginx/snippets/proxy.conf</span><span class="code-lang">nginx</span><span class="spacer"></span><button class="copy">копировать</button></div>
         <pre><code># Common reverse-proxy headers. Included inside every proxied location.
 # Passes the real client identity upstream and is ready for WebSocket upgrades.
 
@@ -687,7 +687,7 @@ proxy_set_header Upgrade           $http_upgrade;
 proxy_set_header Connection        $connection_upgrade;</code></pre>
       </div>
       <div class="code" data-lang="nginx">
-        <div class="code-head"><span class="code-file">dev-vault-infra/nginx/snippets/ssl-params.conf</span><span class="code-lang">nginx</span><span class="spacer"></span><button class="copy">копировать</button></div>
+        <div class="code-head"><span class="code-file">netroom-infra/nginx/snippets/ssl-params.conf</span><span class="code-lang">nginx</span><span class="spacer"></span><button class="copy">копировать</button></div>
         <pre><code># TLS hardening — Mozilla "Intermediate" profile (2024/2025).
 # Included by every HTTPS server block. Certificate paths stay in the server
 # block itself (they are domain-specific); everything reusable lives here.
@@ -717,9 +717,9 @@ add_header Referrer-Policy "strict-origin-when-cross-origin" always;</code></pre
         забрать ACME-проверку по HTTP). Скрипт <code>init-letsencrypt.sh</code> разрывает этот круг.
       </p>
       <div class="code" data-lang="bash">
-        <div class="code-head"><span class="code-file">dev-vault-infra/init-letsencrypt.sh</span><span class="code-lang">sh · запускается один раз</span><span class="spacer"></span><button class="copy">копировать</button></div>
+        <div class="code-head"><span class="code-file">netroom-infra/init-letsencrypt.sh</span><span class="code-lang">sh · запускается один раз</span><span class="spacer"></span><button class="copy">копировать</button></div>
         <pre><code>#!/bin/sh
-# One-time TLS bootstrap for the dev-vault stack (Nginx + certbot / Let's Encrypt).
+# One-time TLS bootstrap for the netroom stack (Nginx + certbot / Let's Encrypt).
 #
 # Solves the chicken-and-egg problem: nginx won't start without a certificate,
 # but the certificate can't be issued without nginx answering the ACME challenge.
@@ -741,7 +741,7 @@ add_header Referrer-Policy "strict-origin-when-cross-origin" always;</code></pre
         <li><b>Перезагружает nginx</b> — уже с боевым сертификатом.</li>
       </ol>
       <div class="code term server" data-lang="bash">
-        <div class="code-head"><span class="code-file">на сервере · dev-vault-infra/</span><span class="code-lang">bash</span><span class="spacer"></span><button class="copy">копировать</button></div>
+        <div class="code-head"><span class="code-file">на сервере · netroom-infra/</span><span class="code-lang">bash</span><span class="spacer"></span><button class="copy">копировать</button></div>
         <pre><code># первый прогон — лучше на тестовом CA, чтобы не спалить лимиты
 chmod +x init-letsencrypt.sh
 STAGING=1 ./init-letsencrypt.sh
@@ -761,7 +761,7 @@ STAGING=1 ./init-letsencrypt.sh
 
       <h2>Шаг 10 — Запуск <span class="stepbadge">поехали</span></h2>
       <div class="code term server" data-lang="bash">
-        <div class="code-head"><span class="code-file">на сервере · dev-vault-infra/</span><span class="code-lang">bash</span><span class="spacer"></span><button class="copy">копировать</button></div>
+        <div class="code-head"><span class="code-file">на сервере · netroom-infra/</span><span class="code-lang">bash</span><span class="spacer"></span><button class="copy">копировать</button></div>
         <pre><code># собрать образы всех трёх приложений и поднять стек в фоне
 docker compose -f compose.prod.yml up -d --build
 
@@ -782,13 +782,13 @@ docker compose -f compose.prod.yml logs -f certbot</code></pre>
 
       <h2>Обновление и бэкапы</h2>
       <div class="code term server" data-lang="bash">
-        <div class="code-head"><span class="code-file">на сервере · dev-vault-infra/</span><span class="code-lang">bash</span><span class="spacer"></span><button class="copy">копировать</button></div>
+        <div class="code-head"><span class="code-file">на сервере · netroom-infra/</span><span class="code-lang">bash</span><span class="spacer"></span><button class="copy">копировать</button></div>
         <pre><code># выкатить новую версию (в нужной репе git pull, затем отсюда)
 docker compose -f compose.prod.yml up -d --build
 
 # бэкап базы в файл
 docker compose -f compose.prod.yml exec postgres \
-  pg_dump -U devvault devvault > backup_$(date +%F).sql</code></pre>
+  pg_dump -U netroom netroom > backup_$(date +%F).sql</code></pre>
       </div>
       <div class="note danger">
         <div class="t">сменил домен — пересобери фронты</div>
@@ -883,7 +883,7 @@ docker compose -f compose.prod.yml exec postgres \
       </div>
 
       <footer>
-        <span>dev-vault · урок 02 · собрано в паре с Claude Code</span>
+        <span>netroom · урок 02 · собрано в паре с Claude Code</span>
         <a href="https://github.com/GrafSoul/claude-artefacts">исходники</a>
       </footer>
     </div>
@@ -924,7 +924,7 @@ docker compose -f compose.prod.yml exec postgres \
         });
       });
 
-      const THEME_KEY = "dev-vault-lesson-theme";
+      const THEME_KEY = "netroom-lesson-theme";
       const btn = document.getElementById("themeBtn");
       function applyTheme(t) { document.documentElement.setAttribute("data-theme", t); btn.textContent = t === "dark" ? "☾" : "☀"; }
       const saved = localStorage.getItem(THEME_KEY);

@@ -3,11 +3,11 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Урок 01 · Локальная среда в Docker · dev-vault</title>
+    <title>Урок 01 · Локальная среда в Docker · netroom</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🐳</text></svg>" />
     <meta
       name="description"
-      content="Практический урок: четыре репы dev-vault (server, client, admin, infra). Локальная разработка — независимые сервисы в Docker с hot-reload, cross-origin + CORS."
+      content="Практический урок: четыре репы netroom (server, client, admin, infra). Локальная разработка — независимые сервисы в Docker с hot-reload, cross-origin + CORS."
     />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -181,7 +181,7 @@
   </head>
   <body>
     <div class="topbar">
-      <a class="brand" href="index.html"><b>◆</b> dev-vault</a>
+      <a class="brand" href="index.html"><b>◆</b> netroom</a>
       <div class="navdd">
         <button class="btn nav-toggle" aria-expanded="false" aria-haspopup="true">☰ материалы</button>
         <div class="nav-menu" role="menu">
@@ -210,7 +210,7 @@
         <span class="eyebrow">этап 01 · локальная разработка</span>
         <h1>Локальная среда <em>в Docker</em></h1>
         <p class="lede">
-          <b>dev-vault</b> — не монолит, а <b>четыре независимых репы</b>: API, клиент, админка и
+          <b>netroom</b> — не монолит, а <b>четыре независимых репы</b>: API, клиент, админка и
           инфраструктура. Каждое приложение разрабатывается и деплоится само по себе, а фронты ходят
           к API по HTTP — это <b>разные origin</b>, поэтому нужен <b>CORS</b>. В этом уроке —
           локальная разработка: Docker-файлы каждого приложения и два способа поднять стек.
@@ -230,17 +230,17 @@
       </p>
       <div class="tbl-wrap"><table class="tbl">
         <tr><th>Репозиторий</th><th>Роль</th><th>Локально</th></tr>
-        <tr><td>dev-vault-server</td><td>Backend API (NestJS)</td><td><code>localhost:3030</code></td></tr>
-        <tr><td>dev-vault-client</td><td>Клиентский SPA (React + Vite)</td><td><code>localhost:3000</code></td></tr>
-        <tr><td>dev-vault-admin</td><td>Админка SPA (React + Vite)</td><td><code>localhost:3001</code></td></tr>
-        <tr><td>dev-vault-infra</td><td>Оркестрация (Compose + Caddy)</td><td>—</td></tr>
+        <tr><td>netroom-server</td><td>Backend API (NestJS)</td><td><code>localhost:3030</code></td></tr>
+        <tr><td>netroom-client</td><td>Клиентский SPA (React + Vite)</td><td><code>localhost:3000</code></td></tr>
+        <tr><td>netroom-admin</td><td>Админка SPA (React + Vite)</td><td><code>localhost:3001</code></td></tr>
+        <tr><td>netroom-infra</td><td>Оркестрация (Compose + Caddy)</td><td>—</td></tr>
       </table></div>
       <div class="tree"><span class="cmt"># репы лежат рядом друг с другом</span>
-dev-vault/
-├── dev-vault-server/     <span class="cmt"># API (Nest) + Postgres + Redis</span>
-├── dev-vault-client/     <span class="cmt"># публичный фронт</span>
-├── dev-vault-admin/      <span class="cmt"># админка</span>
-└── dev-vault-infra/      <span class="cmt"># compose.dev.yml · compose.prod.yml · Caddyfile</span></div>
+netroom/
+├── netroom-server/     <span class="cmt"># API (Nest) + Postgres + Redis</span>
+├── netroom-client/     <span class="cmt"># публичный фронт</span>
+├── netroom-admin/      <span class="cmt"># админка</span>
+└── netroom-infra/      <span class="cmt"># compose.dev.yml · compose.prod.yml · Caddyfile</span></div>
 
       <h2>Что построим локально <span class="stepbadge">результат этапа</span></h2>
       <p class="body">
@@ -301,7 +301,7 @@ dev-vault/
         </p>
       </div>
 
-      <h2>Сервер — dev-vault-server <span class="stepbadge">API + база + кэш</span></h2>
+      <h2>Сервер — netroom-server <span class="stepbadge">API + база + кэш</span></h2>
 
       <h3>Dockerfile</h3>
       <p class="body">
@@ -310,7 +310,7 @@ dev-vault/
         <b>non-root</b> (<code>USER node</code>). Один файл обслуживает и локалку, и прод.
       </p>
       <div class="code" data-lang="dockerfile">
-        <div class="code-head"><span class="code-file">dev-vault-server/Dockerfile</span><span class="code-lang">dockerfile</span><span class="spacer"></span><button class="copy">копировать</button></div>
+        <div class="code-head"><span class="code-file">netroom-server/Dockerfile</span><span class="code-lang">dockerfile</span><span class="spacer"></span><button class="copy">копировать</button></div>
         <pre><code># syntax=docker/dockerfile:1
 
 # ---- base: shared by all stages ----
@@ -350,7 +350,7 @@ CMD ["node", "dist/main.js"]</code></pre>
       <h3>docker-compose.yml — локальная разработка</h3>
       <p class="body">Поднимает API + Postgres + Redis. Порты БД открыты наружу — это удобно локально (psql, GUI). В проде так делать нельзя, там свой файл (урок 02).</p>
       <div class="code" data-lang="yaml">
-        <div class="code-head"><span class="code-file">dev-vault-server/docker-compose.yml</span><span class="code-lang">yaml · dev</span><span class="spacer"></span><button class="copy">копировать</button></div>
+        <div class="code-head"><span class="code-file">netroom-server/docker-compose.yml</span><span class="code-lang">yaml · dev</span><span class="spacer"></span><button class="copy">копировать</button></div>
         <pre><code>services:
   app:
     build:
@@ -372,15 +372,15 @@ CMD ["node", "dist/main.js"]</code></pre>
   postgres:
     image: postgres:18-alpine
     environment:
-      POSTGRES_USER: devvault
-      POSTGRES_PASSWORD: devvault
-      POSTGRES_DB: devvault
+      POSTGRES_USER: netroom
+      POSTGRES_PASSWORD: netroom
+      POSTGRES_DB: netroom
     ports:
       - "5432:5432"
     volumes:
       - pgdata:/var/lib/postgresql
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U devvault"]
+      test: ["CMD-SHELL", "pg_isready -U netroom"]
       interval: 5s
       timeout: 3s
       retries: 5
@@ -409,7 +409,7 @@ volumes:
       <h3>.env.example</h3>
       <p class="body">Шаблон коммитим, рабочий <code>.env</code> — нет. <code>CORS_ORIGIN</code> — белый список origin'ов фронтов, которым разрешено звать API.</p>
       <div class="code" data-lang="env">
-        <div class="code-head"><span class="code-file">dev-vault-server/.env.example</span><span class="code-lang">env</span><span class="spacer"></span><button class="copy">копировать</button></div>
+        <div class="code-head"><span class="code-file">netroom-server/.env.example</span><span class="code-lang">env</span><span class="spacer"></span><button class="copy">копировать</button></div>
         <pre><code># ---- Application ----
 # Port must match the port in docker-compose.yml and EXPOSE in the Dockerfile
 PORT=3030
@@ -421,13 +421,13 @@ CORS_ORIGIN=http://localhost:3000,http://localhost:3001
 
 # ---- PostgreSQL ----
 # host = the service name from docker-compose (postgres), not localhost
-DATABASE_URL=postgres://devvault:devvault@postgres:5432/devvault
+DATABASE_URL=postgres://netroom:netroom@postgres:5432/netroom
 
 # ---- Redis ----
 REDIS_URL=redis://redis:6379</code></pre>
       </div>
 
-      <h2>Клиент — dev-vault-client <span class="stepbadge">React SPA</span></h2>
+      <h2>Клиент — netroom-client <span class="stepbadge">React SPA</span></h2>
       <p class="body">
         Vite + React. Dockerfile тот же по форме, но финал другой: в проде фронт — это
         <b>статика</b>, которую раздаёт Nginx, а не Node. Ключевая деталь — <code>ARG VITE_API_URL</code>
@@ -436,7 +436,7 @@ REDIS_URL=redis://redis:6379</code></pre>
 
       <h3>Dockerfile</h3>
       <div class="code" data-lang="dockerfile">
-        <div class="code-head"><span class="code-file">dev-vault-client/Dockerfile</span><span class="code-lang">dockerfile</span><span class="spacer"></span><button class="copy">копировать</button></div>
+        <div class="code-head"><span class="code-file">netroom-client/Dockerfile</span><span class="code-lang">dockerfile</span><span class="spacer"></span><button class="copy">копировать</button></div>
         <pre><code># syntax=docker/dockerfile:1
 
 # ---- base: shared by all stages ----
@@ -484,7 +484,7 @@ CMD ["nginx", "-g", "daemon off;"]</code></pre>
 
       <h3>docker-compose.yml, vite.config.ts, .env.example</h3>
       <div class="code" data-lang="yaml">
-        <div class="code-head"><span class="code-file">dev-vault-client/docker-compose.yml</span><span class="code-lang">yaml · dev</span><span class="spacer"></span><button class="copy">копировать</button></div>
+        <div class="code-head"><span class="code-file">netroom-client/docker-compose.yml</span><span class="code-lang">yaml · dev</span><span class="spacer"></span><button class="copy">копировать</button></div>
         <pre><code>services:
   web:
     build:
@@ -499,7 +499,7 @@ CMD ["nginx", "-g", "daemon off;"]</code></pre>
       - /app/node_modules    # but keep node_modules from the image</code></pre>
       </div>
       <div class="code" data-lang="ts">
-        <div class="code-head"><span class="code-file">dev-vault-client/vite.config.ts</span><span class="code-lang">typescript</span><span class="spacer"></span><button class="copy">копировать</button></div>
+        <div class="code-head"><span class="code-file">netroom-client/vite.config.ts</span><span class="code-lang">typescript</span><span class="spacer"></span><button class="copy">копировать</button></div>
         <pre><code>import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 
@@ -517,18 +517,18 @@ export default defineConfig({
 })</code></pre>
       </div>
       <div class="code" data-lang="env">
-        <div class="code-head"><span class="code-file">dev-vault-client/.env.example</span><span class="code-lang">env</span><span class="spacer"></span><button class="copy">копировать</button></div>
+        <div class="code-head"><span class="code-file">netroom-client/.env.example</span><span class="code-lang">env</span><span class="spacer"></span><button class="copy">копировать</button></div>
         <pre><code># ---- Client (Vite) ----
 # Vite variables MUST be prefixed with VITE_ — otherwise Vite won't expose them to the code.
 # Note: VITE_ variables are embedded in the built bundle and visible in the browser — no secrets here.
 
-# Backend API address (dev-vault-server listens on 3030).
+# Backend API address (netroom-server listens on 3030).
 # Dev only — used by `npm run dev`/`npm run build` locally.
 # In prod the value is injected at image build via --build-arg VITE_API_URL=https://api.YOUR_DOMAIN.
 VITE_API_URL=http://localhost:3030</code></pre>
       </div>
       <div class="code" data-lang="nginx">
-        <div class="code-head"><span class="code-file">dev-vault-client/nginx.conf</span><span class="code-lang">nginx · для прод-стадии</span><span class="spacer"></span><button class="copy">копировать</button></div>
+        <div class="code-head"><span class="code-file">netroom-client/nginx.conf</span><span class="code-lang">nginx · для прод-стадии</span><span class="spacer"></span><button class="copy">копировать</button></div>
         <pre><code>server {
     listen 80;
     server_name _;
@@ -543,7 +543,7 @@ VITE_API_URL=http://localhost:3030</code></pre>
 }</code></pre>
       </div>
 
-      <h2>Админка — dev-vault-admin <span class="stepbadge">React SPA</span></h2>
+      <h2>Админка — netroom-admin <span class="stepbadge">React SPA</span></h2>
       <p class="body">
         Второй фронт к тому же API. <b>Dockerfile, nginx.conf и .env.example — идентичны клиенту.</b>
         Отличается только compose: имя сервиса <code>admin</code> и проброс порта
@@ -551,7 +551,7 @@ VITE_API_URL=http://localhost:3030</code></pre>
         занимает 3001, чтобы не конфликтовать с клиентом.
       </p>
       <div class="code" data-lang="yaml">
-        <div class="code-head"><span class="code-file">dev-vault-admin/docker-compose.yml</span><span class="code-lang">yaml · dev</span><span class="spacer"></span><button class="copy">копировать</button></div>
+        <div class="code-head"><span class="code-file">netroom-admin/docker-compose.yml</span><span class="code-lang">yaml · dev</span><span class="spacer"></span><button class="copy">копировать</button></div>
         <pre><code>services:
   admin:
     build:
@@ -576,31 +576,31 @@ VITE_API_URL=http://localhost:3030</code></pre>
       <div class="code term" data-lang="bash">
         <div class="code-head"><span class="code-file">терминал</span><span class="code-lang">bash</span><span class="spacer"></span><button class="copy">копировать</button></div>
         <pre><code># terminal 1
-cd dev-vault-server && npm run start:dev    # http://localhost:3030
+cd netroom-server && npm run start:dev    # http://localhost:3030
 # terminal 2
-cd dev-vault-client && npm run dev          # http://localhost:3000
+cd netroom-client && npm run dev          # http://localhost:3000
 # terminal 3
-cd dev-vault-admin  && npm run dev          # http://localhost:3001</code></pre>
+cd netroom-admin  && npm run dev          # http://localhost:3001</code></pre>
       </div>
 
       <h3>B. Одной командой — весь стек в Docker</h3>
       <p class="body">
-        В <code>dev-vault-infra</code> лежит <code>compose.dev.yml</code>, который ничего не дублирует —
+        В <code>netroom-infra</code> лежит <code>compose.dev.yml</code>, который ничего не дублирует —
         он просто <code>include</code>-ит compose-файлы трёх приложений:
       </p>
       <div class="code" data-lang="yaml">
-        <div class="code-head"><span class="code-file">dev-vault-infra/compose.dev.yml</span><span class="code-lang">yaml · dev</span><span class="spacer"></span><button class="copy">копировать</button></div>
+        <div class="code-head"><span class="code-file">netroom-infra/compose.dev.yml</span><span class="code-lang">yaml · dev</span><span class="spacer"></span><button class="copy">копировать</button></div>
         <pre><code># Local development stack: brings up all three apps + Postgres + Redis with one
 # command. Reuses each app's own docker-compose.yml — no duplicated config here.
 # Expects the app repos cloned side by side next to this one. Run from here:
 #   docker compose -f compose.dev.yml up
 include:
-  - ../dev-vault-server/docker-compose.yml
-  - ../dev-vault-client/docker-compose.yml
-  - ../dev-vault-admin/docker-compose.yml</code></pre>
+  - ../netroom-server/docker-compose.yml
+  - ../netroom-client/docker-compose.yml
+  - ../netroom-admin/docker-compose.yml</code></pre>
       </div>
       <div class="code term" data-lang="bash">
-        <div class="code-head"><span class="code-file">терминал · dev-vault-infra/</span><span class="code-lang">bash</span><span class="spacer"></span><button class="copy">копировать</button></div>
+        <div class="code-head"><span class="code-file">терминал · netroom-infra/</span><span class="code-lang">bash</span><span class="spacer"></span><button class="copy">копировать</button></div>
         <pre><code># перед первым запуском в каждой репе: cp .env.example .env
 docker compose -f compose.dev.yml up</code></pre>
       </div>
@@ -630,7 +630,7 @@ http://localhost:3001    # админка (React)</code></pre>
         <div class="t">на macOS hot-reload не сработал?</div>
         <p>
           На Mac события файловой системы не всегда доходят в контейнер через bind-mount. Для сервера
-          лечится поллингом — в <code>dev-vault-server/tsconfig.json</code> добавь на верхний уровень
+          лечится поллингом — в <code>netroom-server/tsconfig.json</code> добавь на верхний уровень
           <code>"watchOptions": { "watchFile": "priorityPollingInterval" }</code> и перезапусти.
         </p>
       </div>
@@ -660,12 +660,12 @@ http://localhost:3001    # админка (React)</code></pre>
       <h2>Шпаргалка команд</h2>
       <div class="cheat">
         <div class="cheat-row"><span class="cheat-cmd">docker compose up</span><span class="cheat-desc">поднять сервис из его репы (с логами)</span></div>
-        <div class="cheat-row"><span class="cheat-cmd">docker compose -f compose.dev.yml up</span><span class="cheat-desc">весь стек из dev-vault-infra</span></div>
+        <div class="cheat-row"><span class="cheat-cmd">docker compose -f compose.dev.yml up</span><span class="cheat-desc">весь стек из netroom-infra</span></div>
         <div class="cheat-row"><span class="cheat-cmd">docker compose up --build</span><span class="cheat-desc">пересобрать образы и поднять</span></div>
         <div class="cheat-row"><span class="cheat-cmd">docker compose down</span><span class="cheat-desc">остановить и удалить контейнеры</span></div>
         <div class="cheat-row"><span class="cheat-cmd">docker compose logs -f app</span><span class="cheat-desc">следить за логами сервиса</span></div>
         <div class="cheat-row"><span class="cheat-cmd">docker compose exec app sh</span><span class="cheat-desc">оболочка внутри контейнера</span></div>
-        <div class="cheat-row"><span class="cheat-cmd">docker compose exec postgres psql -U devvault -d devvault</span><span class="cheat-desc">подключиться к базе</span></div>
+        <div class="cheat-row"><span class="cheat-cmd">docker compose exec postgres psql -U netroom -d netroom</span><span class="cheat-desc">подключиться к базе</span></div>
         <div class="cheat-row"><span class="cheat-cmd">docker compose down -v</span><span class="cheat-desc">+ удалить тома (полный сброс базы)</span></div>
       </div>
 
@@ -675,7 +675,7 @@ http://localhost:3001    # админка (React)</code></pre>
           <summary>Почему четыре репы, а не один проект?</summary>
           <div class="faq-a">
             <p>У каждого приложения свой жизненный цикл: свои коммиты, свои зависимости, свой деплой, могут вести разные люди. Они не связаны общим кодом — только HTTP-контрактом (API).</p>
-            <p>Четвёртая репа, <code>dev-vault-infra</code>, не содержит приложения — только оркестрацию: как всё поднять локально и как развернуть в проде.</p>
+            <p>Четвёртая репа, <code>netroom-infra</code>, не содержит приложения — только оркестрацию: как всё поднять локально и как развернуть в проде.</p>
           </div>
         </details>
         <details class="faq-item">
@@ -734,7 +734,7 @@ http://localhost:3001    # админка (React)</code></pre>
       </div>
 
       <footer>
-        <span>dev-vault · урок 01 · собрано в паре с Claude Code</span>
+        <span>netroom · урок 01 · собрано в паре с Claude Code</span>
         <a href="https://github.com/GrafSoul/claude-artefacts">исходники</a>
       </footer>
     </div>
@@ -775,7 +775,7 @@ http://localhost:3001    # админка (React)</code></pre>
         });
       });
 
-      const THEME_KEY = "dev-vault-lesson-theme";
+      const THEME_KEY = "netroom-lesson-theme";
       const btn = document.getElementById("themeBtn");
       function applyTheme(t) { document.documentElement.setAttribute("data-theme", t); btn.textContent = t === "dark" ? "☾" : "☀"; }
       const saved = localStorage.getItem(THEME_KEY);

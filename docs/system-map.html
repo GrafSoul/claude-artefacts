@@ -3,11 +3,11 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Карта системы · dev-vault</title>
+    <title>Карта системы · netroom</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🗺️</text></svg>" />
     <meta
       name="description"
-      content="Интерактивная карта dev-vault: как связаны client, admin, сервер, Nginx, PostgreSQL, Redis и certbot. Переключение dev/prod, пошаговая анимация пути запроса, глоссарий сокращений."
+      content="Интерактивная карта netroom: как связаны client, admin, сервер, Nginx, PostgreSQL, Redis и certbot. Переключение dev/prod, пошаговая анимация пути запроса, глоссарий сокращений."
     />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -178,7 +178,7 @@
   </head>
   <body>
     <div class="topbar">
-      <a class="brand" href="index.html"><b>◆</b> dev-vault</a>
+      <a class="brand" href="index.html"><b>◆</b> netroom</a>
       <div class="navdd">
         <button class="btn nav-toggle" aria-expanded="false" aria-haspopup="true">☰ материалы</button>
         <div class="nav-menu" role="menu">
@@ -208,7 +208,7 @@
         <h1>Карта <em>системы</em></h1>
         <p class="lede">
           Прежде чем разбираться в строчках, полезно увидеть <b>всю картину сразу</b>: кто с кем
-          разговаривает и зачем. Ниже — живая схема <b>dev-vault</b>. Переключи режим, нажми
+          разговаривает и зачем. Ниже — живая схема <b>netroom</b>. Переключи режим, нажми
           «проиграть путь запроса» и щёлкни любой блок, чтобы узнать, что это. Сокращения снизу — в
           глоссарии.
         </p>
@@ -226,7 +226,7 @@
         <div>
           <div class="diagram">
             <!-- ============ DEV ============ -->
-            <svg id="svg-dev" viewBox="0 0 900 430" role="img" aria-label="Схема локальной среды dev-vault">
+            <svg id="svg-dev" viewBox="0 0 900 430" role="img" aria-label="Схема локальной среды netroom">
               <defs>
                 <marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
                   <path class="arrowhead" d="M0,0 L10,5 L0,10 z" />
@@ -276,7 +276,7 @@
             </svg>
 
             <!-- ============ PROD ============ -->
-            <svg id="svg-prod" viewBox="0 0 900 430" role="img" aria-label="Схема боевого сервера dev-vault" hidden>
+            <svg id="svg-prod" viewBox="0 0 900 430" role="img" aria-label="Схема боевого сервера netroom" hidden>
               <defs>
                 <marker id="ah2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
                   <path class="arrowhead" d="M0,0 L10,5 L0,10 z" />
@@ -414,14 +414,14 @@
       </div>
 
       <footer>
-        <span>dev-vault · карта системы · собрано в паре с Claude Code</span>
+        <span>netroom · карта системы · собрано в паре с Claude Code</span>
         <a href="https://github.com/GrafSoul/claude-artefacts">исходники</a>
       </footer>
     </div>
 
     <script>
       /* ---------- theme ---------- */
-      const THEME_KEY = "dev-vault-lesson-theme";
+      const THEME_KEY = "netroom-lesson-theme";
       const tbtn = document.getElementById("themeBtn");
       function applyTheme(t) { document.documentElement.setAttribute("data-theme", t); tbtn.textContent = t === "dark" ? "☾" : "☀"; }
       const savedTheme = localStorage.getItem(THEME_KEY);
@@ -437,12 +437,12 @@
 
       /* ---------- data ---------- */
       const NODE_INFO = {
-        "d-client":  { emoji:"🌐", title:"Клиент", role:"React-приложение (dev-vault-client)",
-          rows:[["Что","Основной интерфейс на <b>React</b>, собирается через <b>Vite</b>."],["В dev","Vite-сервер с hot-reload — правишь код, страница обновляется сама."],["Порт","<code>localhost:3000</code>"],["Репа","<code>dev-vault-client</code>"]] },
-        "d-admin":   { emoji:"🛠️", title:"Админка", role:"React-приложение (dev-vault-admin)",
-          rows:[["Что","Отдельное React-приложение для администрирования."],["Почему отдельно","Своя репа, свой деплой, свои права — не мешается с клиентом."],["Порт","<code>localhost:3001</code> (3000 занят клиентом)"],["Репа","<code>dev-vault-admin</code>"]] },
-        "d-server":  { emoji:"⚙️", title:"Сервер", role:"API-бэкенд на NestJS (dev-vault-server)",
-          rows:[["Что","<b>Мозг системы</b>: принимает запросы, проверяет права, ходит в базу."],["Стек","<b>NestJS</b> (поверх Node.js), TypeScript."],["Порт","<code>localhost:3030</code>"],["Репа","<code>dev-vault-server</code>"]] },
+        "d-client":  { emoji:"🌐", title:"Клиент", role:"React-приложение (netroom-client)",
+          rows:[["Что","Основной интерфейс на <b>React</b>, собирается через <b>Vite</b>."],["В dev","Vite-сервер с hot-reload — правишь код, страница обновляется сама."],["Порт","<code>localhost:3000</code>"],["Репа","<code>netroom-client</code>"]] },
+        "d-admin":   { emoji:"🛠️", title:"Админка", role:"React-приложение (netroom-admin)",
+          rows:[["Что","Отдельное React-приложение для администрирования."],["Почему отдельно","Своя репа, свой деплой, свои права — не мешается с клиентом."],["Порт","<code>localhost:3001</code> (3000 занят клиентом)"],["Репа","<code>netroom-admin</code>"]] },
+        "d-server":  { emoji:"⚙️", title:"Сервер", role:"API-бэкенд на NestJS (netroom-server)",
+          rows:[["Что","<b>Мозг системы</b>: принимает запросы, проверяет права, ходит в базу."],["Стек","<b>NestJS</b> (поверх Node.js), TypeScript."],["Порт","<code>localhost:3030</code>"],["Репа","<code>netroom-server</code>"]] },
         "d-postgres":{ emoji:"🐘", title:"PostgreSQL", role:"Реляционная база данных",
           rows:[["Что","<b>Главное хранилище</b>: пользователи, записи — всё, что должно жить долго."],["Тип","Реляционная БД (таблицы + связи)."],["Данные","В томе <code>pgdata</code> — переживают перезапуск."],["Порт","<code>:5432</code> (локально проброшен для GUI)"]] },
         "d-redis":   { emoji:"🧱", title:"Redis", role:"Хранилище в оперативной памяти",

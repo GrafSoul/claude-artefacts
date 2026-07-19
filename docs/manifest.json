@@ -17,7 +17,7 @@
     },
     {
       "title": "Урок 01 · Локальная среда в Docker",
-      "description": "Практикум по этапу 01: четыре независимые репы dev-vault (server, client, admin, infra) в Docker. Multi-stage Dockerfile каждого приложения, VITE_API_URL как build-arg, два режима запуска (без Docker и одной командой), hot-reload, cross-origin + CORS.",
+      "description": "Практикум по этапу 01: четыре независимые репы netroom (server, client, admin, infra) в Docker. Multi-stage Dockerfile каждого приложения, VITE_API_URL как build-arg, два режима запуска (без Docker и одной командой), hot-reload, cross-origin + CORS.",
       "path": "lesson-01-docker.html",
       "emoji": "🐳",
       "date": "2026-07-15",
@@ -25,12 +25,12 @@
         "docker",
         "nestjs",
         "урок",
-        "dev-vault"
+        "netroom"
       ]
     },
     {
       "title": "Урок 02 · Боевой сервер под HTTPS",
-      "description": "Практикум по этапу 02: выкат dev-vault на VPS — выбор железа, SSH и защита, Docker, compose.prod.yml с приватными Postgres и Redis, Nginx-прокси на поддомены api/app/admin, certbot с первым выпуском (init-letsencrypt) и автопродлением TLS.",
+      "description": "Практикум по этапу 02: выкат netroom на VPS — выбор железа, SSH и защита, Docker, compose.prod.yml с приватными Postgres и Redis, Nginx-прокси на поддомены api/app/admin, certbot с первым выпуском (init-letsencrypt) и автопродлением TLS.",
       "path": "lesson-02-server.html",
       "emoji": "🖥️",
       "date": "2026-07-16",
@@ -39,12 +39,12 @@
         "server",
         "nginx",
         "урок",
-        "dev-vault"
+        "netroom"
       ]
     },
     {
       "title": "Карта системы",
-      "description": "Интерактивная схема dev-vault: client, admin, сервер, Nginx, PostgreSQL, Redis и certbot на одной картинке. Переключение локально/сервер, пошаговая анимация пути запроса, клик по блоку — что это и зачем, плюс глоссарий сокращений (CORS, TLS, ACME, reverse-proxy и др.).",
+      "description": "Интерактивная схема netroom: client, admin, сервер, Nginx, PostgreSQL, Redis и certbot на одной картинке. Переключение локально/сервер, пошаговая анимация пути запроса, клик по блоку — что это и зачем, плюс глоссарий сокращений (CORS, TLS, ACME, reverse-proxy и др.).",
       "path": "system-map.html",
       "emoji": "🗺️",
       "date": "2026-07-18",
@@ -52,12 +52,12 @@
         "архитектура",
         "обзор",
         "интерактив",
-        "dev-vault"
+        "netroom"
       ]
     },
     {
       "title": "Nginx — привратник системы",
-      "description": "Что такое reverse-proxy на примере dev-vault: forward vs reverse, роутинг по поддоменам api/app/admin с интерактивной схемой, TLS-терминация, построчный разбор реального конфига (map, server :80/:443, proxy_pass), два уровня Nginx, snippets и FAQ.",
+      "description": "Что такое reverse-proxy на примере netroom: forward vs reverse, роутинг по поддоменам api/app/admin с интерактивной схемой, TLS-терминация, построчный разбор реального конфига (map, server :80/:443, proxy_pass), два уровня Nginx, snippets и FAQ.",
       "path": "nginx-reverse-proxy.html",
       "emoji": "🔀",
       "date": "2026-07-18",
@@ -65,12 +65,12 @@
         "nginx",
         "reverse-proxy",
         "концепция",
-        "dev-vault"
+        "netroom"
       ]
     },
     {
       "title": "Redis — быстрая память",
-      "description": "Что такое Redis простыми словами: хранилище ключ-значение в оперативной памяти, чем отличается от PostgreSQL (сравнительная таблица), зачем кэш/сессии/очереди/rate-limit. Интерактивный TTL-плейграунд (SET/GET/протухание ключей), разбор конфигурации dev-vault и FAQ.",
+      "description": "Что такое Redis простыми словами: хранилище ключ-значение в оперативной памяти, чем отличается от PostgreSQL (сравнительная таблица), зачем кэш/сессии/очереди/rate-limit. Интерактивный TTL-плейграунд (SET/GET/протухание ключей), разбор конфигурации netroom и FAQ.",
       "path": "redis-explained.html",
       "emoji": "🧱",
       "date": "2026-07-18",
@@ -78,12 +78,12 @@
         "redis",
         "кэш",
         "концепция",
-        "dev-vault"
+        "netroom"
       ]
     },
     {
       "title": "PostgreSQL — источник правды",
-      "description": "Что такое реляционная база простыми словами: таблицы, строки, столбцы, внешние ключи, связи один-ко-многим. Интерактивный SQL-плейграунд (SELECT/WHERE/JOIN/COUNT с подсветкой строк), миграции, ACID и транзакции, разбор конфигурации dev-vault и FAQ.",
+      "description": "Что такое реляционная база простыми словами: таблицы, строки, столбцы, внешние ключи, связи один-ко-многим. Интерактивный SQL-плейграунд (SELECT/WHERE/JOIN/COUNT с подсветкой строк), миграции, ACID и транзакции, разбор конфигурации netroom и FAQ.",
       "path": "postgresql-explained.html",
       "emoji": "🐘",
       "date": "2026-07-18",
@@ -91,7 +91,7 @@
         "postgresql",
         "sql",
         "концепция",
-        "dev-vault"
+        "netroom"
       ]
     },
     {
@@ -104,12 +104,12 @@
         "docker",
         "контейнеры",
         "концепция",
-        "dev-vault"
+        "netroom"
       ]
     },
     {
       "title": "Docker & Compose построчно",
-      "description": "Справочник: расшифровка каждой строчки Dockerfile и compose на реальных файлах dev-vault. Слева строка — справа человеческое объяснение: что это, зачем, где подвох.",
+      "description": "Справочник: расшифровка каждой строчки Dockerfile и compose на реальных файлах netroom. Слева строка — справа человеческое объяснение: что это, зачем, где подвох.",
       "path": "reference-docker-compose.html",
       "emoji": "🔎",
       "date": "2026-07-16",
@@ -117,7 +117,7 @@
         "docker",
         "compose",
         "справочник",
-        "dev-vault"
+        "netroom"
       ]
     }
   ]
