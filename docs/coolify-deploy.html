@@ -1,0 +1,582 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Coolify · залить проект · netroom</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🚀</text></svg>" />
+    <meta
+      name="description"
+      content="Как залить и настроить netroom через Coolify (self-hosted PaaS): установка на VPS, модель Project/Environment/Resource, PostgreSQL и Redis в один клик, приложения из Dockerfile, домены с авто-SSL, Build vs Runtime переменные, авто-деплой по push. Сверено с docs.coolify.io, июль 2026."
+    />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --bg: #14100e; --bg-2: #1b1613; --panel: #201a16; --panel-2: #261f1a; --code-bg: #17120f;
+        --line: #382e27; --line-2: #4a3d34; --ink: #f3ece4; --ink-2: #c3b6a8; --ink-3: #8b7d70;
+        --copper: #e0895f; --copper-soft: #d97757; --gold: #e6b86a; --done: #7fa66a;
+        --done-bg: rgba(127, 166, 106, 0.14); --blue: #7fa8c9;
+        --radius: 16px; --serif: "Fraunces", Georgia, serif;
+        --sans: "IBM Plex Sans", -apple-system, BlinkMacSystemFont, sans-serif;
+        --mono: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+      }
+      :root[data-theme="light"] {
+        --bg: #f6f1ea; --bg-2: #efe7db; --panel: #fffdf9; --panel-2: #f1e9dc; --code-bg: #2a2320;
+        --line: #e2d6c6; --line-2: #d2c2ad; --ink: #241c14; --ink-2: #5a4d3f; --ink-3: #8a7a68;
+        --copper: #b8542f; --copper-soft: #c96a3e; --gold: #a9762a; --done: #5c7f45; --done-bg: rgba(92,127,69,0.12); --blue: #3f6b8f;
+      }
+      @media (prefers-color-scheme: light) {
+        :root:not([data-theme="dark"]) {
+          --bg: #f6f1ea; --bg-2: #efe7db; --panel: #fffdf9; --panel-2: #f1e9dc; --code-bg: #2a2320;
+          --line: #e2d6c6; --line-2: #d2c2ad; --ink: #241c14; --ink-2: #5a4d3f; --ink-3: #8a7a68;
+          --copper: #b8542f; --copper-soft: #c96a3e; --gold: #a9762a; --done: #5c7f45; --done-bg: rgba(92,127,69,0.12); --blue: #3f6b8f;
+        }
+      }
+
+      * { box-sizing: border-box; margin: 0; padding: 0; }
+      html { scroll-behavior: smooth; scroll-padding-top: 80px; }
+      body {
+        font-family: var(--sans); background: var(--bg); color: var(--ink); line-height: 1.6;
+        -webkit-font-smoothing: antialiased;
+        background-image: radial-gradient(1100px 550px at 88% -5%, rgba(224,137,95,0.09), transparent 60%);
+        background-attachment: fixed;
+      }
+      ::selection { background: var(--copper); color: #14100e; }
+
+      .topbar { position: sticky; top: 0; z-index: 50; display: flex; align-items: center; gap: 1rem; padding: 0.7rem clamp(1rem,4vw,2.5rem); background: color-mix(in srgb, var(--bg) 82%, transparent); backdrop-filter: blur(14px); border-bottom: 1px solid var(--line); }
+      .brand { font-family: var(--mono); font-size: 0.82rem; color: var(--ink-2); white-space: nowrap; }
+      .brand b { color: var(--copper); font-weight: 500; }
+      .topbar .spacer { flex: 1; }
+      .btn { font-family: var(--mono); font-size: 0.76rem; color: var(--ink-2); background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 0.4rem 0.6rem; cursor: pointer; transition: all 0.15s ease; text-decoration: none; white-space: nowrap; }
+      .btn:hover { color: var(--ink); border-color: var(--line-2); }
+
+      .shell { max-width: 900px; margin: 0 auto; padding: 0 clamp(1rem,4vw,2rem) 6rem; }
+
+      .hero { padding: clamp(2.5rem,7vw,4.5rem) 0 1rem; }
+      .eyebrow { font-family: var(--mono); font-size: 0.78rem; letter-spacing: 0.14em; text-transform: uppercase; color: var(--copper); display: flex; align-items: center; gap: 0.6rem; }
+      .eyebrow::before { content: ""; width: 1.8rem; height: 1px; background: var(--copper); }
+      h1 { font-family: var(--serif); font-weight: 600; font-size: clamp(2.2rem,6vw,3.4rem); line-height: 1.05; letter-spacing: -0.015em; margin: 1rem 0 0.5rem; }
+      h1 em { font-style: italic; color: var(--copper); }
+      .lede { font-size: clamp(1.02rem,2.3vw,1.18rem); color: var(--ink-2); max-width: 64ch; margin-top: 0.8rem; }
+      .lede b { color: var(--ink); font-weight: 500; }
+      .meta { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 1.5rem; font-family: var(--mono); font-size: 0.76rem; }
+      .chip { border: 1px solid var(--line); background: var(--panel); color: var(--ink-2); border-radius: 99px; padding: 0.25rem 0.7rem; }
+      .chip.v { border-color: color-mix(in srgb, var(--done) 45%, transparent); color: var(--done); }
+
+      h2 { font-family: var(--serif); font-weight: 600; font-size: clamp(1.5rem,4vw,2rem); letter-spacing: -0.01em; margin: 3rem 0 0.5rem; scroll-margin-top: 80px; }
+      h3 { font-family: var(--mono); font-weight: 500; font-size: 0.9rem; color: var(--copper); margin: 1.8rem 0 0.6rem; text-transform: uppercase; letter-spacing: 0.04em; }
+      p.body { color: var(--ink-2); margin: 0.7rem 0; }
+      p.body b { color: var(--ink); font-weight: 500; }
+      p.body code, .inline { font-family: var(--mono); font-size: 0.88em; background: var(--panel-2); border: 1px solid var(--line); border-radius: 5px; padding: 0.05rem 0.35rem; color: var(--copper); }
+
+      /* command block */
+      .cmd { font-family: var(--mono); font-size: 0.82rem; line-height: 1.6; color: var(--ink); background: var(--code-bg); border: 1px solid var(--line); border-radius: 10px; padding: 0.8rem 0.95rem; margin: 0.8rem 0; white-space: pre-wrap; overflow-wrap: anywhere; }
+      :root[data-theme="light"] .cmd, :root:not([data-theme="dark"]) .cmd { color: #f3ece4; }
+      .cmd .c { color: var(--ink-3); }
+      .cmd .p { color: var(--copper); }
+
+      /* steps */
+      .step { border: 1px solid var(--line); border-radius: 12px; background: var(--panel); padding: 1rem 1.15rem; margin: 0.8rem 0; }
+      .step .sh { display: flex; align-items: center; gap: 0.6rem; margin-bottom: 0.4rem; }
+      .step .num { font-family: var(--mono); font-size: 0.74rem; font-weight: 500; color: #14100e; background: var(--copper); border-radius: 99px; width: 1.5rem; height: 1.5rem; display: grid; place-items: center; flex: none; }
+      .step .st { font-family: var(--serif); font-size: 1.12rem; color: var(--ink); }
+      .step p { font-size: 0.9rem; color: var(--ink-2); margin: 0.3rem 0; }
+      .step p b { color: var(--ink); font-weight: 500; }
+      .step code { font-family: var(--mono); font-size: 0.86em; background: var(--panel-2); border: 1px solid var(--line); border-radius: 5px; padding: 0.05rem 0.35rem; color: var(--copper); }
+
+      /* comparison table */
+      .cmp-wrap { overflow-x: auto; }
+      .cmp { width: 100%; border-collapse: collapse; margin: 1rem 0; font-size: 0.88rem; border: 1px solid var(--line); border-radius: 12px; overflow: hidden; }
+      .cmp th, .cmp td { text-align: left; padding: 0.55rem 0.8rem; border-top: 1px solid var(--line); vertical-align: top; }
+      .cmp thead th { background: color-mix(in srgb, var(--panel) 60%, black); font-family: var(--mono); font-size: 0.74rem; color: var(--ink-2); border-top: none; }
+      .cmp thead th.man { color: var(--ink-3); }
+      .cmp thead th.coo { color: var(--copper); }
+      .cmp td { color: var(--ink-2); background: var(--panel); }
+      .cmp td:first-child { font-family: var(--mono); font-size: 0.76rem; color: var(--ink-3); white-space: nowrap; }
+      .cmp td b { color: var(--ink); font-weight: 500; }
+      .cmp code { font-family: var(--mono); font-size: 0.84em; color: var(--copper); }
+
+      /* resource configurator */
+      .cfg { border: 1px solid var(--line); border-radius: var(--radius); background: linear-gradient(180deg, color-mix(in srgb, var(--panel) 70%, transparent), var(--panel)); padding: 0.9rem; margin: 1.1rem 0; }
+      .cfgbtns { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-bottom: 0.85rem; }
+      .cfgbtns button { font-family: var(--mono); font-size: 0.8rem; color: var(--ink-2); background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 0.45rem 0.8rem; cursor: pointer; transition: all 0.15s ease; display: inline-flex; align-items: center; gap: 0.35rem; }
+      .cfgbtns button.on { background: var(--copper); color: #14100e; font-weight: 500; border-color: var(--copper); }
+      .cfgbtns button:not(.on):hover { color: var(--ink); border-color: var(--line-2); }
+      .cfgpanel { border: 1px solid var(--line); border-radius: 10px; background: var(--code-bg); overflow: hidden; }
+      :root[data-theme="light"] .cfgpanel, :root:not([data-theme="dark"]) .cfgpanel { background: #221c19; }
+      .cfgpanel .ph { padding: 0.7rem 0.9rem; border-bottom: 1px solid var(--line); display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; }
+      .cfgpanel .ph .nm { font-family: var(--mono); font-size: 0.9rem; color: var(--gold); }
+      .cfgpanel .ph .badge { font-family: var(--mono); font-size: 0.68rem; color: var(--copper); border: 1px solid color-mix(in srgb, var(--copper) 40%, transparent); border-radius: 99px; padding: 0.08rem 0.5rem; }
+      .cfgrow { display: grid; grid-template-columns: 8.5rem 1fr; gap: 0.4rem 0.9rem; padding: 0.6rem 0.9rem; border-top: 1px solid color-mix(in srgb, var(--line) 55%, transparent); font-size: 0.86rem; }
+      .cfgrow:first-of-type { border-top: none; }
+      .cfgrow dt { font-family: var(--mono); font-size: 0.72rem; color: var(--ink-3); padding-top: 0.1rem; }
+      .cfgrow dd { color: var(--ink-2); }
+      .cfgrow dd code { font-family: var(--mono); font-size: 0.86em; color: var(--copper); overflow-wrap: anywhere; }
+      .cfgrow dd b { color: var(--ink); font-weight: 500; }
+      .envline { display: block; margin: 0.1rem 0; }
+      .envline .k { color: var(--gold); }
+      .tagb { font-family: var(--mono); font-size: 0.64rem; border-radius: 99px; padding: 0.02rem 0.4rem; margin-left: 0.35rem; }
+      .tagb.build { color: var(--copper); border: 1px solid color-mix(in srgb, var(--copper) 40%, transparent); }
+      .tagb.run { color: var(--blue); border: 1px solid color-mix(in srgb, var(--blue) 40%, transparent); }
+      .tagb.secret { color: var(--gold); border: 1px solid color-mix(in srgb, var(--gold) 40%, transparent); }
+
+      .note { border-left: 3px solid var(--copper); background: color-mix(in srgb, var(--copper) 8%, var(--panel)); border-radius: 0 10px 10px 0; padding: 0.9rem 1.1rem; margin: 1.4rem 0; }
+      .note .t { font-family: var(--mono); font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--copper); margin-bottom: 0.3rem; }
+      .note p { font-size: 0.9rem; color: var(--ink-2); }
+      .note p b { color: var(--ink); }
+      .note p code { font-family: var(--mono); font-size: 0.86em; background: var(--panel-2); border: 1px solid var(--line); border-radius: 5px; padding: 0.05rem 0.35rem; color: var(--copper); }
+      .note.blue { border-left-color: var(--blue); background: color-mix(in srgb, var(--blue) 9%, var(--panel)); }
+      .note.blue .t { color: var(--blue); }
+      .note.warn { border-left-color: var(--gold); background: color-mix(in srgb, var(--gold) 9%, var(--panel)); }
+      .note.warn .t { color: var(--gold); }
+
+      .toc { display: flex; flex-wrap: wrap; gap: 0.5rem; margin: 1.5rem 0 0.5rem; }
+      .toc a { font-family: var(--mono); font-size: 0.76rem; color: var(--ink-2); text-decoration: none; border: 1px solid var(--line); border-radius: 8px; padding: 0.35rem 0.7rem; transition: all 0.15s ease; }
+      .toc a:hover { color: var(--copper); border-color: var(--copper); }
+
+      .faq { border: 1px solid var(--line); border-radius: 12px; background: var(--panel); margin: 0.7rem 0; overflow: hidden; }
+      .faq summary { cursor: pointer; padding: 0.85rem 1rem; font-weight: 500; color: var(--ink); list-style: none; display: flex; align-items: center; gap: 0.6rem; font-size: 0.95rem; }
+      .faq summary::-webkit-details-marker { display: none; }
+      .faq summary::before { content: "＋"; font-family: var(--mono); color: var(--copper); font-size: 1rem; }
+      .faq[open] summary::before { content: "－"; }
+      .faq summary:hover { color: var(--copper); }
+      .faq .a { padding: 0 1rem 0.95rem 2.2rem; color: var(--ink-2); font-size: 0.9rem; }
+      .faq .a code { font-family: var(--mono); font-size: 0.86em; background: var(--panel-2); border: 1px solid var(--line); border-radius: 5px; padding: 0.05rem 0.35rem; color: var(--copper); }
+      .faq .a b { color: var(--ink); font-weight: 500; }
+
+      .srclinks { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.8rem; }
+      .srclinks a { font-family: var(--mono); font-size: 0.76rem; color: var(--ink-2); text-decoration: none; border: 1px solid var(--line); border-radius: 8px; padding: 0.35rem 0.7rem; transition: all 0.15s ease; }
+      .srclinks a:hover { color: var(--copper); border-color: var(--copper); }
+
+      .lnav { display: flex; flex-wrap: wrap; gap: 0.8rem; justify-content: space-between; margin-top: 3.5rem; }
+      .lnav a { flex: 1; min-width: 220px; border: 1px solid var(--line); border-radius: 12px; padding: 1rem 1.2rem; text-decoration: none; background: var(--panel); transition: all 0.15s ease; }
+      .lnav a:hover { border-color: var(--copper); transform: translateY(-2px); }
+      .lnav .dir { font-family: var(--mono); font-size: 0.72rem; color: var(--ink-3); }
+      .lnav .ttl { color: var(--ink); font-weight: 500; margin-top: 0.2rem; }
+
+      footer { margin-top: 3rem; padding-top: 1.5rem; border-top: 1px solid var(--line); font-family: var(--mono); font-size: 0.78rem; color: var(--ink-3); display: flex; flex-wrap: wrap; gap: 0.5rem 1rem; justify-content: space-between; }
+      footer a { color: var(--copper); text-decoration: none; }
+      @media (prefers-reduced-motion: reduce) { * { transition: none !important; scroll-behavior: auto !important; } }
+
+      /* unified nav dropdown */
+      .brand { text-decoration: none; }
+      .navdd { position: relative; display: inline-flex; }
+      .nav-toggle { cursor: pointer; }
+      .nav-menu { position: absolute; top: calc(100% + 8px); left: 0; z-index: 60; display: none; min-width: 266px; max-width: calc(100vw - 2rem); max-height: 74vh; overflow: auto; background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 0.5rem; box-shadow: 0 16px 44px rgba(0,0,0,0.38); }
+      .nav-menu.open { display: block; }
+      .nav-grp { font-family: var(--mono); font-size: 0.66rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--ink-3); margin: 0.6rem 0.5rem 0.2rem; }
+      .nav-grp:first-child { margin-top: 0.2rem; }
+      .nav-item { display: flex; align-items: center; gap: 0.55rem; padding: 0.42rem 0.55rem; border-radius: 9px; text-decoration: none; color: var(--ink-2); font-size: 0.85rem; white-space: nowrap; transition: background 0.12s ease, color 0.12s ease; }
+      .nav-item:hover { background: var(--panel-2); color: var(--ink); }
+      .nav-item.cur { color: var(--copper); background: color-mix(in srgb, var(--copper) 10%, transparent); }
+      .nav-em { width: 1.25rem; text-align: center; flex: none; }
+    </style>
+  </head>
+  <body>
+    <div class="topbar">
+      <a class="brand" href="index.html"><b>◆</b> netroom</a>
+      <div class="navdd">
+        <button class="btn nav-toggle" aria-expanded="false" aria-haspopup="true">☰ материалы</button>
+        <div class="nav-menu" role="menu">
+            <div class="nav-grp">Обзор</div>
+            <a class="nav-item" href="system-map.html"><span class="nav-em">🗺️</span>Карта системы</a>
+            <div class="nav-grp">План</div>
+            <a class="nav-item" href="backend-roadmap.html"><span class="nav-em">🛠️</span>Бэкенд с нуля до прода</a>
+            <div class="nav-grp">Уроки</div>
+            <a class="nav-item" href="lesson-01-docker.html"><span class="nav-em">🐳</span>Урок 01 · Локальная среда</a>
+            <a class="nav-item" href="lesson-02-server.html"><span class="nav-em">🖥️</span>Урок 02 · Боевой сервер</a>
+            <div class="nav-grp">Концепты</div>
+            <a class="nav-item" href="docker-concepts.html"><span class="nav-em">🐳</span>Docker · ментальная модель</a>
+            <a class="nav-item" href="nginx-reverse-proxy.html"><span class="nav-em">🔀</span>Nginx · reverse-proxy</a>
+            <a class="nav-item" href="redis-explained.html"><span class="nav-em">🧱</span>Redis · быстрая память</a>
+            <a class="nav-item" href="postgresql-explained.html"><span class="nav-em">🐘</span>PostgreSQL · источник правды</a>
+            <div class="nav-grp">Деплой</div>
+            <a class="nav-item cur" aria-current="page" href="coolify-deploy.html"><span class="nav-em">🚀</span>Coolify · залить проект</a>
+            <div class="nav-grp">Справка</div>
+            <a class="nav-item" href="reference-docker-compose.html"><span class="nav-em">🔎</span>Docker &amp; Compose построчно</a>
+        </div>
+      </div>
+      <span class="spacer"></span>
+      <button class="btn" id="themeBtn" title="Сменить тему">☾</button>
+    </div>
+
+    <div class="shell">
+      <header class="hero">
+        <span class="eyebrow">деплой · self-hosted paas</span>
+        <h1>Coolify — <em>залить netroom</em> без ручного Nginx</h1>
+        <p class="lede">
+          В <a href="lesson-02-server.html" style="color:var(--copper)">уроке 02</a> мы поднимали прод
+          руками: Nginx, certbot, <code>compose.prod.yml</code>. <b>Coolify</b> — панель, которая делает
+          это за тебя: обратный прокси, авто-SSL, базы в один клик, деплой по <code>git push</code>.
+          Ниже — установка и пошаговый залив всех четырёх реп netroom плюс Postgres и Redis.
+        </p>
+        <div class="meta">
+          <span class="chip v">✓ сверено с docs.coolify.io · июль 2026</span>
+          <span class="chip">установка</span>
+          <span class="chip">5 ресурсов netroom</span>
+          <span class="chip">авто-SSL</span>
+        </div>
+        <div class="toc">
+          <a href="#what">Что это и что заменяет</a>
+          <a href="#install">Установка</a>
+          <a href="#model">Модель Coolify</a>
+          <a href="#plan">План: netroom в Coolify</a>
+          <a href="#steps">Пошагово залить</a>
+          <a href="#cfg">Настройки по ресурсам</a>
+          <a href="#env">Build vs Runtime</a>
+          <a href="#faq">Вопросы</a>
+          <a href="#src">Официальные доки</a>
+        </div>
+      </header>
+
+      <h2 id="what">Что такое Coolify и что он заменяет</h2>
+      <p class="body">
+        Coolify — <b>self-hosted PaaS</b>: ставишь на свой VPS, и он превращается в подобие Vercel или
+        Heroku, но на твоём железе и бесплатно. Под капотом — всё тот же <b>Docker</b> и обратный
+        прокси <b>Traefik</b>, просто спрятанные за панелью. Он не отменяет то, что мы разбирали в
+        уроках, — он это автоматизирует.
+      </p>
+      <div class="cmp-wrap">
+        <table class="cmp">
+          <thead>
+            <tr><th>задача</th><th class="man">руками (урок 02)</th><th class="coo">🚀 Coolify</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>обратный прокси</td><td>пишешь конфиг Nginx, поддомены, <code>proxy_pass</code></td><td>Traefik настраивается сам по домену ресурса</td></tr>
+            <tr><td>HTTPS / TLS</td><td>certbot, <code>init-letsencrypt.sh</code>, envsubst, авто-reload</td><td>указал <code>https://</code> — сертификат Let's Encrypt сам</td></tr>
+            <tr><td>оркестрация</td><td><code>compose.prod.yml</code> руками, <code>docker compose up</code></td><td>каждый сервис — ресурс в UI, поднимается кнопкой</td></tr>
+            <tr><td>база и кэш</td><td>прописываешь сервисы, тома, healthcheck</td><td>PostgreSQL и Redis — <b>в один клик</b>, тома сами</td></tr>
+            <tr><td>деплой</td><td><code>git pull</code> + пересборка на сервере руками</td><td>по <code>git push</code> автоматически (webhook)</td></tr>
+            <tr><td>секреты / env</td><td>файлы <code>.env</code> на сервере</td><td>в UI, с разделением build/runtime</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="note warn">
+        <div class="t">что Coolify НЕ делает за тебя</div>
+        <p>
+          Базовую защиту сервера — <b>всё ещё сам</b>: непарольный SSH, <code>ufw</code>, <code>fail2ban</code>
+          (шаги 1–2 урока 02). Coolify — про приложения, а не про хардненг ОС. И само понимание, что
+          он делает под капотом, — тоже твоё: когда что-то отвалится, чинить будешь ты.
+        </p>
+      </div>
+
+      <h2 id="install">Установка на VPS</h2>
+      <p class="body">
+        Нужен чистый VPS с Linux (Ubuntu/Debian и др.), <b>64-бит</b> (AMD64 или ARM64). Минимум по
+        докам — <b>2 CPU, 2 ГБ RAM, 30 ГБ диска</b> (для комфорта лучше 2+ ГБ с запасом, т.к. на этом
+        же сервере крутятся и твои контейнеры).
+      </p>
+      <p class="body">Зайди на сервер по SSH под root и выполни официальный скрипт:</p>
+      <div class="cmd"><span class="c"># ставит Docker 24+, зависимости, создаёт /data/coolify и запускает панель</span>
+curl -fsSL https://cdn.coollabs.io/coolify/install.sh | sudo bash</div>
+      <p class="body">
+        Скрипт сам поставит <b>Docker</b>, нужные утилиты, сгенерирует SSH-ключи и поднимет Coolify.
+        Через пару минут открывай панель в браузере:
+      </p>
+      <div class="cmd">http://<span class="p">&lt;IP-сервера&gt;</span>:8000</div>
+      <div class="note">
+        <div class="t">первый вход — сразу</div>
+        <p>
+          На первом экране Coolify просит <b>создать админ-аккаунт</b>. Сделай это немедленно: пока
+          аккаунта нет, регистрация открыта — любой, кто знает IP, может занять твою панель. Открыл
+          порт 8000 — сразу заведи админа.
+        </p>
+      </div>
+
+      <h2 id="model">Модель Coolify: Project → Environment → Resource</h2>
+      <p class="body">Три уровня вложенности — важно понять сразу, дальше всё по ним раскладывается.</p>
+      <div class="step">
+        <div class="sh"><span class="num">1</span><span class="st">Project (проект)</span></div>
+        <p>Логическая коробка под весь netroom. Создаёшь один проект — <code>netroom</code>.</p>
+      </div>
+      <div class="step">
+        <div class="sh"><span class="num">2</span><span class="st">Environment (окружение)</span></div>
+        <p>Внутри проекта — окружения: <code>production</code>, при желании <code>staging</code>. Обычно стартуешь с <code>production</code>.</p>
+      </div>
+      <div class="step">
+        <div class="sh"><span class="num">3</span><span class="st">Resource (ресурс)</span></div>
+        <p>Конкретная штука внутри окружения: приложение (из Git), база данных, сервис. Наш netroom — это <b>5 ресурсов</b> в одном окружении: Postgres, Redis, server, client, admin.</p>
+      </div>
+      <p class="body">
+        Сервер, на который всё катится, подключается отдельно (раздел <b>Servers</b>). Сразу после
+        установки уже есть сервер <code>localhost</code> — тот самый VPS, где стоит Coolify. Для старта
+        катим прямо на него.
+      </p>
+
+      <h2 id="plan">План: как разложить netroom</h2>
+      <p class="body">
+        Один проект <code>netroom</code>, окружение <code>production</code>, внутри — пять ресурсов.
+        Домены — три поддомена, как и в ручном варианте.
+      </p>
+      <div class="cmp-wrap">
+        <table class="cmp">
+          <thead>
+            <tr><th>ресурс</th><th class="coo">тип в Coolify</th><th>домен / порт</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>🐘 postgres</td><td>PostgreSQL (one-click)</td><td>приватный, без домена</td></tr>
+            <tr><td>🧱 redis</td><td>Redis (one-click)</td><td>приватный, без домена</td></tr>
+            <tr><td>⚙️ netroom-server</td><td>Application · Dockerfile</td><td><code>api.</code> · порт 3030</td></tr>
+            <tr><td>📦 netroom-client</td><td>Application · Dockerfile</td><td><code>app.</code> · порт 80</td></tr>
+            <tr><td>📦 netroom-admin</td><td>Application · Dockerfile</td><td><code>admin.</code> · порт 80</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="note blue">
+        <div class="t">архитектура не меняется</div>
+        <p>
+          Это ровно та схема с <a href="system-map.html" style="color:var(--blue)">карты (prod)</a>: фронты
+          кросс-ориджин зовут <code>api.</code>, база и кэш приватные. Меняется только <b>кто это
+          настраивает</b> — Traefik Coolify вместо твоего Nginx. <b>CORS и <code>VITE_API_URL</code>
+          остаются</b> — сервисы по-прежнему независимы.
+        </p>
+      </div>
+
+      <h2 id="steps">Пошагово: залить наше барахло</h2>
+
+      <div class="step">
+        <div class="sh"><span class="num">0</span><span class="st">DNS — три A-записи</span></div>
+        <p>У регистратора домена наведи на IP сервера: <code>api.домен</code>, <code>app.домен</code>, <code>admin.домен</code> → A-запись на один и тот же IP. Без этого Let's Encrypt не выпустит сертификат.</p>
+      </div>
+      <div class="step">
+        <div class="sh"><span class="num">1</span><span class="st">Сервер + Coolify</span></div>
+        <p>VPS готов, скрипт установки выполнен (см. выше), админ создан. Сервер <code>localhost</code> уже подключён.</p>
+      </div>
+      <div class="step">
+        <div class="sh"><span class="num">2</span><span class="st">Подключить GitHub</span></div>
+        <p>Раздел <b>Sources</b> → добавь <b>GitHub App</b> (проще всего): даёт доступ к приватным репам <code>netroom-*</code> и включает авто-деплой по push. Альтернатива для одной репы — <b>Deploy Key</b>.</p>
+      </div>
+      <div class="step">
+        <div class="sh"><span class="num">3</span><span class="st">Project + Environment</span></div>
+        <p>Создай проект <code>netroom</code>, внутри — окружение <code>production</code>. Дальше все ресурсы кладём сюда.</p>
+      </div>
+      <div class="step">
+        <div class="sh"><span class="num">4</span><span class="st">PostgreSQL (one-click)</span></div>
+        <p><b>+ New Resource → Databases → PostgreSQL</b>. Версию бери 18 (как локально). Coolify сам поднимет контейнер с постоянным томом. Скопируй <b>Postgres URL (internal)</b> из его страницы — он понадобится серверу.</p>
+      </div>
+      <div class="step">
+        <div class="sh"><span class="num">5</span><span class="st">Redis (one-click)</span></div>
+        <p><b>+ New Resource → Databases → Redis</b>. Тоже приватный, с томом. Скопируй его <b>internal URL</b>.</p>
+      </div>
+      <div class="step">
+        <div class="sh"><span class="num">6</span><span class="st">netroom-server (backend)</span></div>
+        <p><b>+ New Resource → Application</b> → источник <code>netroom-server</code> → Build Pack <b>Dockerfile</b>. Порт <code>3030</code>, домен <code>https://api.домен</code>. Переменные (Runtime): <code>DATABASE_URL</code> и <code>REDIS_URL</code> из шагов 4–5, <code>CORS_ORIGIN=https://app.домен,https://admin.домен</code>. Деплой.</p>
+      </div>
+      <div class="step">
+        <div class="sh"><span class="num">7</span><span class="st">netroom-client</span></div>
+        <p><b>+ New Resource → Application</b> → <code>netroom-client</code> → Dockerfile. Порт <code>80</code> (прод-стадия — статика в nginx), домен <code>https://app.домен</code>. Переменная <code>VITE_API_URL=https://api.домен</code> с включённым чек-боксом <b>Build Variable</b> (см. ниже — это критично). Деплой.</p>
+      </div>
+      <div class="step">
+        <div class="sh"><span class="num">8</span><span class="st">netroom-admin</span></div>
+        <p>То же, что client, но репа <code>netroom-admin</code> и домен <code>https://admin.домен</code>. Порт <code>80</code>, <code>VITE_API_URL</code> как Build Variable.</p>
+      </div>
+      <div class="step">
+        <div class="sh"><span class="num">9</span><span class="st">Авто-деплой</span></div>
+        <p>Если ставил <b>GitHub App</b> — авто-деплой обычно уже включён. Проверь на каждом приложении: <b>Advanced → Auto Deploy</b>. Теперь <code>git push</code> в ветку = пересборка и выкат.</p>
+      </div>
+
+      <h2 id="cfg">Настройки по каждому нашему ресурсу</h2>
+      <p class="body">Шпаргалка: выбери сервис — покажу точные значения полей для Coolify.</p>
+      <div class="cfg">
+        <div class="cfgbtns" id="cfgbtns">
+          <button data-r="postgres">🐘 postgres</button>
+          <button data-r="redis">🧱 redis</button>
+          <button data-r="server" class="on">⚙️ server</button>
+          <button data-r="client">📦 client</button>
+          <button data-r="admin">📦 admin</button>
+        </div>
+        <div class="cfgpanel" id="cfgpanel"></div>
+      </div>
+      <div class="note">
+        <div class="t">про Dockerfile и стадии</div>
+        <p>
+          Наши Dockerfile <b>multi-stage</b> (base → deps → dev → build → prod). Coolify по Build Pack
+          «Dockerfile» собирает <b>финальную стадию</b> — а она у нас <code>prod</code>. Для сервера это
+          лёгкий Node-образ, для client/admin — nginx со статикой. Ничего дополнительно указывать не
+          нужно. Подробнее про стадии — в <a href="docker-concepts.html" style="color:var(--copper)">Docker: ментальная модель</a>.
+        </p>
+      </div>
+
+      <h2 id="env">Build vs Runtime — почему это важно для фронтов</h2>
+      <p class="body">
+        В Coolify у каждой переменной <b>два независимых флага</b> (оба включены по умолчанию):
+      </p>
+      <div class="cards" style="display:grid;grid-template-columns:1fr 1fr;gap:0.9rem;margin:1.1rem 0">
+        <div class="step" style="margin:0">
+          <div class="sh"><span class="st" style="color:var(--copper)">Build Variable</span></div>
+          <p>Подставляется <b>при сборке</b> образа — как Docker <code>ARG</code>. Именно сюда идёт <code>VITE_API_URL</code>: Vite запекает адрес API в бандл на этапе <code>build</code>.</p>
+        </div>
+        <div class="step" style="margin:0">
+          <div class="sh"><span class="st" style="color:var(--blue)">Runtime Variable</span></div>
+          <p>Доступна <b>внутри работающего</b> контейнера через <code>.env</code>. Сюда — то, что читается при старте: <code>DATABASE_URL</code>, <code>REDIS_URL</code>, <code>CORS_ORIGIN</code>.</p>
+        </div>
+      </div>
+      <div class="note warn">
+        <div class="t">главная ловушка фронта</div>
+        <p>
+          Если у <code>VITE_API_URL</code> <b>не</b> отмечен <b>Build Variable</b> — Vite не увидит его при
+          сборке, и бандл уедет с пустым адресом API. Фронт «залился, но не видит бэкенд». Для client и
+          admin <code>VITE_API_URL</code> обязан быть <b>Build Variable</b>; Runtime ему не нужен.
+        </p>
+      </div>
+      <p class="body">
+        Редактировать переменные можно карточками (<b>Normal View</b>, там и чек-боксы Build/Multiline/
+        Literal) или пачкой как <code>.env</code>-текст (<b>Developer View</b>). Для секретов есть
+        <b>Use Docker Build Secrets</b> (BuildKit) — значение не оседает в слоях образа.
+      </p>
+
+      <h2 id="faq">Частые вопросы</h2>
+      <details class="faq">
+        <summary>Можно залить всё одним <code>compose.prod.yml</code> вместо пяти ресурсов?</summary>
+        <div class="a">Да — есть Build Pack <b>Docker Compose</b>: указываешь путь к compose-файлу в репе <code>netroom-infra</code>, и Coolify поднимает весь стек. Но домены и секреты тогда задаются через «магические» переменные (<code>SERVICE_FQDN_*</code>, <code>SERVICE_PASSWORD_*</code>), и <b>нельзя объявлять свои сети</b> в compose (Coolify сам делает bridge; кастомная сеть ломает роутинг Traefik). Для наглядного управления доменами и env проще пять отдельных ресурсов; compose — когда хочешь один источник правды.</div>
+      </details>
+      <details class="faq">
+        <summary>Coolify заменяет то, что я учил в уроке 02? Зря учил?</summary>
+        <div class="a">Не зря. Coolify — <b>обёртка</b> над тем же Docker + reverse-proxy + Let's Encrypt. Пока работает — кликаешь и не думаешь. Когда сломается (сертификат не выпустился, контейнер не поднялся, база не видна) — чинить будешь ты, и тут пригодится понимание из уроков. Ручной путь — чтобы <b>понимать</b>, Coolify — чтобы <b>быстро катить</b>.</div>
+      </details>
+      <details class="faq">
+        <summary>Postgres и Redis точно приватные?</summary>
+        <div class="a">Да. Базы в Coolify по умолчанию <b>не имеют публичного домена/порта</b> — доступны только другим ресурсам по внутреннему адресу (internal URL, который ты копируешь). Публичный доступ включается отдельно и осознанно (например, чтобы подключиться GUI-клиентом). Это ровно наш принцип «база не торчит в интернет».</div>
+      </details>
+      <details class="faq">
+        <summary>Как обновлять — снова кликать?</summary>
+        <div class="a">Нет. С <b>Auto Deploy</b> (GitHub App или webhook) любой <code>git push</code> в отслеживаемую ветку запускает пересборку и выкат сам. Можно и вручную кнопкой <b>Deploy</b>. Откат — из истории деплоев.</div>
+      </details>
+      <details class="faq">
+        <summary>Что с бэкапами базы?</summary>
+        <div class="a">У Postgres в Coolify есть <b>Automatic DB Backups</b> — по расписанию в S3-совместимое хранилище, восстановление в один клик. Плюс раздел Import Backups для загрузки дампов (<code>pg_dump -Fc</code> по умолчанию). Настраивается на странице самой базы.</div>
+      </details>
+
+      <h2 id="src">Официальные доки (сверено)</h2>
+      <p class="body">Материал сверен с документацией Coolify в июле 2026. Первоисточники:</p>
+      <div class="srclinks">
+        <a href="https://coolify.io/docs/get-started/installation" target="_blank" rel="noopener noreferrer">Installation ↗</a>
+        <a href="https://coolify.io/docs/applications/build-packs/dockerfile" target="_blank" rel="noopener noreferrer">Dockerfile build pack ↗</a>
+        <a href="https://coolify.io/docs/knowledge-base/environment-variables" target="_blank" rel="noopener noreferrer">Environment variables ↗</a>
+        <a href="https://coolify.io/docs/databases/postgresql" target="_blank" rel="noopener noreferrer">PostgreSQL ↗</a>
+        <a href="https://coolify.io/docs/knowledge-base/domains" target="_blank" rel="noopener noreferrer">Domains & SSL ↗</a>
+        <a href="https://coolify.io/docs/applications/ci-cd/github/auto-deploy" target="_blank" rel="noopener noreferrer">Auto deploy ↗</a>
+      </div>
+
+      <div class="lnav">
+        <a href="lesson-02-server.html">
+          <div class="dir">← урок 02</div>
+          <div class="ttl">Боевой сервер вручную (Nginx + certbot)</div>
+        </a>
+        <a href="system-map.html">
+          <div class="dir">карта →</div>
+          <div class="ttl">Карта системы</div>
+        </a>
+      </div>
+
+      <footer>
+        <span>netroom · деплой · собрано в паре с Claude Code</span>
+        <a href="https://github.com/GrafSoul/claude-artefacts">исходники</a>
+      </footer>
+    </div>
+
+    <script>
+      /* theme */
+      const THEME_KEY = "netroom-lesson-theme";
+      const tbtn = document.getElementById("themeBtn");
+      function applyTheme(t) { document.documentElement.setAttribute("data-theme", t); tbtn.textContent = t === "dark" ? "☾" : "☀"; }
+      const savedTheme = localStorage.getItem(THEME_KEY);
+      if (savedTheme) applyTheme(savedTheme);
+      else tbtn.textContent = matchMedia("(prefers-color-scheme: light)").matches ? "☀" : "☾";
+      tbtn.addEventListener("click", () => {
+        const cur = document.documentElement.getAttribute("data-theme") || (matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark");
+        const next = cur === "dark" ? "light" : "dark";
+        localStorage.setItem(THEME_KEY, next); applyTheme(next);
+      });
+
+      /* nav dropdown */
+      (function () {
+        var t = document.querySelector(".nav-toggle"), m = document.querySelector(".nav-menu");
+        if (!t || !m) return;
+        t.addEventListener("click", function (e) { e.stopPropagation(); var o = m.classList.toggle("open"); t.setAttribute("aria-expanded", o); });
+        document.addEventListener("click", function (e) { if (!m.contains(e.target) && e.target !== t) { m.classList.remove("open"); t.setAttribute("aria-expanded", "false"); } });
+        document.addEventListener("keydown", function (e) { if (e.key === "Escape") { m.classList.remove("open"); t.setAttribute("aria-expanded", "false"); } });
+      })();
+
+      /* resource configurator */
+      const RESOURCES = {
+        postgres: {
+          name: "postgres", badge: "PostgreSQL · one-click",
+          rows: [
+            ["Тип", "База данных — <b>+ New Resource → Databases → PostgreSQL</b>"],
+            ["Версия", "18 (как локально)"],
+            ["Домен", "нет — <b>приватная</b>, только по internal URL"],
+            ["Хранилище", "постоянный том создаётся автоматически"],
+            ["Отдаёт", "<b>Postgres URL (internal)</b> — копируешь в server"],
+            ["Бэкапы", "Automatic DB Backups → S3 (на странице базы)"],
+          ],
+        },
+        redis: {
+          name: "redis", badge: "Redis · one-click",
+          rows: [
+            ["Тип", "База данных — <b>+ New Resource → Databases → Redis</b>"],
+            ["Версия", "8 (как локально)"],
+            ["Домен", "нет — <b>приватная</b>, только по internal URL"],
+            ["Хранилище", "постоянный том автоматически"],
+            ["Отдаёт", "<b>Redis URL (internal)</b> — копируешь в server"],
+          ],
+        },
+        server: {
+          name: "netroom-server", badge: "Application · Dockerfile",
+          rows: [
+            ["Источник", "репа <code>netroom-server</code> (GitHub App / Deploy Key)"],
+            ["Build Pack", "<b>Dockerfile</b> (переключить с Nixpacks)"],
+            ["Base Directory", "<code>/</code>"],
+            ["Port", "<code>3030</code>"],
+            ["Domain", "<code>https://api.домен</code> → авто-SSL"],
+            ["env", "<span class='envline'><span class='k'>DATABASE_URL</span>=…<span class='tagb run'>runtime</span></span><span class='envline'><span class='k'>REDIS_URL</span>=…<span class='tagb run'>runtime</span></span><span class='envline'><span class='k'>CORS_ORIGIN</span>=https://app.домен,https://admin.домен<span class='tagb run'>runtime</span></span>"],
+          ],
+        },
+        client: {
+          name: "netroom-client", badge: "Application · Dockerfile",
+          rows: [
+            ["Источник", "репа <code>netroom-client</code>"],
+            ["Build Pack", "<b>Dockerfile</b> (финал — nginx со статикой)"],
+            ["Base Directory", "<code>/</code>"],
+            ["Port", "<code>80</code>"],
+            ["Domain", "<code>https://app.домен</code> → авто-SSL"],
+            ["env", "<span class='envline'><span class='k'>VITE_API_URL</span>=https://api.домен<span class='tagb build'>build variable</span></span>"],
+          ],
+        },
+        admin: {
+          name: "netroom-admin", badge: "Application · Dockerfile",
+          rows: [
+            ["Источник", "репа <code>netroom-admin</code>"],
+            ["Build Pack", "<b>Dockerfile</b> (финал — nginx со статикой)"],
+            ["Base Directory", "<code>/</code>"],
+            ["Port", "<code>80</code>"],
+            ["Domain", "<code>https://admin.домен</code> → авто-SSL"],
+            ["env", "<span class='envline'><span class='k'>VITE_API_URL</span>=https://api.домен<span class='tagb build'>build variable</span></span>"],
+          ],
+        },
+      };
+
+      const panel = document.getElementById("cfgpanel");
+      function renderCfg(key) {
+        const r = RESOURCES[key];
+        let html = `<div class="ph"><span class="nm">${r.name}</span><span class="badge">${r.badge}</span></div>`;
+        html += r.rows.map(([k, v]) => `<dl class="cfgrow"><dt>${k}</dt><dd>${v}</dd></dl>`).join("");
+        panel.innerHTML = html;
+      }
+      const cfgBtns = [...document.querySelectorAll("#cfgbtns button")];
+      cfgBtns.forEach((b) => b.addEventListener("click", () => {
+        cfgBtns.forEach((x) => x.classList.remove("on"));
+        b.classList.add("on");
+        renderCfg(b.dataset.r);
+      }));
+
+      /* init */
+      renderCfg("server");
+    </script>
+  </body>
+</html>

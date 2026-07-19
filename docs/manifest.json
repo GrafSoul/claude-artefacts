@@ -43,6 +43,19 @@
       ]
     },
     {
+      "title": "Coolify · залить проект",
+      "description": "Как задеплоить netroom через Coolify (self-hosted PaaS) без ручного Nginx и certbot: установка на VPS, модель Project/Environment/Resource, PostgreSQL и Redis в один клик, приложения из Dockerfile, домены с авто-SSL, Build vs Runtime переменные (VITE_API_URL), авто-деплой по push. Интерактивный конфигуратор по каждому ресурсу. Сверено с docs.coolify.io, июль 2026.",
+      "path": "coolify-deploy.html",
+      "emoji": "🚀",
+      "date": "2026-07-19",
+      "tags": [
+        "coolify",
+        "деплой",
+        "devops",
+        "netroom"
+      ]
+    },
+    {
       "title": "Карта системы",
       "description": "Интерактивная схема netroom: client, admin, сервер, Nginx, PostgreSQL, Redis и certbot на одной картинке. Переключение локально/сервер, пошаговая анимация пути запроса, клик по блоку — что это и зачем, плюс глоссарий сокращений (CORS, TLS, ACME, reverse-proxy и др.).",
       "path": "system-map.html",
