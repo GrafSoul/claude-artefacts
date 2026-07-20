@@ -1,0 +1,752 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Шейдерный фон в шапке · netroom</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🌊</text></svg>" />
+    <meta
+      name="description"
+      content="Как добавить сайту шейдерный перелив в шапке и подвале, не заплатив скоростью: почему полоса вместо полного экрана, сравнение библиотек по весу (Paper Shaders, OGL, Vanta, Granim), установка, свой GLSL-шейдер, обязательные ограничения производительности и запасной вариант без WebGL."
+    />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --bg: #14100e; --bg-2: #1b1613; --panel: #201a16; --panel-2: #261f1a; --code-bg: #17120f;
+        --line: #382e27; --line-2: #4a3d34; --ink: #f3ece4; --ink-2: #c3b6a8; --ink-3: #8b7d70;
+        --copper: #e0895f; --copper-soft: #d97757; --gold: #e6b86a; --done: #7fa66a;
+        --done-bg: rgba(127, 166, 106, 0.14); --blue: #7fa8c9;
+        --radius: 16px; --serif: "Fraunces", Georgia, serif;
+        --sans: "IBM Plex Sans", -apple-system, BlinkMacSystemFont, sans-serif;
+        --mono: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+      }
+      :root[data-theme="light"] {
+        --bg: #f6f1ea; --bg-2: #efe7db; --panel: #fffdf9; --panel-2: #f1e9dc; --code-bg: #2a2320;
+        --line: #e2d6c6; --line-2: #d2c2ad; --ink: #241c14; --ink-2: #5a4d3f; --ink-3: #8a7a68;
+        --copper: #b8542f; --copper-soft: #c96a3e; --gold: #a9762a; --done: #5c7f45; --done-bg: rgba(92,127,69,0.12); --blue: #3f6b8f;
+      }
+      @media (prefers-color-scheme: light) {
+        :root:not([data-theme="dark"]) {
+          --bg: #f6f1ea; --bg-2: #efe7db; --panel: #fffdf9; --panel-2: #f1e9dc; --code-bg: #2a2320;
+          --line: #e2d6c6; --line-2: #d2c2ad; --ink: #241c14; --ink-2: #5a4d3f; --ink-3: #8a7a68;
+          --copper: #b8542f; --copper-soft: #c96a3e; --gold: #a9762a; --done: #5c7f45; --done-bg: rgba(92,127,69,0.12); --blue: #3f6b8f;
+        }
+      }
+
+      * { box-sizing: border-box; margin: 0; padding: 0; }
+      html { scroll-behavior: smooth; scroll-padding-top: 80px; }
+      body {
+        font-family: var(--sans); background: var(--bg); color: var(--ink); line-height: 1.6;
+        -webkit-font-smoothing: antialiased;
+        background-image: radial-gradient(1100px 550px at 88% -5%, rgba(224,137,95,0.09), transparent 60%);
+        background-attachment: fixed;
+      }
+      ::selection { background: var(--copper); color: #14100e; }
+
+      .topbar { position: sticky; top: 0; z-index: 50; display: flex; align-items: center; gap: 1rem; padding: 0.7rem clamp(1rem,4vw,2.5rem); background: color-mix(in srgb, var(--bg) 82%, transparent); backdrop-filter: blur(14px); border-bottom: 1px solid var(--line); }
+      .brand { font-family: var(--mono); font-size: 0.82rem; color: var(--ink-2); white-space: nowrap; }
+      .brand b { color: var(--copper); font-weight: 500; }
+      .topbar .spacer { flex: 1; }
+      .btn { font-family: var(--mono); font-size: 0.76rem; color: var(--ink-2); background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 0.4rem 0.6rem; cursor: pointer; transition: all 0.15s ease; text-decoration: none; white-space: nowrap; }
+      .btn:hover { color: var(--ink); border-color: var(--line-2); }
+
+      .shell { max-width: 900px; margin: 0 auto; padding: 0 clamp(1rem,4vw,2rem) 6rem; }
+
+      .hero { padding: clamp(2.5rem,7vw,4.5rem) 0 1rem; }
+      .eyebrow { font-family: var(--mono); font-size: 0.78rem; letter-spacing: 0.14em; text-transform: uppercase; color: var(--copper); display: flex; align-items: center; gap: 0.6rem; }
+      .eyebrow::before { content: ""; width: 1.8rem; height: 1px; background: var(--copper); }
+      h1 { font-family: var(--serif); font-weight: 600; font-size: clamp(2.2rem,6vw,3.4rem); line-height: 1.05; letter-spacing: -0.015em; margin: 1rem 0 0.5rem; }
+      h1 em { font-style: italic; color: var(--copper); }
+      .lede { font-size: clamp(1.02rem,2.3vw,1.18rem); color: var(--ink-2); max-width: 64ch; margin-top: 0.8rem; }
+      .lede b { color: var(--ink); font-weight: 500; }
+      .meta { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 1.5rem; font-family: var(--mono); font-size: 0.76rem; }
+      .chip { border: 1px solid var(--line); background: var(--panel); color: var(--ink-2); border-radius: 99px; padding: 0.25rem 0.7rem; }
+      .chip.v { border-color: color-mix(in srgb, var(--done) 45%, transparent); color: var(--done); }
+
+      h2 { font-family: var(--serif); font-weight: 600; font-size: clamp(1.5rem,4vw,2rem); letter-spacing: -0.01em; margin: 3rem 0 0.5rem; scroll-margin-top: 80px; }
+      h3 { font-family: var(--mono); font-weight: 500; font-size: 0.9rem; color: var(--copper); margin: 1.8rem 0 0.6rem; text-transform: uppercase; letter-spacing: 0.04em; }
+      p.body { color: var(--ink-2); margin: 0.7rem 0; }
+      p.body b { color: var(--ink); font-weight: 500; }
+      p.body code, .inline { font-family: var(--mono); font-size: 0.88em; background: var(--panel-2); border: 1px solid var(--line); border-radius: 5px; padding: 0.05rem 0.35rem; color: var(--copper); }
+
+      .cmd { font-family: var(--mono); font-size: 0.82rem; line-height: 1.6; color: #f3ece4; background: var(--code-bg); border: 1px solid var(--line); border-radius: 10px; padding: 0.8rem 0.95rem; margin: 0.8rem 0; overflow-x: auto; }
+      .cmd .c { color: var(--ink-3); }
+      .cmd .p { color: var(--copper); }
+      .cmd .k { color: var(--gold); }
+      .cmd .s { color: var(--done); }
+
+      .step { border: 1px solid var(--line); border-radius: 12px; background: var(--panel); padding: 1rem 1.15rem; margin: 0.8rem 0; }
+      .step .sh { display: flex; align-items: center; gap: 0.6rem; margin-bottom: 0.4rem; }
+      .step .num { font-family: var(--mono); font-size: 0.74rem; font-weight: 500; color: #14100e; background: var(--copper); border-radius: 99px; width: 1.5rem; height: 1.5rem; display: grid; place-items: center; flex: none; }
+      .step .st { font-family: var(--serif); font-size: 1.12rem; color: var(--ink); }
+      .step p { font-size: 0.9rem; color: var(--ink-2); margin: 0.3rem 0; }
+      .step p b { color: var(--ink); font-weight: 500; }
+      .step code { font-family: var(--mono); font-size: 0.86em; background: var(--panel-2); border: 1px solid var(--line); border-radius: 5px; padding: 0.05rem 0.35rem; color: var(--copper); }
+
+      .cmp-wrap { overflow-x: auto; }
+      .cmp { width: 100%; border-collapse: collapse; margin: 1rem 0; font-size: 0.88rem; border: 1px solid var(--line); border-radius: 12px; overflow: hidden; }
+      .cmp th, .cmp td { text-align: left; padding: 0.55rem 0.8rem; border-top: 1px solid var(--line); vertical-align: top; }
+      .cmp thead th { background: color-mix(in srgb, var(--panel) 60%, black); font-family: var(--mono); font-size: 0.74rem; color: var(--ink-2); border-top: none; }
+      .cmp td { color: var(--ink-2); background: var(--panel); }
+      .cmp td:first-child { font-family: var(--mono); font-size: 0.78rem; color: var(--ink); white-space: nowrap; }
+      .cmp td b { color: var(--ink); font-weight: 500; }
+      .cmp td.w { font-family: var(--mono); font-size: 0.78rem; font-variant-numeric: tabular-nums; white-space: nowrap; color: var(--ink-3); }
+      .cmp code { font-family: var(--mono); font-size: 0.84em; color: var(--copper); }
+      .pick { font-family: var(--mono); font-size: 0.64rem; color: var(--done); border: 1px solid color-mix(in srgb, var(--done) 45%, transparent); border-radius: 99px; padding: 0.02rem 0.4rem; margin-left: 0.35rem; }
+
+      .note { border-left: 3px solid var(--copper); background: color-mix(in srgb, var(--copper) 8%, var(--panel)); border-radius: 0 10px 10px 0; padding: 0.9rem 1.1rem; margin: 1.4rem 0; }
+      .note .t { font-family: var(--mono); font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--copper); margin-bottom: 0.3rem; }
+      .note p { font-size: 0.9rem; color: var(--ink-2); }
+      .note p b { color: var(--ink); }
+      .note p code { font-family: var(--mono); font-size: 0.86em; background: var(--panel-2); border: 1px solid var(--line); border-radius: 5px; padding: 0.05rem 0.35rem; color: var(--copper); }
+      .note.blue { border-left-color: var(--blue); background: color-mix(in srgb, var(--blue) 9%, var(--panel)); }
+      .note.blue .t { color: var(--blue); }
+      .note.warn { border-left-color: var(--gold); background: color-mix(in srgb, var(--gold) 9%, var(--panel)); }
+      .note.warn .t { color: var(--gold); }
+
+      .toc { display: flex; flex-wrap: wrap; gap: 0.5rem; margin: 1.5rem 0 0.5rem; }
+      .toc a { font-family: var(--mono); font-size: 0.76rem; color: var(--ink-2); text-decoration: none; border: 1px solid var(--line); border-radius: 8px; padding: 0.35rem 0.7rem; transition: all 0.15s ease; }
+      .toc a:hover { color: var(--copper); border-color: var(--copper); }
+
+      .faq { border: 1px solid var(--line); border-radius: 12px; background: var(--panel); margin: 0.7rem 0; overflow: hidden; }
+      .faq summary { cursor: pointer; padding: 0.85rem 1rem; font-weight: 500; color: var(--ink); list-style: none; display: flex; align-items: center; gap: 0.6rem; font-size: 0.95rem; }
+      .faq summary::-webkit-details-marker { display: none; }
+      .faq summary::before { content: "＋"; font-family: var(--mono); color: var(--copper); font-size: 1rem; }
+      .faq[open] summary::before { content: "－"; }
+      .faq summary:hover { color: var(--copper); }
+      .faq .a { padding: 0 1rem 0.95rem 2.2rem; color: var(--ink-2); font-size: 0.9rem; }
+      .faq .a code { font-family: var(--mono); font-size: 0.86em; background: var(--panel-2); border: 1px solid var(--line); border-radius: 5px; padding: 0.05rem 0.35rem; color: var(--copper); }
+      .faq .a b { color: var(--ink); font-weight: 500; }
+
+      .srclinks { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.8rem; }
+      .srclinks a { font-family: var(--mono); font-size: 0.76rem; color: var(--ink-2); text-decoration: none; border: 1px solid var(--line); border-radius: 8px; padding: 0.35rem 0.7rem; transition: all 0.15s ease; }
+      .srclinks a:hover { color: var(--copper); border-color: var(--copper); }
+
+      .lnav { display: flex; flex-wrap: wrap; gap: 0.8rem; justify-content: space-between; margin-top: 3.5rem; }
+      .lnav a { flex: 1; min-width: 220px; border: 1px solid var(--line); border-radius: 12px; padding: 1rem 1.2rem; text-decoration: none; background: var(--panel); transition: all 0.15s ease; }
+      .lnav a:hover { border-color: var(--copper); transform: translateY(-2px); }
+      .lnav .dir { font-family: var(--mono); font-size: 0.72rem; color: var(--ink-3); }
+      .lnav .ttl { color: var(--ink); font-weight: 500; margin-top: 0.2rem; }
+
+      footer { margin-top: 3rem; padding-top: 1.5rem; border-top: 1px solid var(--line); font-family: var(--mono); font-size: 0.78rem; color: var(--ink-3); display: flex; flex-wrap: wrap; gap: 0.5rem 1rem; justify-content: space-between; }
+      footer a { color: var(--copper); text-decoration: none; }
+
+      /* unified nav dropdown */
+      .brand { text-decoration: none; }
+      .navdd { position: relative; display: inline-flex; }
+      .nav-toggle { cursor: pointer; }
+      .nav-menu { position: absolute; top: calc(100% + 8px); left: 0; z-index: 60; display: none; min-width: 266px; max-width: calc(100vw - 2rem); max-height: 74vh; overflow: auto; background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 0.5rem; box-shadow: 0 16px 44px rgba(0,0,0,0.38); }
+      .nav-menu.open { display: block; }
+      .nav-grp { font-family: var(--mono); font-size: 0.66rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--ink-3); margin: 0.6rem 0.5rem 0.2rem; }
+      .nav-grp:first-child { margin-top: 0.2rem; }
+      .nav-item { display: flex; align-items: center; gap: 0.55rem; padding: 0.42rem 0.55rem; border-radius: 9px; text-decoration: none; color: var(--ink-2); font-size: 0.85rem; white-space: nowrap; transition: background 0.12s ease, color 0.12s ease; }
+      .nav-item:hover { background: var(--panel-2); color: var(--ink); }
+      .nav-item.cur { color: var(--copper); background: color-mix(in srgb, var(--copper) 10%, transparent); }
+      .nav-em { width: 1.25rem; text-align: center; flex: none; }
+
+      /* живое демо шейдера */
+      .demo { border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; margin: 1.4rem 0; background: var(--panel); }
+      .demo__stage { position: relative; height: 190px; background: #0c0a09; }
+      .demo__canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+      .demo__over { position: relative; height: 100%; display: flex; flex-direction: column; justify-content: center; padding: 0 1.2rem; pointer-events: none; }
+      .demo__brand { font-family: var(--mono); font-size: 0.85rem; color: #f3ece4; }
+      .demo__brand b { color: #e0895f; font-weight: 500; }
+      .demo__hint { font-family: var(--mono); font-size: 0.7rem; color: #9a8d80; margin-top: 0.3rem; }
+      .demo__bar { display: flex; flex-wrap: wrap; align-items: center; gap: 0.4rem; padding: 0.7rem 0.9rem; border-top: 1px solid var(--line); }
+      .demo__label { font-family: var(--mono); font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.1em; color: var(--ink-3); margin-right: 0.3rem; }
+      .tint { font-family: var(--mono); font-size: 0.76rem; color: var(--ink-2); background: var(--panel-2); border: 1px solid var(--line); border-radius: 8px; padding: 0.32rem 0.6rem; cursor: pointer; transition: all 0.15s ease; }
+      .tint:hover { color: var(--ink); border-color: var(--line-2); }
+      .tint[aria-pressed="true"] { background: var(--copper); color: #14100e; border-color: var(--copper); font-weight: 500; }
+      .demo__status { font-family: var(--mono); font-size: 0.7rem; color: var(--ink-3); padding: 0 0.9rem 0.8rem; }
+
+      .btn:focus-visible, .tint:focus-visible, a:focus-visible, summary:focus-visible { outline: 2px solid var(--copper); outline-offset: 2px; }
+
+      @media (prefers-reduced-motion: reduce) { * { transition: none !important; scroll-behavior: auto !important; } }
+    </style>
+  </head>
+  <body>
+    <div class="topbar">
+      <a class="brand" href="index.html"><b>◆</b> netroom</a>
+      <div class="navdd">
+        <button class="btn nav-toggle" aria-expanded="false" aria-haspopup="true">☰ материалы</button>
+        <div class="nav-menu" role="menu">
+            <div class="nav-grp">Обзор</div>
+            <a class="nav-item" href="system-map.html"><span class="nav-em">🗺️</span>Карта системы</a>
+            <div class="nav-grp">План</div>
+            <a class="nav-item" href="backend-roadmap.html"><span class="nav-em">🛠️</span>Бэкенд с нуля до прода</a>
+            <div class="nav-grp">Уроки</div>
+            <a class="nav-item" href="lesson-01-docker.html"><span class="nav-em">🐳</span>Урок 01 · Локальная среда</a>
+            <a class="nav-item" href="lesson-02-server.html"><span class="nav-em">🖥️</span>Урок 02 · Боевой сервер</a>
+            <div class="nav-grp">Концепты</div>
+            <a class="nav-item" href="docker-concepts.html"><span class="nav-em">🐳</span>Docker · ментальная модель</a>
+            <a class="nav-item" href="nginx-reverse-proxy.html"><span class="nav-em">🔀</span>Nginx · reverse-proxy</a>
+            <a class="nav-item" href="redis-explained.html"><span class="nav-em">🧱</span>Redis · быстрая память</a>
+            <a class="nav-item" href="postgresql-explained.html"><span class="nav-em">🐘</span>PostgreSQL · источник правды</a>
+            <div class="nav-grp">Фронтенд</div>
+            <a class="nav-item cur" aria-current="page" href="shader-background.html"><span class="nav-em">🌊</span>Шейдерный фон в шапке</a>
+            <div class="nav-grp">Деплой</div>
+            <a class="nav-item" href="coolify-deploy.html"><span class="nav-em">🚀</span>Coolify · залить проект</a>
+            <div class="nav-grp">Справка</div>
+            <a class="nav-item" href="reference-docker-compose.html"><span class="nav-em">🔎</span>Docker &amp; Compose построчно</a>
+        </div>
+      </div>
+      <span class="spacer"></span>
+      <button class="btn" id="themeBtn" title="Сменить тему">☾</button>
+    </div>
+
+    <div class="shell">
+      <header class="hero">
+        <span class="eyebrow">фронтенд · webgl</span>
+        <h1>Шейдерный фон <em>в шапке</em>, а не во весь экран</h1>
+        <p class="lede">
+          Полноэкранный шейдер — самый дорогой способ показать, что сайт современный.
+          Он забирает весь вьюпорт, спорит с текстом и первым лезет в бюджет первого экрана.
+          <b>Полоса под шапкой решает ту же задачу за долю стоимости.</b>
+          Ниже — что выбрать, как поставить и какие ограничения обязательны.
+        </p>
+        <div class="meta">
+          <span class="chip v">✓ живое демо на чистом WebGL</span>
+          <span class="chip">без зависимостей</span>
+          <span class="chip">30 fps</span>
+          <span class="chip">фолбэк без WebGL</span>
+        </div>
+        <nav class="toc">
+          <a href="#pochemu">Почему полоса</a>
+          <a href="#vybor">Что выбрать</a>
+          <a href="#ustanovka">Установка</a>
+          <a href="#svoy">Свой шейдер</a>
+          <a href="#pravila">Правила</a>
+          <a href="#dostupnost">Доступность</a>
+          <a href="#faq">Вопросы</a>
+        </nav>
+      </header>
+
+      <section>
+        <h2>Так это выглядит</h2>
+        <p class="body">
+          Полоса ниже — <b>не картинка и не видео</b>. Это работающий фрагментный шейдер
+          на чистом WebGL, без единой библиотеки. Кнопки под ним меняют оттенок —
+          так же, как это будет работать при переходе между разделами сайта.
+        </p>
+
+        <div class="demo">
+          <div class="demo__stage">
+            <canvas class="demo__canvas" id="shader" aria-hidden="true"></canvas>
+            <div class="demo__over">
+              <div class="demo__brand"><b>◆</b> заголовок сайта поверх шейдера</div>
+              <div class="demo__hint">яркость подложки приглушена — текст читается в любой фазе</div>
+            </div>
+          </div>
+          <div class="demo__bar" role="group" aria-label="Оттенок раздела">
+            <span class="demo__label">Оттенок раздела</span>
+            <button class="tint" data-tint="0" aria-pressed="true">Обзор</button>
+            <button class="tint" data-tint="1" aria-pressed="false">Уроки</button>
+            <button class="tint" data-tint="2" aria-pressed="false">Концепты</button>
+            <button class="tint" data-tint="3" aria-pressed="false">Деплой</button>
+          </div>
+          <p class="demo__status" id="shader-status">Инициализация…</p>
+        </div>
+      </section>
+
+      <section>
+        <h2 id="pochemu">Почему полоса, а не весь экран</h2>
+        <div class="cmp-wrap">
+          <table class="cmp">
+            <thead>
+              <tr><th>Критерий</th><th>Полный экран</th><th>Полоса 90&nbsp;px</th></tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Площадь закраски</td>
+                <td>~1&nbsp;900&nbsp;000 пикселей на FullHD</td>
+                <td><b>~170&nbsp;000</b> — в одиннадцать раз меньше</td>
+              </tr>
+              <tr>
+                <td>Первый экран</td>
+                <td>Шейдер попадает в LCP</td>
+                <td><b>Текст рисуется сразу</b>, шейдер после</td>
+              </tr>
+              <tr>
+                <td>Читаемость</td>
+                <td>Фон конкурирует с контентом</td>
+                <td><b>Шапка и так тёмная</b> — конфликта нет</td>
+              </tr>
+              <tr>
+                <td>Тёмная тема</td>
+                <td>Нужны две версии эффекта</td>
+                <td><b>Шапка не меняется</b> — версия одна</td>
+              </tr>
+              <tr>
+                <td>Смысл</td>
+                <td>Украшение</td>
+                <td><b>Оттенок кодирует раздел</b></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="body">
+          Последняя строка важнее прочих. Когда оттенок привязан к разделу,
+          движение перестаёт быть украшением и начинает нести информацию:
+          человек видит, что перешёл в другую часть сайта, ещё до того, как прочитает
+          заголовок.
+        </p>
+      </section>
+
+      <section>
+        <h2 id="vybor">Что выбрать</h2>
+        <p class="body">
+          Для узкой полосы главный критерий — <b>вес библиотеки</b>, а не богатство
+          эффектов. Второй — можно ли задать цвет параметром, иначе оттенок по разделам
+          превратится в четыре копии кода.
+        </p>
+        <div class="cmp-wrap">
+          <table class="cmp">
+            <thead>
+              <tr><th>Инструмент</th><th>Вес</th><th>Когда брать</th></tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Paper Shaders<span class="pick">выбор</span></td>
+                <td class="w">0 зависимостей</td>
+                <td>Готовые <code>meshGradient</code>, <code>warp</code>, <code>waves</code>, <code>grainGradient</code>. Цвета — параметры. Не тянет three.js.</td>
+              </tr>
+              <tr>
+                <td>OGL</td>
+                <td class="w">~10 КБ</td>
+                <td>Свой шейдер с минимальным весом. Нужно писать GLSL руками.</td>
+              </tr>
+              <tr>
+                <td>ShaderGradient</td>
+                <td class="w">средний</td>
+                <td>Есть визуальный конструктор: настроил мышкой — забрал код.</td>
+              </tr>
+              <tr>
+                <td>shadcn shaders</td>
+                <td class="w">копипаста</td>
+                <td>57 компонентов, попадают в проект как свой код без зависимости.</td>
+              </tr>
+              <tr>
+                <td>Vanta.js</td>
+                <td class="w">~120 КБ</td>
+                <td>Только если нужно сложное взаимодействие с курсором.</td>
+              </tr>
+              <tr>
+                <td>Granim.js</td>
+                <td class="w">малый</td>
+                <td>Без WebGL, обычный canvas. Годится как запасной вариант.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="note warn">
+          <div class="t">про 120 килобайт</div>
+          <p>
+            Авторы Vanta честно сравнивают этот вес с фоновым видео — и там он выигрывает.
+            Но для полосы в 90 пикселей тянуть целый 3D-движок несоразмерно.
+            <b>Вес библиотеки должен быть пропорционален площади, которую она закрашивает.</b>
+          </p>
+        </div>
+      </section>
+
+      <section>
+        <h2 id="ustanovka">Установка за пять минут</h2>
+
+        <div class="step">
+          <div class="sh"><span class="num">1</span><span class="st">Поставить пакет</span></div>
+          <div class="cmd">npm i @paper-design/shaders-react</div>
+        </div>
+
+        <div class="step">
+          <div class="sh"><span class="num">2</span><span class="st">Обернуть в компонент</span></div>
+          <p>Цвета приходят снаружи — из настроек раздела, а не из кода компонента.</p>
+          <div class="cmd"><span class="c">// components/ShaderBar.tsx</span>
+<span class="k">import</span> { MeshGradient } <span class="k">from</span> <span class="s">"@paper-design/shaders-react"</span>;
+
+<span class="c">/**
+ * Полоса с переливом для шапки и подвала.
+ * @param colors — палитра раздела, 2–4 цвета
+ * @param height — высота полосы в пикселях
+ */</span>
+<span class="k">export function</span> ShaderBar({ colors, height = 90 }: Props) {
+  <span class="k">return</span> (
+    &lt;div style={{ position: <span class="s">"absolute"</span>, inset: 0 }} aria-hidden&gt;
+      &lt;MeshGradient colors={colors} speed={0.12} /&gt;
+    &lt;/div&gt;
+  );
+}</div>
+          <p><b>speed 0.12</b> — намеренно медленно. Это фон, а не заставка.</p>
+        </div>
+
+        <div class="step">
+          <div class="sh"><span class="num">3</span><span class="st">Уложить слои</span></div>
+          <p>Родителю — <code>position: relative</code> и <code>overflow: hidden</code>.
+            Содержимому шапки — <code>position: relative</code>, иначе оно окажется под подложкой.</p>
+        </div>
+      </section>
+
+      <section>
+        <h2 id="svoy">Свой шейдер</h2>
+        <p class="body">
+          Если нужен точный контроль над картинкой, пишется фрагментный шейдер.
+          Перелив получается наложением нескольких волн разной частоты —
+          дешёвая замена настоящему шуму Перлина.
+        </p>
+        <div class="cmd"><span class="c">// Сумма синусов даёт мягкие полосы, похожие на ткань</span>
+precision mediump float;
+
+uniform float uTime;
+uniform vec2  uSize;
+uniform vec3  uTint;   <span class="c">// оттенок раздела</span>
+
+<span class="k">void</span> main() {
+  vec2 uv = gl_FragCoord.xy / uSize;
+
+  <span class="c">// три волны с разным периодом и скоростью</span>
+  <span class="k">float</span> w = sin(uv.x * 3.0 + uTime * 0.30)
+          + sin(uv.x * 7.0 - uTime * 0.21 + uv.y * 4.0)
+          + sin(uv.y * 5.0 + uTime * 0.17);
+
+  <span class="k">float</span> v = w / 6.0 + 0.5;   <span class="c">// приводим к 0…1</span>
+  v = pow(v, 1.6) * <span class="p">0.62</span>;      <span class="c">// приглушаем: сверху текст</span>
+
+  gl_FragColor = vec4(uTint * v, 1.0);
+}</div>
+        <div class="note">
+          <div class="t">множитель 0.62</div>
+          <p>
+            Это не украшение, а требование к контрасту. Он держит яркость подложки низкой,
+            чтобы светлый текст шапки оставался читаемым <b>в самой светлой фазе анимации</b>,
+            а не в среднем по кадрам.
+          </p>
+        </div>
+      </section>
+
+      <section>
+        <h2 id="pravila">Правила, без которых не работает</h2>
+        <p class="body">
+          Сам шейдер несложен. Сложно сделать так, чтобы он не жёг батарею.
+          Всё перечисленное — обязательное.
+        </p>
+        <div class="cmp-wrap">
+          <table class="cmp">
+            <thead><tr><th>Правило</th><th>Зачем</th></tr></thead>
+            <tbody>
+              <tr><td>Рендер только когда видно</td><td><code>IntersectionObserver</code> на полосу. Подвал внизу страницы не должен крутиться, пока до него не долистали.</td></tr>
+              <tr><td>Пауза вне вкладки</td><td><code>visibilitychange</code>. Иначе свёрнутая вкладка продолжает считать кадры.</td></tr>
+              <tr><td>30 кадров в секунду</td><td>Медленному переливу шестьдесят не нужно. Расход вдвое ниже, разницы не видно.</td></tr>
+              <tr><td>Плотность до 1.5</td><td>На экранах с <code>devicePixelRatio</code> 3 закрашивать честно незачем — у фона нет резких краёв.</td></tr>
+              <tr><td>Малая амплитуда</td><td>Проверять контраст в самой светлой фазе, а не на среднем кадре.</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="body">Пропуск кадров и остановка вне экрана:</p>
+        <div class="cmd"><span class="k">const</span> FRAME = 1000 / 30;        <span class="c">// целимся в 30 fps</span>
+<span class="k">let</span> last = 0, visible = <span class="p">false</span>, active = <span class="p">true</span>;
+
+<span class="k">function</span> loop(now) {
+  <span class="k">if</span> (visible &amp;&amp; active &amp;&amp; now - last &gt;= FRAME) {
+    last = now;
+    draw(now / 1000);
+  }
+  requestAnimationFrame(loop);
+}
+
+<span class="c">// полоса ушла за экран — перестаём считать</span>
+<span class="k">new</span> IntersectionObserver(
+  ([e]) =&gt; { visible = e.isIntersecting; },
+  { threshold: 0 }
+).observe(canvas);
+
+<span class="c">// вкладка свернулась — тоже</span>
+document.addEventListener(<span class="s">"visibilitychange"</span>, () =&gt; {
+  active = !document.hidden;
+});</div>
+      </section>
+
+      <section>
+        <h2 id="dostupnost">Доступность и запасной вариант</h2>
+        <p class="body">
+          Фон декоративен — <code>aria-hidden="true"</code> на канвасе, чтобы скринридер
+          не пытался его озвучить.
+        </p>
+        <div class="note blue">
+          <div class="t">reduced motion</div>
+          <p>
+            При <code>prefers-reduced-motion</code> эффект <b>не отключается целиком</b> —
+            показывается стоп-кадр. Картинка остаётся, движение уходит: страница
+            не становится беднее для тех, кого от анимации укачивает.
+          </p>
+        </div>
+        <div class="cmd"><span class="k">const</span> reduced = matchMedia(<span class="s">"(prefers-reduced-motion: reduce)"</span>);
+
+<span class="k">if</span> (reduced.matches) {
+  draw(0);           <span class="c">// один кадр и остановка</span>
+} <span class="k">else</span> {
+  requestAnimationFrame(loop);
+}</div>
+        <p class="body">
+          Поддержку WebGL надо <b>проверять, а не предполагать</b>: контекст может не
+          создаться на старом устройстве или при программном рендеринге. Запасной вариант —
+          обычный CSS-градиент того же оттенка. Пустой чёрной полосы пользователь
+          видеть не должен.
+        </p>
+        <div class="cmd"><span class="k">const</span> gl = canvas.getContext(<span class="s">"webgl"</span>, { antialias: <span class="p">false</span> });
+
+<span class="k">if</span> (!gl) {
+  canvas.remove();
+  bar.style.background = <span class="s">`linear-gradient(100deg, ${tint}, transparent)`</span>;
+}</div>
+      </section>
+
+      <section>
+        <h2 id="faq">Вопросы</h2>
+
+        <details class="faq">
+          <summary>Не будет ли это тормозить на мобильном?</summary>
+          <div class="a">
+            При соблюдении правил выше — нет. Но на мобильном разумно вообще не запускать
+            WebGL и показывать статичный градиент: экран маленький, полоса едва заметна,
+            а батарея дороже. Ориентироваться на тип устройства, а не пытаться замерить
+            производительность — в вебе это гадание.
+          </div>
+        </details>
+
+        <details class="faq">
+          <summary>Почему не GIF или видео?</summary>
+          <div class="a">
+            Видео весит сотни килобайт против пары килобайт шейдера, не тянется под любую
+            ширину без обрезки и не умеет менять оттенок параметром. Плюс автовоспроизведение
+            видео на мобильных — отдельная история с ограничениями браузеров.
+          </div>
+        </details>
+
+        <details class="faq">
+          <summary>Как связать оттенок с разделом?</summary>
+          <div class="a">
+            Передавать цвет параметром, а сам параметр брать из настроек раздела в CMS.
+            Тогда новый раздел не потребует правки кода — только записи в админке.
+            В демо выше это и происходит: кнопки меняют <code>uTint</code>, шейдер один.
+          </div>
+        </details>
+
+        <details class="faq">
+          <summary>А если дизайнер захочет эффект посложнее?</summary>
+          <div class="a">
+            Сложность шейдера почти не влияет на вес — влияет на количество операций
+            на пиксель. Для полосы в 90 пикселей запас большой. Опасно другое:
+            <b>яркие эффекты с высокой амплитудой</b>, из-за которых текст поверх
+            перестаёт читаться. Ограничение по контрасту важнее ограничения по сложности.
+          </div>
+        </details>
+      </section>
+
+      <section>
+        <h2>Источники</h2>
+        <div class="srclinks">
+          <a href="https://github.com/paper-design/shaders">Paper Shaders</a>
+          <a href="https://code.charliegleason.com/paper-design-shaders">Разбор с примерами</a>
+          <a href="https://alexharri.com/blog/webgl-gradients">Градиент по шагам</a>
+          <a href="https://instantgradient.com/app">InstantGradient</a>
+          <a href="https://github.com/oframe/ogl">OGL</a>
+          <a href="https://www.vantajs.com/">Vanta.js</a>
+          <a href="https://tympanus.net/codrops/tag/webgl/">Codrops · WebGL</a>
+          <a href="https://www.shadertoy.com/">Shadertoy</a>
+        </div>
+      </section>
+
+      <nav class="lnav">
+        <a href="coolify-deploy.html">
+          <div class="dir">← деплой</div>
+          <div class="ttl">Coolify · залить проект</div>
+        </a>
+        <a href="system-map.html">
+          <div class="dir">обзор →</div>
+          <div class="ttl">Карта системы</div>
+        </a>
+      </nav>
+
+      <footer>
+        <span>Полоса в демо написана на чистом WebGL — код страницы следует правилам, которые в ней описаны.</span>
+        <a href="index.html">← все материалы</a>
+      </footer>
+    </div>
+
+    <script>
+      // ---------- тема ----------
+      const root = document.documentElement;
+      const themeBtn = document.getElementById("themeBtn");
+      const savedTheme = localStorage.getItem("theme");
+      if (savedTheme) root.setAttribute("data-theme", savedTheme);
+
+      const syncIcon = () => {
+        const dark =
+          root.getAttribute("data-theme") === "dark" ||
+          (!root.hasAttribute("data-theme") &&
+            !matchMedia("(prefers-color-scheme: light)").matches);
+        themeBtn.textContent = dark ? "☾" : "☀";
+      };
+      syncIcon();
+
+      themeBtn.addEventListener("click", () => {
+        const dark =
+          root.getAttribute("data-theme") === "dark" ||
+          (!root.hasAttribute("data-theme") &&
+            !matchMedia("(prefers-color-scheme: light)").matches);
+        const next = dark ? "light" : "dark";
+        root.setAttribute("data-theme", next);
+        localStorage.setItem("theme", next);
+        syncIcon();
+      });
+
+      // ---------- выпадающее меню материалов ----------
+      const navToggle = document.querySelector(".nav-toggle");
+      const navMenu = document.querySelector(".nav-menu");
+
+      navToggle.addEventListener("click", (e) => {
+        e.stopPropagation();
+        const open = navMenu.classList.toggle("open");
+        navToggle.setAttribute("aria-expanded", String(open));
+      });
+
+      document.addEventListener("click", () => {
+        navMenu.classList.remove("open");
+        navToggle.setAttribute("aria-expanded", "false");
+      });
+
+      document.addEventListener("keydown", (e) => {
+        if (e.key === "Escape") {
+          navMenu.classList.remove("open");
+          navToggle.setAttribute("aria-expanded", "false");
+        }
+      });
+
+      // ---------- живое демо ----------
+      // Тот же код, что описан в тексте: пропуск кадров, пауза вне экрана,
+      // стоп-кадр при reduced motion, запасной градиент без WebGL.
+
+      const canvas = document.getElementById("shader");
+      const status = document.getElementById("shader-status");
+      const stage = canvas.parentElement;
+
+      // Палитры разделов — механика «цвет по разделу»
+      const TINTS = [
+        [0.88, 0.54, 0.37], // обзор — медь
+        [0.90, 0.72, 0.42], // уроки — золото
+        [0.50, 0.66, 0.79], // концепты — синий
+        [0.50, 0.65, 0.42], // деплой — зелёный
+      ];
+
+      let tint = TINTS[0].slice();
+      let target = tint.slice();
+
+      const gl = canvas.getContext("webgl", { antialias: false, alpha: false });
+
+      if (!gl) {
+        canvas.remove();
+        stage.style.background = "linear-gradient(100deg, #7a4227, #0c0a09 60%)";
+        status.textContent = "WebGL недоступен — показан запасной градиент.";
+      } else {
+        const VERT = "attribute vec2 p; void main(){ gl_Position = vec4(p,0.0,1.0); }";
+
+        const FRAG = [
+          "precision mediump float;",
+          "uniform float uTime; uniform vec2 uSize; uniform vec3 uTint;",
+          "void main() {",
+          "  vec2 uv = gl_FragCoord.xy / uSize;",
+          "  float w = sin(uv.x * 3.0 + uTime * 0.30)",
+          "          + sin(uv.x * 7.0 - uTime * 0.21 + uv.y * 4.0)",
+          "          + sin(uv.y * 5.0 + uTime * 0.17)",
+          "          + sin((uv.x + uv.y) * 4.0 - uTime * 0.13);",
+          "  float v = w / 8.0 + 0.5;",
+          "  v = pow(v, 1.6) * 0.62;",
+          "  v *= mix(0.82, 1.0, uv.y);",
+          "  gl_FragColor = vec4(uTint * v, 1.0);",
+          "}",
+        ].join("\n");
+
+        const compile = (type, src) => {
+          const sh = gl.createShader(type);
+          gl.shaderSource(sh, src);
+          gl.compileShader(sh);
+          return sh;
+        };
+
+        const prog = gl.createProgram();
+        gl.attachShader(prog, compile(gl.VERTEX_SHADER, VERT));
+        gl.attachShader(prog, compile(gl.FRAGMENT_SHADER, FRAG));
+        gl.linkProgram(prog);
+        gl.useProgram(prog);
+
+        gl.bindBuffer(gl.ARRAY_BUFFER, gl.createBuffer());
+        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 3, -1, -1, 3]), gl.STATIC_DRAW);
+        const loc = gl.getAttribLocation(prog, "p");
+        gl.enableVertexAttribArray(loc);
+        gl.vertexAttribPointer(loc, 2, gl.FLOAT, false, 0, 0);
+
+        const uTime = gl.getUniformLocation(prog, "uTime");
+        const uSize = gl.getUniformLocation(prog, "uSize");
+        const uTint = gl.getUniformLocation(prog, "uTint");
+
+        // Плотность пикселей ограничена: у фона нет резких краёв
+        const resize = () => {
+          const dpr = Math.min(window.devicePixelRatio || 1, 1.5);
+          const w = Math.round(stage.clientWidth * dpr);
+          const h = Math.round(stage.clientHeight * dpr);
+          if (canvas.width !== w || canvas.height !== h) {
+            canvas.width = w;
+            canvas.height = h;
+            gl.viewport(0, 0, w, h);
+          }
+        };
+
+        const draw = (t) => {
+          resize();
+          for (let i = 0; i < 3; i++) tint[i] += (target[i] - tint[i]) * 0.06;
+          gl.uniform1f(uTime, t);
+          gl.uniform2f(uSize, canvas.width, canvas.height);
+          gl.uniform3f(uTint, tint[0], tint[1], tint[2]);
+          gl.drawArrays(gl.TRIANGLES, 0, 3);
+        };
+
+        const reduced = matchMedia("(prefers-reduced-motion: reduce)");
+        const FRAME = 1000 / 30;
+        let last = 0;
+        let visible = true;
+        let active = true;
+
+        const loop = (now) => {
+          if (visible && active && now - last >= FRAME) {
+            last = now;
+            draw(now / 1000);
+          }
+          requestAnimationFrame(loop);
+        };
+
+        new IntersectionObserver(([e]) => { visible = e.isIntersecting; }, { threshold: 0 }).observe(canvas);
+        document.addEventListener("visibilitychange", () => { active = !document.hidden; });
+        window.addEventListener("resize", resize, { passive: true });
+
+        if (reduced.matches) {
+          draw(0);
+          status.textContent = "Движение выключено системной настройкой — показан стоп-кадр.";
+        } else {
+          requestAnimationFrame(loop);
+          status.textContent = "30 кадров в секунду · пауза вне экрана и вне вкладки · плотность пикселей до 1.5";
+        }
+
+        document.querySelectorAll(".tint").forEach((btn) => {
+          btn.addEventListener("click", () => {
+            document.querySelectorAll(".tint").forEach((b) => b.setAttribute("aria-pressed", String(b === btn)));
+            target = TINTS[Number(btn.dataset.tint)].slice();
+            if (reduced.matches) { tint = target.slice(); draw(0); }
+          });
+        });
+      }
+    </script>
+  </body>
+</html>
